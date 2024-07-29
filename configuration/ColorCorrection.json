@@ -16,7 +16,7 @@
 		"flavor": "",
 		"hook": "",
 		"importance": "",
-		"localHookTemplate": "configuration/ColorCorrection.m",
+		"localHookTemplate": "configuration/ColorCorrectionLocalHookTemplate.m",
 		"name": "ColorCorrection",
 		"pathPlacement": "append",
 		"subfolder": "",
