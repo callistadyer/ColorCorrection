@@ -41,11 +41,21 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
 % Render lms image that a trichromat or dichromat sees
 lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
+RGBImage_trichromat = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+
+alpha        = linspace(0,1,20);
+mCones            = lmsImageCalFormat(2,:);
+contrast     = (mCones - mean(mCones)) ./ mean(mCones);
+contrast_new = alpha' .* contrast;
+m_new        = (contrast_new .* mean(mCones)) + mean(mCones);
 
 renderType = 'Deuteranopia';
-if strcmp(renderType,'trichromat')
-elseif strcmp(renderType, 'Deuteranopia')
-lmsImageCalFormat(2,:) =  mean(lmsImageCalFormat(2,:));
+if strcmp(renderType, 'Deuteranopia')
+    for i = 1:size(m_new,1)
+    lmsImageCalFormat(2,:) = m_new(i);
+    RGBImage_dichromat(:,:,:,i) = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+    end
+% lmsImageCalFormat(2,:) =  mean(lmsImageCalFormat(2,:));
 % lmsImageCalFormat(2,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(3,:)],"all");
 elseif strcmp(renderType, 'Protanopia')
 lmsImageCalFormat(1,:) = mean([lmsImageCalFormat(2,:),lmsImageCalFormat(3,:)],"all");    
@@ -53,7 +63,23 @@ elseif strcmp(renderType, 'Tritanopia')
 lmsImageCalFormat(3,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(2,:)],"all");    
 end
 
-function RGBimg(lmsImageCalFormat,d,P_monitor)
+
+for i = 1:size(m_new,1) 
+% Show the image
+figure('position',[896         896        1152         363]); 
+subplot(1,2,1);
+imshow(RGBImage_trichromat);
+title('Trichromat rendering');
+
+subplot(1,2,2);
+imshow(RGBImage_dichromat(:,:,:,i));
+title([renderType ' rendering']);
+subtitle([num2str(alpha(i)) num2str(m_new(i))])
+end
+
+
+
+function RGBImage = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n)
 
 % Build matrix that goes from cones to monitor linear rgb
 M_rgb2cones = T_cones*P_monitor;
@@ -71,9 +97,5 @@ rgbImage(rgbImage < 0) = 0;
 gammaTable = displayGet(d,'gammatable');
 iGtable = displayGet(d,'inversegamma');
 RGBImage = rgb2dac(rgbImage,iGtable)/(2^displayGet(d,'dacsize')-1);
-
-% Show the imagew
-figure; imshow(RGBImage);
-title([renderType ' rendering']);
 
 end

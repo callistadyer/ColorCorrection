@@ -43,18 +43,30 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
 RGBImage_trichromat = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
 
+
+% Testing different constant values of m-cone (or other missing cone)
+alpha        = linspace(0,1,20);
+mCones       = lmsImageCalFormat(2,:);
+contrast     = (mCones - mean(mCones)) ./ mean(mCones);
+contrast_new = alpha' .* contrast;
+m_new        = (contrast_new .* mean(mCones)) + mean(mCones);
+
 renderType = 'Deuteranopia';
 if strcmp(renderType, 'Deuteranopia')
-lmsImageCalFormat(2,:) =  mean(lmsImageCalFormat(2,:));
+    for i = 1:size(m_new,1)
+    lmsImageCalFormat(2,:) = m_new(i);
+    RGBImage_dichromat(:,:,:,i) = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+    end
+% lmsImageCalFormat(2,:) = mean(lmsImageCalFormat(2,:));
 % lmsImageCalFormat(2,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(3,:)],"all");
 elseif strcmp(renderType, 'Protanopia')
 lmsImageCalFormat(1,:) = mean([lmsImageCalFormat(2,:),lmsImageCalFormat(3,:)],"all");    
 elseif strcmp(renderType, 'Tritanopia')
 lmsImageCalFormat(3,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(2,:)],"all");    
 end
-RGBImage_dichromat = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
 
 
+for i = 1:size(m_new,1) 
 % Show the image
 figure('position',[896         896        1152         363]); 
 subplot(1,2,1);
@@ -62,9 +74,9 @@ imshow(RGBImage_trichromat);
 title('Trichromat rendering');
 
 subplot(1,2,2);
-imshow(RGBImage_dichromat);
-title([renderType ' rendering']);
-
+imshow(RGBImage_dichromat(:,:,:,i)); hold on;
+title([renderType ' rendering: alpha = ' num2str(round(alpha(i),3)) ' constant = ' num2str(round(m_new(i),4))]);
+end
 
 
 
