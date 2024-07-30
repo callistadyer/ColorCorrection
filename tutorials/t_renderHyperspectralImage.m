@@ -40,17 +40,15 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
 
 % Render lms image that a trichromat or dichromat sees
+lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
+
 renderType = 'Tritanopia';
 if strcmp(renderType,'trichromat')
-lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
 elseif strcmp(renderType, 'Deuteranopia')
-lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
 lmsImageCalFormat(2,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(3,:)],"all");
 elseif strcmp(renderType, 'Protanopia')
-lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
 lmsImageCalFormat(1,:) = mean([lmsImageCalFormat(2,:),lmsImageCalFormat(3,:)],"all");    
 elseif strcmp(renderType, 'Tritanopia')
-lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
 lmsImageCalFormat(3,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(2,:)],"all");    
 end
 
