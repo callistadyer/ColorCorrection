@@ -40,18 +40,16 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
 
 % Render lms image that a trichromat or dichromat sees
-renderType = 'Tritanopia';
+renderType = 'Deuteranopia';
 if strcmp(renderType,'trichromat')
 lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
 elseif strcmp(renderType, 'Deuteranopia')
 lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
 lmsImageCalFormat(2,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(3,:)],"all");
 elseif strcmp(renderType, 'Protanopia')
-lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
-lmsImageCalFormat(1,:) = mean([lmsImageCalFormat(2,:),lmsImageCalFormat(3,:)],"all");    
-elseif strcmp(renderType, 'Tritanopia')
-lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
-lmsImageCalFormat(3,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(2,:)],"all");    
+
+% lmsImageCalFormat(2,:) = zeros(1,size(lmsImageCalFormat,2));
+
 end
 
 % Build matrix that goes from cones to monitor linear rgb
