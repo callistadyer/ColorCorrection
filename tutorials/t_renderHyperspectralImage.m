@@ -9,7 +9,7 @@
 clear; close all
 
 %% Load hyperspectral image data 
-defaultImage = false;
+defaultImage = true;
 if (defaultImage)
     % This image comes with ISETBio.
     scene = sceneFromFile('StuffedAnimals_tungsten-hdrs','multispectral');
@@ -41,16 +41,34 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
 % Render lms image that a trichromat or dichromat sees
 lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
+RGBImage_trichromat = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
 
-renderType = 'Tritanopia';
-if strcmp(renderType,'trichromat')
-elseif strcmp(renderType, 'Deuteranopia')
-lmsImageCalFormat(2,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(3,:)],"all");
+renderType = 'Deuteranopia';
+if strcmp(renderType, 'Deuteranopia')
+lmsImageCalFormat(2,:) =  mean(lmsImageCalFormat(2,:));
+% lmsImageCalFormat(2,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(3,:)],"all");
 elseif strcmp(renderType, 'Protanopia')
 lmsImageCalFormat(1,:) = mean([lmsImageCalFormat(2,:),lmsImageCalFormat(3,:)],"all");    
 elseif strcmp(renderType, 'Tritanopia')
 lmsImageCalFormat(3,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(2,:)],"all");    
 end
+RGBImage_dichromat = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+
+
+% Show the image
+figure('position',[896         896        1152         363]); 
+subplot(1,2,1);
+imshow(RGBImage_trichromat);
+title('Trichromat rendering');
+
+subplot(1,2,2);
+imshow(RGBImage_dichromat);
+title([renderType ' rendering']);
+
+
+
+
+function RGBImage = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n)
 
 % Build matrix that goes from cones to monitor linear rgb
 M_rgb2cones = T_cones*P_monitor;
@@ -69,6 +87,4 @@ gammaTable = displayGet(d,'gammatable');
 iGtable = displayGet(d,'inversegamma');
 RGBImage = rgb2dac(rgbImage,iGtable)/(2^displayGet(d,'dacsize')-1);
 
-% Show the imagew
-figure; imshow(RGBImage);
-title([renderType ' rendering']);
+end
