@@ -51,22 +51,34 @@ contrast     = (mCones - mean(mCones)) ./ mean(mCones);
 contrast_new = alpha' .* contrast;
 m_new        = (contrast_new .* mean(mCones)) + mean(mCones);
 
-renderType = 'Deuteranopia';
+l_cone = lmsImageCalFormat(1,:);
+m_cone = lmsImageCalFormat(2,:);
+s_cone = lmsImageCalFormat(3,:);
+
+renderType = 'Protanopia';
 if strcmp(renderType, 'Deuteranopia')
-    for i = 1:size(m_new,1)
-    lmsImageCalFormat(2,:) = m_new(i);
-    RGBImage_dichromat(:,:,:,i) = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
-    end
-% lmsImageCalFormat(2,:) = mean(lmsImageCalFormat(2,:));
-% lmsImageCalFormat(2,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(3,:)],"all");
+
+    % % use this to test different values for missing cone
+    % for i = 1:size(m_new,1)
+    % lmsImageCalFormat(2,:) = m_new(i);
+    % RGBImage_dichromat(:,:,:,i) = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+    % end
+
+    % lmsImageCalFormat(2,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(3,:)],"all");
+
+lmsImageCalFormat(2,:)  = l_cone; % replace m cones with L cone mean
+RGBImage_dichromat      = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+
 elseif strcmp(renderType, 'Protanopia')
-lmsImageCalFormat(1,:) = mean([lmsImageCalFormat(2,:),lmsImageCalFormat(3,:)],"all");    
+lmsImageCalFormat(1,:) = m_cone;   
+RGBImage_dichromat      = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+
 elseif strcmp(renderType, 'Tritanopia')
 lmsImageCalFormat(3,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(2,:)],"all");    
 end
 
 
-for i = 1:size(m_new,1) 
+% for i = 1:size(m_new,1) 
 % Show the image
 figure('position',[896         896        1152         363]); 
 subplot(1,2,1);
@@ -74,11 +86,18 @@ imshow(RGBImage_trichromat);
 title('Trichromat rendering');
 
 subplot(1,2,2);
-imshow(RGBImage_dichromat(:,:,:,i)); hold on;
-title([renderType ' rendering: alpha = ' num2str(round(alpha(i),3)) ' constant = ' num2str(round(m_new(i),4))]);
-end
+imshow(RGBImage_dichromat); hold on;
+title([renderType ' rendering']);
+% title([renderType ' rendering: alpha = ' num2str(round(alpha(i),3)) ' constant = ' num2str(round(m_new(i),4))]);
+% end
 
 
+% check by reversing RGB to LMS image
+LMSimage_trichromat = double(T_cones*hyperspectralImageCalFormat);
+LMSimage_dichromat  = double(RGB2LMSimg(RGBImage_dichromat,d,T_cones,P_monitor,m,n));
+sameLcone = isequal(LMSimage_trichromat(1,:),LMSimage_dichromat(1,:))
+sameMcone = isequal(LMSimage_trichromat(2,:),LMSimage_dichromat(2,:))
+sameScone = isequal(LMSimage_trichromat(3,:),LMSimage_dichromat(3,:))
 
 function RGBImage = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n)
 
@@ -100,3 +119,19 @@ iGtable = displayGet(d,'inversegamma');
 RGBImage = rgb2dac(rgbImage,iGtable)/(2^displayGet(d,'dacsize')-1);
 
 end
+
+function lmsImageCalFormat = RGB2LMSimg(RGBImage,d,T_cones,P_monitor,m,n)
+
+% reverse the gamma correction
+gammaTable = displayGet(d,'gammatable');
+rgbImg = dac2rgb(RGBImage, gammaTable);
+
+rgbImageCalFormat = ImageToCalFormat(rgbImg);
+
+M_rgb2cones = T_cones*P_monitor;
+lmsImageCalFormat = M_rgb2cones * rgbImageCalFormat;
+
+
+end
+
+

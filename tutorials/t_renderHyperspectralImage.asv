@@ -43,19 +43,30 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
 RGBImage_trichromat = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
 
+
+% Testing different constant values of m-cone (or other missing cone)
 alpha        = linspace(0,1,20);
-mCones            = lmsImageCalFormat(2,:);
+mCones       = lmsImageCalFormat(2,:);
 contrast     = (mCones - mean(mCones)) ./ mean(mCones);
 contrast_new = alpha' .* contrast;
 m_new        = (contrast_new .* mean(mCones)) + mean(mCones);
 
+l_cone = lmsImageCalFormat(1,:);
+m_cone = lmsImageCalFormat(2,:);
+s_cone = lmsImageCalFormat(3,:);
+
 renderType = 'Deuteranopia';
 if strcmp(renderType, 'Deuteranopia')
-    for i = 1:size(m_new,1)
-    lmsImageCalFormat(2,:) = m_new(i);
-    RGBImage_dichromat(:,:,:,i) = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
-    end
-% lmsImageCalFormat(2,:) =  mean(lmsImageCalFormat(2,:));
+
+    % % use this to test different values for missing cone
+    % for i = 1:size(m_new,1)
+    % lmsImageCalFormat(2,:) = m_new(i);
+    % RGBImage_dichromat(:,:,:,i) = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+    % end
+
+lmsImageCalFormat(2,:)  = mean(l_cone); % replace m cones with L cone mean
+RGBImage_dichromat      = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+
 % lmsImageCalFormat(2,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(3,:)],"all");
 elseif strcmp(renderType, 'Protanopia')
 lmsImageCalFormat(1,:) = mean([lmsImageCalFormat(2,:),lmsImageCalFormat(3,:)],"all");    
@@ -64,7 +75,7 @@ lmsImageCalFormat(3,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(2,:)],"a
 end
 
 
-for i = 1:size(m_new,1) 
+% for i = 1:size(m_new,1) 
 % Show the image
 figure('position',[896         896        1152         363]); 
 subplot(1,2,1);
@@ -72,10 +83,10 @@ imshow(RGBImage_trichromat);
 title('Trichromat rendering');
 
 subplot(1,2,2);
-imshow(RGBImage_dichromat(:,:,:,i));
+imshow(RGBImage_dichromat); hold on;
 title([renderType ' rendering']);
-subtitle([num2str(alpha(i)) num2str(m_new(i))])
-end
+% title([renderType ' rendering: alpha = ' num2str(round(alpha(i),3)) ' constant = ' num2str(round(m_new(i),4))]);
+% end
 
 
 
