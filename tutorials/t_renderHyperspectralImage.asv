@@ -22,8 +22,7 @@ else
     load(fullfile(scenesDir, 'scene3.mat'), 'scene');
 end
 
-% Get the wavelength sampling and the actual hyperspectral image data in
-% energy units.
+% Get the wavelength sampling and the actual hyperspectral image data in energy units.
 wls = sceneGet(scene,'wave');
 hyperspectralImage = sceneGet(scene,'energy');
 clear scene
@@ -32,7 +31,7 @@ clear scene
 load T_cones_ss2;
 T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
 
-% Get some monitor primaries.  For right now we'll
+% Get some monitor primaries
 d = displayCreate('LCD-Apple');
 P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
@@ -41,15 +40,15 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
 % Render lms image that a trichromat or dichromat sees
 lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
-[RGBImage_trichromat,scaleFactor]  = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+[RGBImage_trichromat,scaleFactor_tri]  = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
 
 
-% Testing different constant values of m-cone (or other missing cone)
-alpha        = linspace(0,1,20);
-mCones       = lmsImageCalFormat(2,:);
-contrast     = (mCones - mean(mCones)) ./ mean(mCones);
-contrast_new = alpha' .* contrast;
-m_new        = (contrast_new .* mean(mCones)) + mean(mCones);
+%%% Testing different constant values of m-cone (or other missing cone)
+% alpha        = linspace(0,1,20);
+% mCones       = lmsImageCalFormat(2,:);
+% contrast     = (mCones - mean(mCones)) ./ mean(mCones);
+% contrast_new = alpha' .* contrast;
+% m_new        = (contrast_new .* mean(mCones)) + mean(mCones);
 
 l_cone = lmsImageCalFormat(1,:);
 m_cone = lmsImageCalFormat(2,:);
@@ -75,29 +74,27 @@ lmsImageCalFormat(3,:)  = m_cone; % replace S cones with M cone mean
 end  
 
 % get dichromat image
-[RGBImage_dichromat,scaleFactor]      = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+[RGBImage_dichromat,scaleFactor_di] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
 
 % for i = 1:size(m_new,1) 
-% Show the image
+%%%%%%%%%%%% SHOW THE RENDERED DICHROMAT IMAGE %%%%%%%%%%%%
 figure('position',[896         896        1152         363]); 
 subplot(1,2,1);
-imshow(RGBImage_trichromat);
+imshow(RGBImage_trichromat);    % TRICHROMAT
 title('Trichromat rendering');
 
 subplot(1,2,2);
-imshow(RGBImage_dichromat); hold on;
+imshow(RGBImage_dichromat);     % DICHROMAT
 title([renderType ' rendering']);
 % title([renderType ' rendering: alpha = ' num2str(round(alpha(i),3)) ' constant = ' num2str(round(m_new(i),4))]);
 % end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Check by reversing RGB to LMS image
+LMSimage_trichromat = T_cones*hyperspectralImageCalFormat;
+LMSimage_dichromat  = RGB2LMSimg(RGBImage_dichromat,d,T_cones,P_monitor,scaleFactor_di,m,n); % try to exactly reverse
 
-% check by reversing RGB to LMS image
-LMSimage_trichromat = double(T_cones*hyperspectralImageCalFormat);
-LMSimage_dichromat  = double(RGB2LMSimg(RGBImage_dichromat,d,T_cones,P_monitor,scaleFactor,m,n));
-sameLcone = isequal(LMSimage_trichromat(1,:),LMSimage_dichromat(1,:)); % do we get the same answer when we reverse the process?
-sameMcone = isequal(LMSimage_trichromat(2,:),LMSimage_dichromat(2,:));
-sameScone = isequal(LMSimage_trichromat(3,:),LMSimage_dichromat(3,:));
-
+%%% SCATTER PLOTS OF DESIRED VS RECOVERED LMS VALUES %%%
 figure('position',[743         503        1632         476]);
 subplot(1,3,1)
 scatter(LMSimage_trichromat(1,:),LMSimage_dichromat(1,:),'red','Marker','.','LineWidth',2)
@@ -113,6 +110,7 @@ xlabel('desired S'); ylabel('recovered S'); title('S');
 axis square;
 
 
+%%%%%%% GO FROM LMS IMAGE TO RGB IMAGE %%%%%%%
 function [RGBImage,scaleFactor] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n)
 
 % Build matrix that goes from cones to monitor linear rgb
@@ -135,6 +133,7 @@ RGBImage = rgb2dac(rgbImage,iGtable)/(2^displayGet(d,'dacsize')-1);
 
 end
 
+%%%%%%% GO FROM RGB IMAGE TO LMS IMAGE %%%%%%%
 function lmsImageCalFormat = RGB2LMSimg(RGBImage,d,T_cones,P_monitor,scaleFactor,m,n)
 
 % reverse the gamma correction
