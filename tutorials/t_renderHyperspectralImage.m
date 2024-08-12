@@ -108,6 +108,7 @@ subplot(1,3,3)
 scatter(LMSimage_trichromat(3,:),LMSimage_dichromat(3,:),'blue','Marker','.','LineWidth',2)
 xlabel('desired S'); ylabel('recovered S'); title('S');
 axis square;
+sgtitle([renderType ' rendering and reversal: LMS values'])
 
 
 %%%%%%% GO FROM LMS IMAGE TO RGB IMAGE %%%%%%%
