@@ -41,7 +41,7 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
 % Render lms image that a trichromat or dichromat sees
 lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
-[RGBImage_trichromat,scaleFactor]  = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+[RGBImage_trichromat,scaleFactor]  = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
 
 
 % Testing different constant values of m-cone (or other missing cone)
@@ -75,7 +75,7 @@ lmsImageCalFormat(3,:)  = m_cone; % replace S cones with M cone mean
 end  
 
 % get dichromat image
-[RGBImage_dichromat,scaleFactor]      = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+[RGBImage_dichromat,scaleFactor]      = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
 
 % for i = 1:size(m_new,1) 
 % Show the image
@@ -91,13 +91,11 @@ title([renderType ' rendering']);
 % end
 
 
-% check by reversing RGB to LMS image
-LMSimage_trichromat = double(T_cones*hyperspectralImageCalFormat);
-LMSimage_dichromat  = double(RGB2LMSimg(RGBImage_dichromat,d,T_cones,P_monitor,scaleFactor,m,n));
-sameLcone = isequal(LMSimage_trichromat(1,:),LMSimage_dichromat(1,:)); % do we get the same answer when we reverse the process?
-sameMcone = isequal(LMSimage_trichromat(2,:),LMSimage_dichromat(2,:));
-sameScone = isequal(LMSimage_trichromat(3,:),LMSimage_dichromat(3,:));
+% Check by reversing RGB to LMS image
+LMSimage_trichromat = T_cones*hyperspectralImageCalFormat;
+LMSimage_dichromat  = RGB2LMSimg(RGBImage_dichromat,d,T_cones,P_monitor,scaleFactor,m,n);
 
+%%% SCATTER PLOTS OF DESIRED VS RECOVERED LMS VALUES %%%
 figure('position',[743         503        1632         476]);
 subplot(1,3,1)
 scatter(LMSimage_trichromat(1,:),LMSimage_dichromat(1,:),'red','Marker','.','LineWidth',2)
@@ -113,7 +111,7 @@ xlabel('desired S'); ylabel('recovered S'); title('S');
 axis square;
 
 
-function [RGBImage,scaleFactor] = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n)
+function [RGBImage,scaleFactor] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n)
 
 % Build matrix that goes from cones to monitor linear rgb
 M_rgb2cones = T_cones*P_monitor;

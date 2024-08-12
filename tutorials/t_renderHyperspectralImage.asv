@@ -41,7 +41,7 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
 % Render lms image that a trichromat or dichromat sees
 lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
-[RGBImage_trichromat,scaleFactor]  = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+[RGBImage_trichromat,scaleFactor]  = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
 
 
 % Testing different constant values of m-cone (or other missing cone)
@@ -75,7 +75,7 @@ lmsImageCalFormat(3,:)  = m_cone; % replace S cones with M cone mean
 end  
 
 % get dichromat image
-[RGBImage_dichromat,scaleFactor]      = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+[RGBImage_dichromat,scaleFactor]      = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
 
 % for i = 1:size(m_new,1) 
 % Show the image
@@ -113,7 +113,7 @@ xlabel('desired S'); ylabel('recovered S'); title('S');
 axis square;
 
 
-function [RGBImage,scaleFactor] = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n)
+function [RGBImage,scaleFactor] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n)
 
 % Build matrix that goes from cones to monitor linear rgb
 M_rgb2cones = T_cones*P_monitor;
