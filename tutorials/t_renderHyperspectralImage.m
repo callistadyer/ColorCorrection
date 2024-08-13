@@ -1,20 +1,22 @@
 
-function t_renderHyperspectralImage(image)
+function t_renderHyperspectralImage(image,renderType)
 
-% function t_renderHyperspectralImage()
+% function t_renderHyperspectralImage(image)
 % Demonstrate how to read and then render a hyperspectral image.
+
+% Example images to use
+% t_renderHyperspectralImage('scene1.mat','Protanopia')
+% t_renderHyperspectralImage('scene2.mat','Deuteranopia')
+% t_renderHyperspectralImage('scene3.mat','Tritanopia')
+% t_renderHyperspectralImage('scene4.mat','Deuteranopia')
+% t_renderHyperspectralImage('scene5.mat','Deuteranopia')
 
 % History
 %   07/30/2024  dhb, cmd  Initial go.
 
-%% Close all open figures
-clear; close all
 
 %% Load hyperspectral image data 
-if isempty(image) || ~exist(image)
-defaultImage = true;
-end
-if (defaultImage)
+if isempty(image)
     % This image comes with ISETBio.
     scene = sceneFromFile('StuffedAnimals_tungsten-hdrs','multispectral');
     scene = sceneSet(scene,'fov',2);
@@ -24,6 +26,10 @@ if (defaultImage)
 %     dropboxDirPath = localDropboxDir();
 %     scenesDir = fullfile(dropboxDirPath, 'HyperspectralSceneTutorial', 'resources', 'manchester_database', '2004');
 %     load(fullfile(scenesDir, 'scene3.mat'), 'scene');
+else
+    dropboxDirPath = localDropboxDir();
+    scenesDir = fullfile(dropboxDirPath, 'HyperspectralSceneTutorial', 'resources', 'manchester_database', '2004');
+    load(fullfile(scenesDir, image), 'scene');
 end
 
 % Get the wavelength sampling and the actual hyperspectral image data in energy units.
@@ -59,7 +65,6 @@ l_cone = lmsImageCalFormat(1,:);
 m_cone = lmsImageCalFormat(2,:);
 s_cone = lmsImageCalFormat(3,:);
 
-renderType = 'Protanopia';
 dichromImageCalFormat = lmsImageCalFormat;
 deuterMLScale = 0.65;
 protoLMScale = 1/0.65;
@@ -87,7 +92,7 @@ imshow(RGBImage_dichromat);     % DICHROMAT
 title([renderType ' rendering']);
 
 % Check by reversing RGB to LMS image
-lmsImageDichromatFromrgb          = rgb2LMSimg(rgbImage_dichromat,T_cones,P_monitor,scaleFactor_di,m,n);
+lmsImageDichromatFromrgb          = rgbLin2LMSimg(rgbImage_dichromat,T_cones,P_monitor,scaleFactor_di,m,n);
 lmsImageDichromatFromrgbCalFormat = ImageToCalFormat(lmsImageDichromatFromrgb);
 lmsImageDichromatFromRGB          = RGB2LMSimg(RGBImage_dichromat,d,T_cones,P_monitor,scaleFactor_di,m,n); 
 lmsImageDichromatFromRGBCalFormat = ImageToCalFormat(lmsImageDichromatFromRGB);
@@ -168,61 +173,3 @@ end
 
 
 end
-
-%%%%%%% GO FROM LMS IMAGE TO RGB IMAGE %%%%%%%
-function [RGBImageCalFormat,scaleFactor,rgbImage] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n)
-
-% Build matrix that goes from cones to monitor linear rgb
-M_rgb2cones = T_cones*P_monitor;
-M_cones2rgb = inv(M_rgb2cones);
-
-% Get linear RGB from LMS
-rgbImageCalFormat = M_cones2rgb*lmsImageCalFormat;
-rgbImage = CalFormatToImage(rgbImageCalFormat,m,n);
-
-% For right now, normalize so that maximum value in rgb is 1
-scaleFactor = max(rgbImage(:)); % save scale factor for later 
-rgbImage = rgbImage/scaleFactor;
-
-% Truncated version for gamma correction
-rgbImageTruncate = rgbImage;
-rgbImageTruncate(rgbImageTruncate < 0) = 0;
-
-% Gamma correct
-iGtable = displayGet(d,'inversegamma');
-RGBImage = rgb2dac(rgbImageTruncate,iGtable)/(2^displayGet(d,'dacsize')-1);
-
-% Transform to cal format
-RGBImageCalFormat = ImageToCalFormat(RGBImage);
-
-end
-
-%%%%%%% GO FROM RGB IMAGE TO LMS IMAGE %%%%%%%
-function lmsImage = RGB2LMSimg(RGBImage,d,T_cones,P_monitor,scaleFactor,m,n)
-
-% Reverse the gamma correction
-gammaTable = displayGet(d,'gammatable');
-rgbImage = dac2rgb(RGBImage, gammaTable)*(2^displayGet(d,'dacsize')-1);
-
-% Undo scaling and convert to LMS
-lmsImage = rgb2LMSimg(rgbImage,T_cones,P_monitor,scaleFactor,m,n);
-
-end
-
-function lmsImage = rgb2LMSimg(rgbImage,T_cones,P_monitor,scaleFactor,m,n)
-
-% Undo the scaling 
-rgbImage = rgbImage * scaleFactor;
-
-% Cal format
-rgbImageCalFormat = ImageToCalFormat(rgbImage);
-
-% lms image
-M_rgb2cones = T_cones*P_monitor;
-lmsImageCalFormat = M_rgb2cones * rgbImageCalFormat;
-
-lmsImage = CalFormatToImage(lmsImageCalFormat,m,n);
-end
-
-
-
