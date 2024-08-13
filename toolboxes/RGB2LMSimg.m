@@ -9,6 +9,6 @@ gammaTable = displayGet(d,'gammatable');
 rgbImage = dac2rgb(RGBImage, gammaTable)*(2^displayGet(d,'dacsize')-1);
 
 % Undo scaling and convert to LMS
-lmsImage = rgb2LMSimg(rgbImage,T_cones,P_monitor,scaleFactor,m,n);
+lmsImage = rgbLin2LMSimg(rgbImage,T_cones,P_monitor,scaleFactor,m,n);
 
 end

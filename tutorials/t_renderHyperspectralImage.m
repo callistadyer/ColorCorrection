@@ -1,7 +1,7 @@
 
 function t_renderHyperspectralImage(image,renderType)
 
-% function t_renderHyperspectralImage(image)
+% function t_renderHyperspectralImage(image,renderType)
 % Demonstrate how to read and then render a hyperspectral image.
 
 % Example images to use
@@ -79,8 +79,13 @@ switch (renderType)
 end
 
 % Get dichromat image for looking at
-[RGBImage_dichromatCalFormat,scaleFactor_di,rgbImage_dichromat] = LMS2RGBimg(dichromImageCalFormat,d,T_cones,P_monitor,m,n);
+[RGBImage_dichromatCalFormat,scaleFactor_di] = LMS2RGBimg(dichromImageCalFormat,d,T_cones,P_monitor,m,n);
 RGBImage_dichromat = CalFormatToImage(RGBImage_dichromatCalFormat,m,n);
+
+% Get dichromat image for comparing lms values
+[rgbImage_dichromatCalFormat,scaleFactor_di] = LMS2rgbLinimg(dichromImageCalFormat,d,T_cones,P_monitor,m,n);
+rgbImage_dichromat = CalFormatToImage(rgbImage_dichromatCalFormat,m,n);
+
 % Show the trichromatic image and the dichromatic image
 figure('position',[896         896        1152         363]); 
 subplot(1,2,1);
