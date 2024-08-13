@@ -9,7 +9,7 @@
 clear; close all
 
 %% Load hyperspectral image data 
-defaultImage = true;
+defaultImage = false;
 if (defaultImage)
     % This image comes with ISETBio.
     scene = sceneFromFile('StuffedAnimals_tungsten-hdrs','multispectral');
@@ -42,42 +42,34 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
 [RGBImage_trichromat,scaleFactor_tri]  = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
 
-
 %%% Testing different constant values of m-cone (or other missing cone)
 % alpha        = linspace(0,1,20);
 % mCones       = lmsImageCalFormat(2,:);
 % contrast     = (mCones - mean(mCones)) ./ mean(mCones);
 % contrast_new = alpha' .* contrast;
 % m_new        = (contrast_new .* mean(mCones)) + mean(mCones);
-
 l_cone = lmsImageCalFormat(1,:);
 m_cone = lmsImageCalFormat(2,:);
 s_cone = lmsImageCalFormat(3,:);
 
-renderType = 'Deuteranopia';
-if strcmp(renderType, 'Deuteranopia')
+renderType = 'Tritanopia';
+dichromImageCalFormat = lmsImageCalFormat;
+deuterMLScale = 0.65;
+protoLMScale = 1/0.65;
+tritanSMScale = 0.25;
+switch (renderType)
+    case 'Deuteranopia'
+        dichromImageCalFormat(2,:)  =  deuterMLScale *l_cone; % replace M cones with L cone
+    case 'Protanopia'
+        dichromImageCalFormat(1,:)  = protoLMScale*m_cone; % replace L cones with M cone
+    case 'Tritanopia'
+        dichromImageCalFormat(3,:)  = tritanSMScale*(m_cone + deuterMLScale*l_cone)/2; % replace S cones with M cone
+end
 
-    % % use this to test different values for missing cone
-    % for i = 1:size(m_new,1)
-    % lmsImageCalFormat(2,:) = m_new(i);
-    % RGBImage_dichromat(:,:,:,i) = RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
-    % end
+% Get dichromat image for looking at
+[RGBImage_dichromat,scaleFactor_di,rgbImage_dichromat] = LMS2RGBimg(dichromImageCalFormat,d,T_cones,P_monitor,m,n);
 
-    % lmsImageCalFormat(2,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(3,:)],"all");
-
-lmsImageCalFormat(2,:)  = l_cone; % replace M cones with L cone mean
-elseif strcmp(renderType, 'Protanopia')
-lmsImageCalFormat(1,:)  = m_cone; % replace L cones with M cone mean
-elseif strcmp(renderType, 'Tritanopia')
-% lmsImageCalFormat(3,:) = mean([lmsImageCalFormat(1,:),lmsImageCalFormat(2,:)],"all");    
-lmsImageCalFormat(3,:)  = m_cone; % replace S cones with M cone mean
-end  
-
-% get dichromat image
-[RGBImage_dichromat,scaleFactor_di] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
-
-% for i = 1:size(m_new,1) 
-%%%%%%%%%%%% SHOW THE RENDERED DICHROMAT IMAGE %%%%%%%%%%%%
+% Show the trichromatic image and the dichromatic image
 figure('position',[896         896        1152         363]); 
 subplot(1,2,1);
 imshow(RGBImage_trichromat);    % TRICHROMAT
@@ -86,33 +78,43 @@ title('Trichromat rendering');
 subplot(1,2,2);
 imshow(RGBImage_dichromat);     % DICHROMAT
 title([renderType ' rendering']);
-% title([renderType ' rendering: alpha = ' num2str(round(alpha(i),3)) ' constant = ' num2str(round(m_new(i),4))]);
-% end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Check by reversing RGB to LMS image
-LMSimage_trichromat = T_cones*hyperspectralImageCalFormat;
-LMSimage_dichromat  = RGB2LMSimg(RGBImage_dichromat,d,T_cones,P_monitor,scaleFactor_di,m,n); % try to exactly reverse LMS2RGBimg
+lmsImageDichromatFromrgbCalFormat = rgb2LMSimg(rgbImage_dichromat,T_cones,P_monitor,scaleFactor_di);
+lmsImageDichromatFromRGBCalFormat  = RGB2LMSimg(RGBImage_dichromat,d,T_cones,P_monitor,scaleFactor_di); 
 
 %%% SCATTER PLOTS OF DESIRED VS RECOVERED LMS VALUES %%%
-figure('position',[743         503        1632         476]);
-subplot(1,3,1)
-scatter(LMSimage_trichromat(1,:),LMSimage_dichromat(1,:),'red','Marker','.','LineWidth',2)
-xlabel('desired L'); ylabel('recovered L'); title('L');
-axis square;
-subplot(1,3,2)
-scatter(LMSimage_trichromat(2,:),LMSimage_dichromat(2,:),'green','Marker','.','LineWidth',2)
-xlabel('desired M'); ylabel('recovered M'); title('M');
-axis square;
-subplot(1,3,3)
-scatter(LMSimage_trichromat(3,:),LMSimage_dichromat(3,:),'blue','Marker','.','LineWidth',2)
-xlabel('desired S'); ylabel('recovered S'); title('S');
-axis square;
-sgtitle([renderType ' rendering and reversal: LMS values'])
+switch (renderType)
+    case 'Deuteranopia'
+        figure('position',[743         503        1200         1200]);
+        subplot(2,2,1)
+        scatter(lmsImageCalFormat(1,:),lmsImageDichromatFromRGBCalFormat(1,:),'red','Marker','.','LineWidth',2)
+        xlabel('desired L'); ylabel('recovered from RGB L'); title('L from RGB');
+        axis square;
+        
+        subplot(2,2,2)
+        scatter(lmsImageCalFormat(3,:),lmsImageDichromatFromRGBCalFormat(3,:),'blue','Marker','.','LineWidth',2)
+        xlabel('desired S'); ylabel('recovered from RGB S'); title('S from RGB');
+        axis square;
 
+        subplot(2,2,3)
+        scatter(lmsImageCalFormat(1,:),lmsImageDichromatFromrgbCalFormat(1,:),'red','Marker','.','LineWidth',2)
+        xlabel('desired L'); ylabel('recovered from rgb L'); title('L from rgb');
+        axis square;
+        
+        subplot(2,2,4)
+        scatter(lmsImageCalFormat(3,:),lmsImageDichromatFromrgbCalFormat(3,:),'blue','Marker','.','LineWidth',2)
+        xlabel('desired S'); ylabel('recovered from rgb S'); title('S from rgb');
+        axis square;
+
+        sgtitle([renderType ' rendering and reversal: L and S values'])
+    case 'Protanopia'
+    case 'Tritanopia'
+
+end
 
 %%%%%%% GO FROM LMS IMAGE TO RGB IMAGE %%%%%%%
-function [RGBImage,scaleFactor] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n)
+function [RGBImage,scaleFactor,rgbImage] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n)
 
 % Build matrix that goes from cones to monitor linear rgb
 M_rgb2cones = T_cones*P_monitor;
@@ -125,33 +127,43 @@ rgbImage = CalFormatToImage(rgbImageCalFormat,m,n);
 % For right now, normalize so that maximum value in rgb is 1
 scaleFactor = max(rgbImage(:)); % save scale factor for later 
 rgbImage = rgbImage/scaleFactor;
-rgbImage(rgbImage < 0) = 0;
+
+% Truncated version for gamma correction
+rgbImageTruncate = rgbImage;
+rgbImageTruncate(rgbImageTruncate < 0) = 0;
 
 % Gamma correct
-gammaTable = displayGet(d,'gammatable');
+%gammaTable = displayGet(d,'gammatable');
 iGtable = displayGet(d,'inversegamma');
-RGBImage = rgb2dac(rgbImage,iGtable)/(2^displayGet(d,'dacsize')-1);
+RGBImage = rgb2dac(rgbImageTruncate,iGtable)/(2^displayGet(d,'dacsize')-1);
 
 end
 
 %%%%%%% GO FROM RGB IMAGE TO LMS IMAGE %%%%%%%
-function lmsImageCalFormat = RGB2LMSimg(RGBImage,d,T_cones,P_monitor,scaleFactor,m,n)
+function lmsImageCalFormat = RGB2LMSimg(RGBImage,d,T_cones,P_monitor,scaleFactor)
 
-% reverse the gamma correction
+% Reverse the gamma correction
 gammaTable = displayGet(d,'gammatable');
-rgbImg = dac2rgb(RGBImage, gammaTable)*(2^displayGet(d,'dacsize')-1);
+rgbImage = dac2rgb(RGBImage, gammaTable)*(2^displayGet(d,'dacsize')-1);
 
-% undo the scaling 
-rgbImg = rgbImg * scaleFactor;
+% Undo scaling and convert to LMS
+lmsImageCalFormat = rgb2LMSimg(rgbImage,T_cones,P_monitor,scaleFactor);
 
-% cal format
-rgbImageCalFormat = ImageToCalFormat(rgbImg);
+end
+
+function lmsImageCalFormat = rgb2LMSimg(rgbImage,T_cones,P_monitor,scaleFactor)
+
+% Undo the scaling 
+rgbImage = rgbImage * scaleFactor;
+
+% Cal format
+rgbImageCalFormat = ImageToCalFormat(rgbImage);
 
 % lms image
 M_rgb2cones = T_cones*P_monitor;
 lmsImageCalFormat = M_rgb2cones * rgbImageCalFormat;
 
-
 end
+
 
 
