@@ -20,16 +20,30 @@ if isempty(image)
     % This image comes with ISETBio.
     scene = sceneFromFile('StuffedAnimals_tungsten-hdrs','multispectral');
     scene = sceneSet(scene,'fov',2);
-% else
-%     % This will work if you are in the Brainard Lab and have the
-%     % HyperspectralSceneTutorial folder on your lab dropbox path.
-%     dropboxDirPath = localDropboxDir();
-%     scenesDir = fullfile(dropboxDirPath, 'HyperspectralSceneTutorial', 'resources', 'manchester_database', '2004');
-%     load(fullfile(scenesDir, 'scene3.mat'), 'scene');
+    hyperspectralImage = sceneGet(scene,'energy');
+elseif strcmp(image,'gray')
+    scene = sceneFromFile('StuffedAnimals_tungsten-hdrs','multispectral');
+    scene = sceneSet(scene,'fov',2);
+
+    % Get some monitor primaries
+    wls = sceneGet(scene,'wave');
+    d = displayCreate('LCD-Apple');
+    P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
+
+    % Create gray hyperspectral image
+    % 256 x 256 gray image
+    [grayImgCalFormat,m,n] = ImageToCalFormat(ones(256,256));
+    grayImgCalFormat = (0.5.*(repmat(grayImgCalFormat,3,1)));
+    grayImgrgb          = CalFormatToImage(grayImgCalFormat,m,n);
+    hyperspecGrayCalFormat = P_monitor * grayImgCalFormat;
+    hyperspectralImage = CalFormatToImage(hyperspecGrayCalFormat,m,n);
 else
+    % This will work if you are in the Brainard Lab and have the
+    % HyperspectralSceneTutorial folder on your lab dropbox path.
     dropboxDirPath = localDropboxDir();
     scenesDir = fullfile(dropboxDirPath, 'HyperspectralSceneTutorial', 'resources', 'manchester_database', '2004');
     load(fullfile(scenesDir, image), 'scene');
+    hyperspectralImage = sceneGet(scene,'energy');
 end
 
 % call function that creates isochromatic plates
@@ -37,7 +51,6 @@ end
 
 % Get the wavelength sampling and the actual hyperspectral image data in energy units.
 wls = sceneGet(scene,'wave');
-hyperspectralImage = sceneGet(scene,'energy');
 clear scene
 
 % Get cone spectral sensitivities
@@ -47,6 +60,9 @@ T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
 % Get some monitor primaries
 d = displayCreate('LCD-Apple');
 P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
+
+
+
 
 % Get cone responses for every pixel of the hyperspectral image
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
@@ -100,7 +116,7 @@ rgbImage_dichromat = CalFormatToImage(rgbImage_dichromatCalFormat,m,n);
 % Show the trichromatic image and the dichromatic image
 figure('position',[ 896         364        1231         883]); 
 subplot(2,2,1);
-imshow(RGBImage_trichromat);    % TRICHROMAT
+imshow(RGBImage_trichromat);    % TRICHROMAT   %% why is this showing up white? 
 title('Trichromat rendering - no modulation','FontSize',20);
 
 subplot(2,2,3);

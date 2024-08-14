@@ -1,29 +1,54 @@
 function [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(img,renderType,deltaModulation)
 
-% isochromaticPlates([],'Deuteranopia',.0005)
-% scene = 0.5 * ones(256, 256);
-% scene = sceneSet(scene,'fov',2);
-% hyperspectralGrayImage = sceneGet(scene,'energy');
+% function create isochromatic plates for testing dichromacy
+% Example call: [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates([],'Deuteranopia',.0005)
 
 if isempty(img)
+    % Default scenes
     sceneImg = sceneFromFile('StuffedAnimals_tungsten-hdrs','multispectral');
     scene = sceneSet(sceneImg,'fov',2);
+    hyperspectralImage = sceneGet(scene,'energy');
+
+    % Get wavelengths from scene
+    wls = sceneGet(scene,'wave');
+    % Get some monitor primaries
+    d = displayCreate('LCD-Apple');
+    P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
+elseif strcmp(img,'gray')
+    % Need to call this scene to grab its primaries
+    sceneImg = sceneFromFile('StuffedAnimals_tungsten-hdrs','multispectral');
+    scene = sceneSet(sceneImg,'fov',2);
+    % Get wavelengths for creating primaries
+    wls = sceneGet(scene,'wave');
+    % Get some monitor primaries
+    d = displayCreate('LCD-Apple');
+    P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
+
+    % Create gray hyperspectral image
+    % 256 x 256 gray image
+    [grayImgCalFormat,m,n] = ImageToCalFormat(ones(256,256));
+    grayImgCalFormat = (0.5.*(repmat(grayImgCalFormat,3,1)));
+    grayImgrgb          = CalFormatToImage(grayImgCalFormat,m,n);
+    hyperspecGrayCalFormat = P_monitor * grayImgCalFormat;
+    hyperspectralImage = CalFormatToImage(hyperspecGrayCalFormat,m,n);
 else
+    % Choose scene from manchester database of hyperspectral scenes
     dropboxDirPath = localDropboxDir();
     scenesDir = fullfile(dropboxDirPath, 'HyperspectralSceneTutorial', 'resources', 'manchester_database', '2004');
     load(fullfile(scenesDir, img), 'scene');
+    hyperspectralImage = sceneGet(scene,'energy');
+
+    % Get wavelengths from scene
+    wls = sceneGet(scene,'wave');
+    % Get some monitor primaries
+    d = displayCreate('LCD-Apple');
+    P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 end
 
-wls = sceneGet(scene,'wave');
-hyperspectralImage = sceneGet(scene,'energy');
 
 % Get cone spectral sensitivities
 load T_cones_ss2;
 T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
-
-% Get some monitor primaries
-d = displayCreate('LCD-Apple');
-P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
 % Get LMS values
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
@@ -47,7 +72,7 @@ switch (renderType)
 end
 
 % carve out an image where there is 0s everywhere except the delta 
-delta = plateO(size(slice_lms),deltaModulation,200);
+delta = plateO(size(slice_lms),deltaModulation,100);
 % add the delta to the L M or S values to modulate one cone type
 new_slice = slice_lms + delta;
 % redefine that L M or S cone values
