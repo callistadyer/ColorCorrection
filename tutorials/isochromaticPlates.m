@@ -1,7 +1,11 @@
 function [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(img,renderType,deltaModulation)
 
 % function create isochromatic plates for testing dichromacy
-% Example call: [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates([],'Deuteranopia',.0005)
+
+% Examples:
+%{
+    [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates('gray','Deuteranopia',.0005);
+%}
 
 if isempty(img)
     % Default scenes

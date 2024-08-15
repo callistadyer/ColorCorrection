@@ -5,12 +5,15 @@ function t_renderHyperspectralImage(image,renderType,bPLOTscatter)
 % Demonstrate how to read and then render a hyperspectral image.
 
 % Example images to use
-% t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0)
-% t_renderHyperspectralImage('scene2.mat','Deuteranopia',0)
-% t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0)
-% t_renderHyperspectralImage('scene4.mat','Deuteranopia',0)
-% t_renderHyperspectralImage('scene5.mat','Deuteranopia',0)
-% t_renderHyperspectralImage('gray','Deuteranopia',0)
+%{
+t_renderHyperspectralImage([],'Deuteranopia'  ,0)
+t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0)
+t_renderHyperspectralImage('scene2.mat','Deuteranopia',0)
+t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0)
+t_renderHyperspectralImage('scene4.mat','Deuteranopia',0)
+t_renderHyperspectralImage('scene5.mat','Deuteranopia',0)
+t_renderHyperspectralImage('gray','Deuteranopia',0)
+%}
 
 % History
 %   07/30/2024  dhb, cmd  Initial go.
