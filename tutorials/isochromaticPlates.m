@@ -15,22 +15,25 @@ if isempty(img)
     d = displayCreate('LCD-Apple');
     P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 elseif strcmp(img,'gray')
-    % Need to call this scene to grab its primaries
-    sceneImg = sceneFromFile('StuffedAnimals_tungsten-hdrs','multispectral');
-    scene = sceneSet(sceneImg,'fov',2);
-    % Get wavelengths for creating primaries
-    wls = sceneGet(scene,'wave');
+    % Grab a scene to define primaries
+    scene = sceneFromFile('StuffedAnimals_tungsten-hdrs','multispectral');
+    scene = sceneSet(scene,'fov',2);
+
     % Get some monitor primaries
+    wls = sceneGet(scene,'wave');
     d = displayCreate('LCD-Apple');
     P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
     % Create gray hyperspectral image
     % 256 x 256 gray image
     [grayImgCalFormat,m,n] = ImageToCalFormat(ones(256,256));
-    grayImgCalFormat = (0.5.*(repmat(grayImgCalFormat,3,1)));
-    grayImgrgb          = CalFormatToImage(grayImgCalFormat,m,n);
+    % Gray 0.5 rgb at each pixel in image 
+    grayImgCalFormat       = (0.5.*(repmat(grayImgCalFormat,3,1)));
+    grayImgrgb             = CalFormatToImage(grayImgCalFormat,m,n);
+    % Make hyperspectral img by multiplying primaries * rgb values at each pixel 
     hyperspecGrayCalFormat = P_monitor * grayImgCalFormat;
-    hyperspectralImage = CalFormatToImage(hyperspecGrayCalFormat,m,n);
+    % Image format
+    hyperspectralImage     = CalFormatToImage(hyperspecGrayCalFormat,m,n);
 else
     % Choose scene from manchester database of hyperspectral scenes
     dropboxDirPath = localDropboxDir();
