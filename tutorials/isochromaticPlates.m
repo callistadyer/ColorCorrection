@@ -79,7 +79,9 @@ switch (renderType)
 end
 
 % carve out an image where there is 0s everywhere except the delta 
-delta = plateO(size(slice_lms),deltaModulation,100);
+% delta = plateO(size(slice_lms),deltaModulation,100);
+delta = plateSquare(size(slice_lms),deltaModulation,100);
+
 % add the delta to the L M or S values to modulate one cone type
 new_slice = slice_lms + delta;
 % redefine that L M or S cone values
