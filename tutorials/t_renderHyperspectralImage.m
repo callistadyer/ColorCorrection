@@ -55,7 +55,7 @@ else
 end
 
 % Create isochromatic plates
-[RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(image,renderType,.0005,bScale);
+[RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(image,renderType,.0004,bScale);
 
 % Get the wavelength sampling and the actual hyperspectral image data in energy units.
 wls = sceneGet(scene,'wave');
@@ -89,28 +89,34 @@ l_cone = lmsImageCalFormat(1,:);
 m_cone = lmsImageCalFormat(2,:);
 s_cone = lmsImageCalFormat(3,:);
 
+% NOTE WELL:
+% To get the renderings to look right, we are using the mean value of
+% at the missing cone plane to get the scale of our substitution
+% right.  Presumably this could be done once by analyzing a full ensemble
+% of images, but we are going to worry about that later.
 dichromImageCalFormat = lmsImageCalFormat;
-deuterMLScale = 0.65;
-protoLMScale  = 1/0.65;
-tritanSMScale = 0.25;
+deuterMFromLScale = mean(m_cone)/mean(l_cone);
+protoLFromMScale  = mean(l_cone)/mean(m_cone);
+tritanSFromMScale = mean(s_cone)/mean(m_cone); 
+tritanSFromLScale = mean(s_cone)/mean(l_cone);
 
 % Make dichromat manipulation - missing cone
 switch (renderType)
     case 'Deuteranopia' % m cone deficiency
         % lms values of image + isochromatic plate 
-        lms_ModuledCalFormat(2,:)       =  deuterMLScale *l_cone; % replace M cones with L cone PLATE
+        lms_ModuledCalFormat(2,:)       =  deuterMFromLScale *l_cone; % replace M cones with L cone PLATE
         % lms values of image
-        dichromImageCalFormat(2,:)      =  deuterMLScale *l_cone; % replace M cones with L cone
+        dichromImageCalFormat(2,:)      =  deuterMFromLScale *l_cone; % replace M cones with L cone
     case 'Protanopia'   % l cone deficiency
         % lms values of image + isochromatic plate 
-        lms_ModuledCalFormat(1,:)       = protoLMScale*m_cone; % replace L cones with M cone PLATE
+        lms_ModuledCalFormat(1,:)       = protoLFromMScale*m_cone; % replace L cones with M cone PLATE
         % lms values of image
-        dichromImageCalFormat(1,:)      = protoLMScale*m_cone; % replace L cones with M cone
+        dichromImageCalFormat(1,:)      = protoLFromMScale*m_cone; % replace L cones with M cone
     case 'Tritanopia'   % s cone deficiency
         % lms values of image + isochromatic plate 
-        lms_ModuledCalFormat(3,:)       = tritanSMScale*(m_cone + deuterMLScale*l_cone)/2; % replace S cones with M cone PLATE
+        lms_ModuledCalFormat(3,:)       = (tritanSFromMScale*m_cone + tritanSFromLScale*l_cone)/2; % replace S cones with M cone PLATE
         % lms values of image
-        dichromImageCalFormat(3,:)      = tritanSMScale*(m_cone + deuterMLScale*l_cone)/2; % replace S cones with M cone
+        dichromImageCalFormat(3,:)      = (tritanSFromMScale*m_cone + tritanSFromLScale*l_cone)/2; % replace S cones with M cone
 end
 
 % Get dichromat image for looking at

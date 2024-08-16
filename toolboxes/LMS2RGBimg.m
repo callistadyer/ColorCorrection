@@ -13,9 +13,11 @@ rgbImageCalFormat = M_cones2rgb*lmsImageCalFormat;
 rgbImage = CalFormatToImage(rgbImageCalFormat,m,n);
 
 if bScale == 1
-% For right now, normalize so that maximum value in rgb is 1
-scaleFactor = max(rgbImage(:)); % save scale factor for later 
-rgbImage = rgbImage/scaleFactor;
+    % For right now, normalize so that maximum value in rgb is 1
+    scaleFactor = max(rgbImage(:)); % save scale factor for later
+    rgbImage = rgbImage/scaleFactor;
+else
+    scaleFactor = 1;
 end
 
 % Truncated version for gamma correction

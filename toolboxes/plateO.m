@@ -6,7 +6,7 @@ image = zeros(imgSz);
 % Define the center and base radius of the circle
 centerX = imgSz(1) / 2;
 centerY = imgSz(2) / 2;
-noiseLevel = 30; % Noise level
+noiseLevel = 0; % Noise level (try 30 for a fuzzy looking version)
 
 % Loop through each pixel in the image
 for x = 1:imgSz(1)
