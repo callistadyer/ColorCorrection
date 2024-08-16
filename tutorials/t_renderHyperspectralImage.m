@@ -1,18 +1,18 @@
 
-function t_renderHyperspectralImage(image,renderType,bPLOTscatter)
+function t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale)
 
 % function t_renderHyperspectralImage(image,renderType)
 % Demonstrate how to read and then render a hyperspectral image.
 
 % Example images to use
 %{
-t_renderHyperspectralImage([],'Deuteranopia'  ,0)
-t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0)
-t_renderHyperspectralImage('scene2.mat','Deuteranopia',0)
-t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0)
-t_renderHyperspectralImage('scene4.mat','Deuteranopia',0)
-t_renderHyperspectralImage('scene5.mat','Deuteranopia',0)
-t_renderHyperspectralImage('gray','Deuteranopia',0)
+t_renderHyperspectralImage([],'Deuteranopia'  ,0,1)
+t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0,1)
+t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1)
+t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1)
+t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1)
+t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1)
+t_renderHyperspectralImage('gray','Deuteranopia',0,0)
 %}
 
 % History
@@ -55,7 +55,7 @@ else
 end
 
 % Create isochromatic plates
-[RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(image,renderType,.0005);
+[RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(image,renderType,.0005,bScale);
 
 % Get the wavelength sampling and the actual hyperspectral image data in energy units.
 wls = sceneGet(scene,'wave');
@@ -74,7 +74,7 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
 % Render lms image that a trichromat or dichromat sees
 lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
-[RGBImageCalFormat_trichromat,scaleFactor_tri] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+[RGBImageCalFormat_trichromat,scaleFactor_tri] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
 
 % RGB Image format
 RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
@@ -114,8 +114,8 @@ switch (renderType)
 end
 
 % Get dichromat image for looking at
-[RGBImage_dichromatCalFormat,scaleFactor_di]       = LMS2RGBimg(dichromImageCalFormat,d,T_cones,P_monitor,m,n); % no modulation
-[RGBPlate_dichromatCalFormat,scaleFactor_di_plate] = LMS2RGBimg(lms_ModuledCalFormat, d,T_cones,P_monitor,m,n); % isochromatic plate 
+[RGBImage_dichromatCalFormat,scaleFactor_di]       = LMS2RGBimg(dichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale); % no modulation
+[RGBPlate_dichromatCalFormat,scaleFactor_di_plate] = LMS2RGBimg(lms_ModuledCalFormat, d,T_cones,P_monitor,m,n,bScale); % isochromatic plate 
 
 % Convert to image from cal format
 RGBImage_dichromat          = CalFormatToImage(RGBImage_dichromatCalFormat,m,n); % no modulation
@@ -142,13 +142,13 @@ title([renderType ' rendering - plate'],'FontSize',20);
 if bPLOTscatter == 1
 
     % Get dichromat image for comparing lms values
-    [rgbImage_dichromatCalFormat,scaleFactor_di] = LMS2rgbLinimg(dichromImageCalFormat,d,T_cones,P_monitor,m,n);
+    [rgbImage_dichromatCalFormat,scaleFactor_di] = LMS2rgbLinimg(dichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
     rgbImage_dichromat                           = CalFormatToImage(rgbImage_dichromatCalFormat,m,n);
 
     % Check by reversing RGB to LMS image
-    lmsImageDichromatFromrgb          = rgbLin2LMSimg(rgbImage_dichromat,T_cones,P_monitor,scaleFactor_di,m,n);
+    lmsImageDichromatFromrgb          = rgbLin2LMSimg(rgbImage_dichromat,T_cones,P_monitor,scaleFactor_di,m,n,bScale);
     lmsImageDichromatFromrgbCalFormat = ImageToCalFormat(lmsImageDichromatFromrgb);
-    lmsImageDichromatFromRGB          = RGB2LMSimg(RGBImage_dichromat,d,T_cones,P_monitor,scaleFactor_di,m,n);
+    lmsImageDichromatFromRGB          = RGB2LMSimg(RGBImage_dichromat,d,T_cones,P_monitor,scaleFactor_di,m,n,bScale);
     lmsImageDichromatFromRGBCalFormat = ImageToCalFormat(lmsImageDichromatFromRGB);
 
     %%% SCATTER PLOTS OF DESIRED VS RECOVERED LMS VALUES %%%

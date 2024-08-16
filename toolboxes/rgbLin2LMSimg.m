@@ -1,11 +1,13 @@
-function lmsImage = rgbLin2LMSimg(rgbImage,T_cones,P_monitor,scaleFactor,m,n)
+function lmsImage = rgbLin2LMSimg(rgbImage,T_cones,P_monitor,scaleFactor,m,n,bScale)
 
 % function takes rgb image in image format and outputs LMS image in image format 
 % 
 % 
 
+if bScale == 1
 % Undo the scaling 
 rgbImage = rgbImage * scaleFactor;
+end
 
 % Cal format
 rgbImageCalFormat = ImageToCalFormat(rgbImage);

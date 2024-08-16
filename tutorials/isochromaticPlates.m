@@ -1,10 +1,10 @@
-function [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(img,renderType,deltaModulation)
+function [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(img,renderType,deltaModulation,bScale)
 
 % function create isochromatic plates for testing dichromacy
 
 % Examples:
 %{
-    [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates('gray','Deuteranopia',.0005);
+    [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates('gray','Deuteranopia',.0005,0);
 %}
 
 if isempty(img)
@@ -63,7 +63,7 @@ lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
 lmsImage          = CalFormatToImage(lmsImageCalFormat,m,n);
 
 % get original image
-RGB_CalFormat     = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n);
+RGB_CalFormat     = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
 RGB_img           = CalFormatToImage(RGB_CalFormat,m,n);
 
 switch (renderType)
@@ -88,7 +88,7 @@ lmsImage(:,:,idxLMS) = new_slice;
 % turn lmsImage to cal format so you can convert to RGB
 lms_ModuledCalFormat = ImageToCalFormat(lmsImage);
 % convert to RGB
-RGB_modulatedCalFormat = LMS2RGBimg(lms_ModuledCalFormat,d,T_cones,P_monitor,m,n);
+RGB_modulatedCalFormat = LMS2RGBimg(lms_ModuledCalFormat,d,T_cones,P_monitor,m,n,bScale);
 % convert to image for viewing
 RGB_modulated = CalFormatToImage(RGB_modulatedCalFormat,m,n);
 
