@@ -74,7 +74,7 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
 % Render lms image that a trichromat or dichromat sees
 lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
-[RGBImageCalFormat_trichromat,scaleFactor_tri] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
+[RGBImageCalFormat_trichromat] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
 
 % RGB Image format
 RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
@@ -124,7 +124,7 @@ RGBPlate_dichromat          = CalFormatToImage(RGBPlate_dichromatCalFormat,m,n);
 % Show the trichromatic image, dichromatic image, and trichromatic plate, dichromatic plate
 figure('position',[ 896         364        1231         883]); 
 subplot(2,2,1);
-imshow(RGBImage_trichromat);    % TRICHROMAT   %% why is this showing up white? 
+imshow(RGBImage_trichromat);    % TRICHROMAT  
 title('Trichromat rendering - no modulation','FontSize',20);
 
 subplot(2,2,3);
@@ -136,7 +136,7 @@ imshow(RGBImage_dichromat);     % DICHROMAT
 title([renderType ' rendering - no modulation'],'FontSize',20);
 
 subplot(2,2,4);
-imshow(RGBPlate_dichromat);     % DICHROMAT PLATE
+imshow(RGBPlate_dichromat);     % DICHROMAT PLATE 
 title([renderType ' rendering - plate'],'FontSize',20);
 
 if bPLOTscatter == 1
