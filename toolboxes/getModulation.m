@@ -1,5 +1,8 @@
 function modulation = getModulation(rgbImageCalFormat,renderType,m,n)
 
+% function that calculates the modulation in the L M or S cone based on the
+% input image and the gamut limitations
+
 % Which cone do you want to modulate
 switch (renderType)
     case 'Deuteranopia' % m cone deficiency
