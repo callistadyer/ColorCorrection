@@ -17,7 +17,11 @@ for x = 1:imgSz(1)
         % If the distance is within the noisy radius range, set the pixel
         % to modulation value
         if distanceX < halfSideLength && distanceY < halfSideLength
-            image(x, y) = modulation;
+            if size(modulation,1) > 1 || size(modulation,2) > 1
+                image(x, y) = modulation(x,y);
+            else
+                image(x, y) = modulation;
+            end
         end
     end
 end

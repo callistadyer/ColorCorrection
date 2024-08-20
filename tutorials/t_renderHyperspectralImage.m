@@ -54,9 +54,6 @@ else
     hyperspectralImage = sceneGet(scene,'energy');
 end
 
-% Create isochromatic plates
-[RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(image,renderType,.0004,bScale);
-
 % Get the wavelength sampling and the actual hyperspectral image data in energy units.
 wls = sceneGet(scene,'wave');
 clear scene
@@ -72,12 +69,21 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 % Get cone responses for every pixel of the hyperspectral image
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
 
-% Render lms image that a trichromat or dichromat sees
+% Render lms image that a trichromat sees
 lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
 [RGBImageCalFormat_trichromat] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
 
 % RGB Image format
 RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
+
+% Get original image into rgb so you can maximize gamut contrast
+[rgbImageCalFormat,~] = LMS2rgbLinimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
+
+% Get modulation
+modulation = getModulation(rgbImageCalFormat,renderType,modulationDirection,m,n);
+
+% Create isochromatic plates
+[RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(image,renderType,modulation,bScale);
 
 %%% Testing different constant values of m-cone (or other missing cone)
 % alpha        = linspace(0,1,20);
