@@ -52,7 +52,6 @@ else
     P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 end
 
-
 % Get cone spectral sensitivities
 load T_cones_ss2;
 T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
