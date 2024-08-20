@@ -80,7 +80,7 @@ RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 [rgbImageCalFormat,~] = LMS2rgbLinimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
 
 % Get modulation
-modulation = getModulation(rgbImageCalFormat,renderType,modulationDirection,m,n);
+modulation = getModulation(rgbImageCalFormat,renderType,m,n);
 
 % Create isochromatic plates
 [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(image,renderType,modulation,bScale);

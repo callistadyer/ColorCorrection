@@ -1,4 +1,4 @@
-function modulation = getModulation(rgbImageCalFormat,renderType,modulationDirection)
+function modulation = getModulation(rgbImageCalFormat,renderType,m,n)
 
 % Which cone do you want to modulate
 switch (renderType)
@@ -16,13 +16,13 @@ for i = 1:size(rgbImageCalFormat,2)
 end
 
 % Use these two lines to use the same modulation for all pixels... will need to take the minimum mod of all 
-nonzeroMod = modulation(modulation>0);  % modulations above 0 
-modulation = min(nonzeroMod(:));        % minimum modulation of all pixels
+% nonzeroMod = modulation(modulation>0);  % modulations above 0 
+% modulation = min(nonzeroMod(:));        % minimum modulation of all pixels
 
 % If there is more than 1 value for the modulation (ie. different for each pixel) 
-% if size(modulation,1) > 1 || size(modulation,2) > 1
-%     modulation = CalFormatToImage(modulation,m,n);
-% end
+if size(modulation,1) > 1 || size(modulation,2) > 1
+    modulation = CalFormatToImage(modulation,m,n);
+end
 
 
 
