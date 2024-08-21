@@ -6,13 +6,13 @@ function t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale)
 
 % Example images to use
 %{
-t_renderHyperspectralImage([],'Deuteranopia'  ,0,1)
-t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0,1)
-t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1)
-t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1)
-t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1)
-t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1)
-t_renderHyperspectralImage('gray','Deuteranopia',0,0)
+t_renderHyperspectralImage([],'Deuteranopia'  ,0,1)            % doesn't seem to show anything? 
+t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0,1)    % weird bright red square - natural? 
+t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1)    % believable but darkened img 
+t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1)    % doesn't seem to show anything?
+t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1)    % doesn't seem to show anything? 
+t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1)    % doesn't seem to show anything? 
+t_renderHyperspectralImage('gray','Deuteranopia',0,0)          % breaking
 %}
 
 % History
