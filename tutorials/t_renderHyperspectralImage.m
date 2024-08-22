@@ -1,5 +1,5 @@
 
-function t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale)
+function t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod)
 
 % function t_renderHyperspectralImage(image,renderType)
 % Demonstrate how to read and then render a hyperspectral image.
@@ -9,11 +9,22 @@ function t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale)
 t_renderHyperspectralImage([],'Deuteranopia'  ,0,1)            % doesn't seem to show anything? 
 t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0,1)    % weird bright red square - natural? 
 t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1)    % believable but darkened img 
-t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1)    % doesn't seem to show anything?
-t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1)    % doesn't seem to show anything? 
-t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1)    % doesn't seem to show anything? 
+t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1)    % nothing if min, but maybe if each pix diff   
+t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1)    % nothing if min, but maybe if each pix diff
+t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1)    % nothing if min, but maybe if each pix diff
 t_renderHyperspectralImage('gray','Deuteranopia',0,0)          % breaking
 %}
+
+% Inputs
+% image:        image to be rendered
+% renderType:   type of dichromat
+%               Deuteranopia
+%               Protanopia
+%               Tritanopia
+% bPLOTscatter: plot scatter plots of lms values (1 or 0)
+% bScale:       scale the image values (1 or 0)
+% bMinMod:      when modulating the image in L M or S cone dimension, do this separately for each pixel (0)
+%               or take the minimum modulation for all pixels (1)
 
 % History
 %   07/30/2024  dhb, cmd  Initial go.
@@ -80,7 +91,7 @@ RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 [rgbImageCalFormat,~] = LMS2rgbLinimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
 
 % Get modulation
-modulation = getModulation(rgbImageCalFormat,renderType,m,n);
+modulation = getModulation(rgbImageCalFormat,renderType,bMinMod,m,n);
 
 % Create isochromatic plates
 [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(image,renderType,modulation,bScale);

@@ -1,4 +1,4 @@
-function modulation = getModulation(rgbImageCalFormat,renderType,m,n)
+function modulation = getModulation(rgbImageCalFormat,renderType,takeMin,m,n)
 
 % function that calculates the modulation in the L M or S cone based on the
 % input image and the gamut limitations
@@ -18,15 +18,15 @@ for i = 1:size(rgbImageCalFormat,2)
     modulation(i) = MaximizeGamutContrast(modulationDirection,rgbImageCalFormat(:,i)); % bg is in rgb cal format
 end
 
+if takeMin == 1
 % Use these two lines to use the same modulation for all pixels... will need to take the minimum mod of all 
 nonzeroMod = modulation(modulation>0);  % modulations above 0 
 modulation = min(nonzeroMod(:));        % minimum modulation of all pixels
+end
 
 % If there is more than 1 value for the modulation (ie. different for each pixel) 
 if size(modulation,1) > 1 || size(modulation,2) > 1
     modulation = CalFormatToImage(modulation,m,n);
 end
-
-
 
 end
