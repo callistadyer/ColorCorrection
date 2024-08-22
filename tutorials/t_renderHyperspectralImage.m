@@ -12,7 +12,7 @@ t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1)    % believable but 
 t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1)    % nothing if min, but maybe if each pix diff   
 t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1)    % nothing if min, but maybe if each pix diff
 t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1)    % nothing if min, but maybe if each pix diff
-t_renderHyperspectralImage('gray','Deuteranopia',0,0)          % breaking
+t_renderHyperspectralImage('gray','Deuteranopia',0,0,0)          % breaking
 %}
 
 % Inputs
