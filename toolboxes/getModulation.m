@@ -33,6 +33,9 @@ end
 % Convert modulation direction from LMS space to rgb space
 modulationDirection_rgb = M_cones2rgb*modulationDirection;
 
+% NOTE: this scaleFactor_rgb is for scaling the modulation direction. This
+% is different from scaleFactor that goes into rgb->LMS conversions (and
+% vice versa) which scales the image values to a sensible number
 % Background is the value of each pixel: this determines cone contrast separately for each pixel
 for i = 1:size(rgbImageCalFormat,2)
 scaleFactor_rgb(:,i) = MaximizeGamutContrast(modulationDirection_rgb,rgbImageCalFormat(:,i)); % bg is in rgb cal format
