@@ -6,13 +6,14 @@ function t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod
 
 % Example images to use
 %{
-t_renderHyperspectralImage([],'Deuteranopia'  ,0,1)            % doesn't seem to show anything? 
-t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0,1)    % weird bright red square - natural? 
-t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1)    % believable but darkened img 
-t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1)    % nothing if min, but maybe if each pix diff   
-t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1)    % nothing if min, but maybe if each pix diff
-t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1)    % nothing if min, but maybe if each pix diff
-t_renderHyperspectralImage('gray','Deuteranopia',0,0,0)          % breaking
+t_renderHyperspectralImage([],'Deuteranopia'  ,0,1,0)            % doesn't seem to show anything? 
+t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0,1,0)    
+t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1,0)    % believable but darkened img 
+t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1,0)    % nothing if min, but maybe if each pix diff   
+t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1,0)    % nothing if min, but maybe if each pix diff
+t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1,0)    
+there
+t_renderHyperspectralImage('gray','Deuteranopia',0,0,0)           
 %}
 
 % Inputs
@@ -88,13 +89,13 @@ lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
 RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 
 % Get original image into rgb so you can maximize gamut contrast
-[rgbImageCalFormat,~] = LMS2rgbLinimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
+[rgbImageCalFormat,scaleFactor] = LMS2rgbLinimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
 
-% Get modulation
-modulation = getModulation(rgbImageCalFormat,renderType,bMinMod,m,n);
+% Get modulation for isochromatic plate modulation
+lmsModulationImgFormat = getModulation(rgbImageCalFormat,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n);
 
 % Create isochromatic plates
-[RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(image,renderType,modulation,bScale);
+[RGBModulated lmsModuledCalFormat] = isochromaticPlates(image,renderType,lmsModulationImgFormat,bScale);
 
 %%% Testing different constant values of m-cone (or other missing cone)
 % alpha        = linspace(0,1,20);
@@ -121,24 +122,24 @@ tritanSFromLScale = mean(s_cone)/mean(l_cone);
 switch (renderType)
     case 'Deuteranopia' % m cone deficiency
         % lms values of image + isochromatic plate 
-        lms_ModuledCalFormat(2,:)       =  deuterMFromLScale *l_cone; % replace M cones with L cone PLATE
+        lmsModuledCalFormat(2,:)       =  deuterMFromLScale * l_cone; % replace M cones with L cone PLATE
         % lms values of image
-        dichromImageCalFormat(2,:)      =  deuterMFromLScale *l_cone; % replace M cones with L cone
+        dichromImageCalFormat(2,:)      =  deuterMFromLScale * l_cone; % replace M cones with L cone
     case 'Protanopia'   % l cone deficiency
         % lms values of image + isochromatic plate 
-        lms_ModuledCalFormat(1,:)       = protoLFromMScale*m_cone; % replace L cones with M cone PLATE
+        lmsModuledCalFormat(1,:)       = protoLFromMScale*m_cone; % replace L cones with M cone PLATE
         % lms values of image
         dichromImageCalFormat(1,:)      = protoLFromMScale*m_cone; % replace L cones with M cone
     case 'Tritanopia'   % s cone deficiency
         % lms values of image + isochromatic plate 
-        lms_ModuledCalFormat(3,:)       = (tritanSFromMScale*m_cone + tritanSFromLScale*l_cone)/2; % replace S cones with M cone PLATE
+        lmsModuledCalFormat(3,:)       = (tritanSFromMScale*m_cone + tritanSFromLScale*l_cone)/2; % replace S cones with M cone PLATE
         % lms values of image
         dichromImageCalFormat(3,:)      = (tritanSFromMScale*m_cone + tritanSFromLScale*l_cone)/2; % replace S cones with M cone
 end
 
 % Get dichromat image for looking at
 [RGBImage_dichromatCalFormat,scaleFactor_di]       = LMS2RGBimg(dichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale); % no modulation
-[RGBPlate_dichromatCalFormat,scaleFactor_di_plate] = LMS2RGBimg(lms_ModuledCalFormat, d,T_cones,P_monitor,m,n,bScale); % isochromatic plate 
+[RGBPlate_dichromatCalFormat,scaleFactor_di_plate] = LMS2RGBimg(lmsModuledCalFormat, d,T_cones,P_monitor,m,n,bScale); % isochromatic plate 
 
 % Convert to image from cal format
 RGBImage_dichromat          = CalFormatToImage(RGBImage_dichromatCalFormat,m,n); % no modulation
@@ -151,7 +152,7 @@ imshow(RGBImage_trichromat);    % TRICHROMAT
 title('Trichromat rendering - no modulation','FontSize',20);
 
 subplot(2,2,3);
-imshow(RGB_modulated);          % TRICHROMAT PLATE
+imshow(RGBModulated);          % TRICHROMAT PLATE
 title('Trichromat rendering - plate','FontSize',20);
 
 subplot(2,2,2);

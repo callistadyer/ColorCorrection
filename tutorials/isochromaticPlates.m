@@ -1,4 +1,4 @@
-function [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(img,renderType,deltaModulation,bScale)
+function [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates(img,renderType,modulation_lms_img,bScale)
 
 % function create isochromatic plates for testing dichromacy
 
@@ -79,15 +79,16 @@ end
 
 % carve out an image where there is 0s everywhere except the delta 
 % delta = plateO(size(slice_lms),deltaModulation,100);
-delta = plateSquare(size(slice_lms),deltaModulation,100);
+% no longer just for one slice...
+delta_lms = plateSquare(size(lmsImage),modulation_lms_img,100);
 
 % add the delta to the L M or S values to modulate one cone type
-new_slice = slice_lms + delta;
+lmsImage_mod = lmsImage + delta_lms;
 % redefine that L M or S cone values
-lmsImage(:,:,idxLMS) = new_slice;
+% lmsImage(:,:,idxLMS) = new_slice;
 
 % turn lmsImage to cal format so you can convert to RGB
-lms_ModuledCalFormat = ImageToCalFormat(lmsImage);
+lms_ModuledCalFormat = ImageToCalFormat(lmsImage_mod);
 % convert to RGB
 RGB_modulatedCalFormat = LMS2RGBimg(lms_ModuledCalFormat,d,T_cones,P_monitor,m,n,bScale);
 % convert to image for viewing
