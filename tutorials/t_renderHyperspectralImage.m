@@ -6,11 +6,11 @@ function t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod
 
 % Example images to use
 %{
-t_renderHyperspectralImage([],'Deuteranopia'  ,0,1,0)            % doesn't seem to show anything? 
+t_renderHyperspectralImage([],'Deuteranopia'  ,0,1,0)          
 t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0,1,0)    
-t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1,0)    % believable but darkened img 
-t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1,0)    % nothing if min, but maybe if each pix diff   
-t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1,0)    % nothing if min, but maybe if each pix diff
+t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1,0)    
+t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1,0)    
+    t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1,0)  
 t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1,0)    
 there
 t_renderHyperspectralImage('gray','Deuteranopia',0,0,0)           
@@ -92,7 +92,7 @@ RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 [rgbImageCalFormat,scaleFactor] = LMS2rgbLinimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
 
 % Get modulation for isochromatic plate modulation
-lmsModulationImgFormat = getModulation(rgbImageCalFormat,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n);
+lmsModulationImgFormat = getModulation(rgbImageCalFormat,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
 
 % Create isochromatic plates
 [RGBModulated lmsModuledCalFormat] = isochromaticPlates(image,renderType,lmsModulationImgFormat,bScale);

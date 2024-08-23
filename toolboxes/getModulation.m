@@ -1,4 +1,4 @@
-function modulationLMS = getModulation(rgbImageCalFormat,renderType,takeMin,T_cones,P_monitor,scaleFactor,m,n)
+function modulationLMS = getModulation(rgbImageCalFormat,renderType,takeMin,T_cones,P_monitor,scaleFactor,m,n,bScale)
 
 % function that calculates the modulation in the L M or S cone based on the
 % input image and the gamut limitations
@@ -40,7 +40,6 @@ if size(modulation_rgb,2) > 1
     modulation_rgb_img = CalFormatToImage(modulation_rgb,m,n);
 end
 
-bScale = 0;
 modulationLMS = rgbLin2LMSimg(modulation_rgb_img,T_cones,P_monitor,scaleFactor,m,n,bScale);
 
 end
