@@ -9,7 +9,6 @@ function [dichromatLMS] = tri2dichromatLMS(lmsImageCalFormat,renderType)
 %                    Protanopia
 %                    Tritanopia
 
-
 l_cone = lmsImageCalFormat(1,:);
 m_cone = lmsImageCalFormat(2,:);
 s_cone = lmsImageCalFormat(3,:);

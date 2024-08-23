@@ -2,6 +2,19 @@ function modulationLMS = getModulation(rgbImageCalFormat,renderType,takeMin,T_co
 
 % function that calculates the modulation in the L M or S cone based on the
 % input image and the gamut limitations
+%
+% inputs
+% rgbImageCalFormat: rgb in cal format
+% renderType:        type of dichromacy
+% takeMin:           take the minimum modulation of all the pixels?
+%                    0 -> dont take min
+%                    1 -> take min
+% T_cones:           spectral sensitivities
+% P_monitor:         monitor primaries
+% scaleFactor:       how much to scale the rgbImage values (or undo it)
+% m:                 dimension 1 of img
+% n:                 dimension 2 of img
+% bScale:            do you wanna scale or not?
 
 % Grab 
 M_rgb2cones = T_cones*P_monitor;
