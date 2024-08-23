@@ -97,54 +97,19 @@ lmsModulationImgFormat = getModulation(rgbImageCalFormat,renderType,bMinMod,T_co
 % Create isochromatic plates
 [RGBModulated lmsModuledCalFormat] = isochromaticPlates(image,renderType,lmsModulationImgFormat,bScale);
 
-%%% Testing different constant values of m-cone (or other missing cone)
-% alpha        = linspace(0,1,20);
-% mCones       = lmsImageCalFormat(2,:);
-% contrast     = (mCones - mean(mCones)) ./ mean(mCones);
-% contrast_new = alpha' .* contrast;
-% m_new        = (contrast_new .* mean(mCones)) + mean(mCones);
-l_cone = lmsImageCalFormat(1,:);
-m_cone = lmsImageCalFormat(2,:);
-s_cone = lmsImageCalFormat(3,:);
+% Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)  
+dichromImageCalFormat = tri2dichromatLMS(lmsImageCalFormat,renderType);
+lmsModuledCalFormat   = tri2dichromatLMS(lmsModuledCalFormat,renderType);
 
-% NOTE WELL:
-% To get the renderings to look right, we are using the mean value of
-% at the missing cone plane to get the scale of our substitution
-% right.  Presumably this could be done once by analyzing a full ensemble
-% of images, but we are going to worry about that later.
-dichromImageCalFormat = lmsImageCalFormat;
-deuterMFromLScale = mean(m_cone)/mean(l_cone);
-protoLFromMScale  = mean(l_cone)/mean(m_cone);
-tritanSFromMScale = mean(s_cone)/mean(m_cone); 
-tritanSFromLScale = mean(s_cone)/mean(l_cone);
-
-% Make dichromat manipulation - missing cone
-switch (renderType)
-    case 'Deuteranopia' % m cone deficiency
-        % lms values of image + isochromatic plate 
-        lmsModuledCalFormat(2,:)       =  deuterMFromLScale * l_cone; % replace M cones with L cone PLATE
-        % lms values of image
-        dichromImageCalFormat(2,:)      =  deuterMFromLScale * l_cone; % replace M cones with L cone
-    case 'Protanopia'   % l cone deficiency
-        % lms values of image + isochromatic plate 
-        lmsModuledCalFormat(1,:)       = protoLFromMScale*m_cone; % replace L cones with M cone PLATE
-        % lms values of image
-        dichromImageCalFormat(1,:)      = protoLFromMScale*m_cone; % replace L cones with M cone
-    case 'Tritanopia'   % s cone deficiency
-        % lms values of image + isochromatic plate 
-        lmsModuledCalFormat(3,:)       = (tritanSFromMScale*m_cone + tritanSFromLScale*l_cone)/2; % replace S cones with M cone PLATE
-        % lms values of image
-        dichromImageCalFormat(3,:)      = (tritanSFromMScale*m_cone + tritanSFromLScale*l_cone)/2; % replace S cones with M cone
-end
-
-% Get dichromat image for looking at
+% Dichromat LMS --> RGB
 [RGBImage_dichromatCalFormat,scaleFactor_di]       = LMS2RGBimg(dichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale); % no modulation
-[RGBPlate_dichromatCalFormat,scaleFactor_di_plate] = LMS2RGBimg(lmsModuledCalFormat, d,T_cones,P_monitor,m,n,bScale); % isochromatic plate 
+[RGBPlate_dichromatCalFormat,scaleFactor_di_plate] = LMS2RGBimg(lmsModuledCalFormat, d,T_cones,P_monitor,m,n,bScale);  % isochromatic plate 
 
-% Convert to image from cal format
+% Dichromat RGB cal format --> image format
 RGBImage_dichromat          = CalFormatToImage(RGBImage_dichromatCalFormat,m,n); % no modulation
 RGBPlate_dichromat          = CalFormatToImage(RGBPlate_dichromatCalFormat,m,n); % isochromatic plate
 
+% plotting
 % Show the trichromatic image, dichromatic image, and trichromatic plate, dichromatic plate
 figure('position',[ 896         364        1231         883]); 
 subplot(2,2,1);
@@ -162,6 +127,10 @@ title([renderType ' rendering - no modulation'],'FontSize',20);
 subplot(2,2,4);
 imshow(RGBPlate_dichromat);     % DICHROMAT PLATE 
 title([renderType ' rendering - plate'],'FontSize',20);
+
+
+
+
 
 if bPLOTscatter == 1
 
