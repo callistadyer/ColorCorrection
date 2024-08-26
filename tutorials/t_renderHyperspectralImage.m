@@ -96,12 +96,14 @@ lmsModulationImgFormat = getModulation(rgbImageCalFormat,renderType,bMinMod,T_co
 % Create isochromatic plates
 [RGBModulated lmsModuledCalFormat] = isochromaticPlates(image,renderType,lmsModulationImgFormat,bScale);
 
+% callista: fix this
+cone_mean_orig = mean(lmsModuledCalFormat(2,:));
 % Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)  
-dichromImageCalFormat = tri2dichromatLMS(lmsImageCalFormat,renderType);
-lmsModuledCalFormat   = tri2dichromatLMS(lmsModuledCalFormat,renderType);
+lmsDichromImageCalFormat = tri2dichromatLMS(lmsImageCalFormat,renderType,cone_mean_orig); % gray
+lmsModuledCalFormat      = tri2dichromatLMS(lmsModuledCalFormat,renderType,cone_mean_orig); %
 
 % Dichromat LMS --> RGB
-[RGBImage_dichromatCalFormat,scaleFactor_di]       = LMS2RGBimg(dichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale); % no modulation
+[RGBImage_dichromatCalFormat,scaleFactor_di]       = LMS2RGBimg(lmsDichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale); % no modulation
 [RGBPlate_dichromatCalFormat,scaleFactor_di_plate] = LMS2RGBimg(lmsModuledCalFormat, d,T_cones,P_monitor,m,n,bScale);  % isochromatic plate 
 
 % Dichromat RGB cal format --> image format
@@ -134,7 +136,7 @@ title([renderType ' rendering - plate'],'FontSize',20);
 if bPLOTscatter == 1
 
     % Get dichromat image for comparing lms values
-    [rgbImage_dichromatCalFormat,scaleFactor_di] = LMS2rgbLinimg(dichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
+    [rgbImage_dichromatCalFormat,scaleFactor_di] = LMS2rgbLinimg(lmsDichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
     rgbImage_dichromat                           = CalFormatToImage(rgbImage_dichromatCalFormat,m,n);
 
     % Check by reversing RGB to LMS image
