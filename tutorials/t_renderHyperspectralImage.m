@@ -99,11 +99,11 @@ lmsModulationImgFormat = getModulation(rgbImageCalFormat,renderType,bMinMod,T_co
 % Mean of absent cone in original image. Used for replacing that cone value in dichromat image 
 switch (renderType)
     case 'Deuteranopia' % m cone deficiency
-        cone_mean_orig = mean(lmsModuledCalFormat(2,:));
+        cone_mean_orig = mean(lmsImageCalFormat(2,:));
     case 'Protanopia'   % l cone deficiency
-        cone_mean_orig = mean(lmsModuledCalFormat(1,:));
+        cone_mean_orig = mean(lmsImageCalFormat(1,:));
     case 'Tritanopia'   % s cone deficiency
-        cone_mean_orig = mean(lmsModuledCalFormat(3,:));
+        cone_mean_orig = mean(lmsImageCalFormat(3,:));
 end 
 
 % Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)  
