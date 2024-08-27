@@ -96,8 +96,16 @@ lmsModulationImgFormat = getModulation(rgbImageCalFormat,renderType,bMinMod,T_co
 % Create isochromatic plates
 [RGBModulated lmsModuledCalFormat] = isochromaticPlates(image,renderType,lmsModulationImgFormat,bScale);
 
-% callista: fix this
-cone_mean_orig = mean(lmsModuledCalFormat(2,:));
+% Mean of absent cone in original image. Used for replacing that cone value in dichromat image 
+switch (renderType)
+    case 'Deuteranopia' % m cone deficiency
+        cone_mean_orig = mean(lmsModuledCalFormat(2,:));
+    case 'Protanopia'   % l cone deficiency
+        cone_mean_orig = mean(lmsModuledCalFormat(1,:));
+    case 'Tritanopia'   % s cone deficiency
+        cone_mean_orig = mean(lmsModuledCalFormat(3,:));
+end 
+
 % Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)  
 lmsDichromImageCalFormat = tri2dichromatLMS(lmsImageCalFormat,renderType,cone_mean_orig); % gray
 lmsModuledCalFormat      = tri2dichromatLMS(lmsModuledCalFormat,renderType,cone_mean_orig); %
