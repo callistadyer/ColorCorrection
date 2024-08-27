@@ -9,6 +9,7 @@ M_rgb2cones = T_cones*P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 
 % Get linear RGB from LMS
+% THIS SHOULD CALL LMS2rgbLinimg().
 rgbImageCalFormat = M_cones2rgb*lmsImageCalFormat;
 rgbImage = CalFormatToImage(rgbImageCalFormat,m,n);
 

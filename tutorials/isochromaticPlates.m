@@ -1,4 +1,4 @@
-function [RGBmodulatedCalFormat lmsModuledCalFormat] = isochromaticPlates(img,renderType,lmsModulationImgFormat,bScale)
+function [RGBmodulatedCalFormat lmsModuledCalFormat] = isochromaticPlates(img,renderType,lmsModulationImgFormat,bScale,options)
 
 % function create isochromatic plates for testing dichromacy
 % 
@@ -12,6 +12,19 @@ function [RGBmodulatedCalFormat lmsModuledCalFormat] = isochromaticPlates(img,re
 %{
     [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates('gray','Deuteranopia',.0005,0);
 %}
+
+%% Pick up optional arguments
+arguments
+    img
+    renderType
+    lmsModulationImgFormat
+    bScale
+    options.verbose (1,1) logical = false;
+end
+
+if (options.verbose)
+    fprintf('Starting execution of isochromaticPlates\n');
+end
 
 if isempty(img)
     % Default scenes
