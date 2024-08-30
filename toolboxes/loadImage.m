@@ -1,5 +1,26 @@
 function [hyperspectralImage wls d P_monitor] = loadImage(image)
 
+% Loads in images and makes them hyperspectral images for ColorCorrection
+% project (dichromat rendering)
+%
+% Syntax:
+%   [hyperspectralImage wls d P_monitor] = loadImage(image)
+%
+% Description:
+%
+% Inputs:
+%   lmsImageCalFormat     - String. Image to be loaded. Options include:
+%                               'sceneN.mat' - N is 1 to 5. One of our hypespectral scenes.
+%                               'gray'       - Gray spatially uniform field.  
+% Outputs:
+%   hyperspectralImage    - 
+%   wls 
+%   d       
+%   P_monitor
+%
+% Optional key/value pairs:
+%   None
+%
 %% Load hyperspectral image data 
 if isempty(image)
     % This image comes with ISETBio.
