@@ -18,7 +18,9 @@ function [RGBImageCalFormat,rgbLinImageCalFormat,scaleFactor] = LMS2RGBimg(lmsIm
 %   bScale                - Boolean. Scale or not 
 %
 % Outputs:
-%   None
+%   RGBImageCalFormat     - RGB image in cal format
+%   rgbLinImageCalFormat  - linear rgb image in cal format
+%   scaleFactor           - scale factor used to scale img values
 %
 % Optional key/value pairs:
 %   None

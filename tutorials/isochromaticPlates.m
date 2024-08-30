@@ -1,12 +1,24 @@
 function [RGBmodulatedCalFormat lmsModuledCalFormat] = isochromaticPlates(img,renderType,lmsModulationImgFormat,bScale,options)
 
 % function create isochromatic plates for testing dichromacy
-% 
-% inputs
-% img:                    input image - which to create plate with?
-% renderType:             type of dichromacy
-% lmsModulationImgFormat: lms plate modulation in img format
-% bScale:                 scale rgb values or not?
+%
+% Syntax:
+%   [RGBmodulatedCalFormat lmsModuledCalFormat] = isochromaticPlates(img,renderType,lmsModulationImgFormat,bScale,options)
+%
+% Description:
+%
+% Inputs:
+%       img:                     Input image - which to create plate with?
+%       renderType:              Type of dichromacy
+%       lmsModulationImgFormat:  LMS plate modulation in img format
+%       bScale:                  Scale rgb values or not?
+%
+% Outputs:
+%       RGBmodulatedCalFormat    Gamma corrected RGB image with cone modulation included  
+%       lmsModuledCalFormat      LMS values with cone modulation added 
+%
+% Optional key/value pairs:
+%   None
 
 % Examples:
 %{
