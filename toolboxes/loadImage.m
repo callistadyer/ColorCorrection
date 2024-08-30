@@ -13,10 +13,10 @@ function [hyperspectralImage wls d P_monitor] = loadImage(image)
 %                               'sceneN.mat' - N is 1 to 5. One of our hypespectral scenes.
 %                               'gray'       - Gray spatially uniform field.  
 % Outputs:
-%   hyperspectralImage    - 
-%   wls 
-%   d       
-%   P_monitor
+%   hyperspectralImage    - hyperspectral image of the input image
+%   wls                   - wavelengths
+%   d                     - display info
+%   P_monitor             - monitor primaries
 %
 % Optional key/value pairs:
 %   None
