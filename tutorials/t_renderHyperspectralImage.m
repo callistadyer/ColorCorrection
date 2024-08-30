@@ -48,7 +48,7 @@ t_renderHyperspectralImage('gray','Deuteranopia',0,0,0)
 %}
 
 %% Load hyperspectral image data
-[hyperspectralImage wls] = loadImage(image);
+[hyperspectralImage wls d P_monitor] = loadImage(image);
 
 % Get cone spectral sensitivities
 load T_cones_ss2;
@@ -64,18 +64,18 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 % Render lms image that a trichromat sees.  Convert from cal format to
 % image as well.
 lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
-[RGBImageCalFormat_trichromat] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
+[RGBImageCalFormat_trichromat,rgbLinImageCalFormat,scaleFactor] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
 RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 
 % Get original image into rgb so you can maximize gamut contrast.
 % CAN MODIFY LMS2RGB image to return linear rgb image as well, since it is
 % computed on the way.
-[rgbImageCalFormat,scaleFactor] = LMS2rgbLinimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
+[rgbLinImageCalFormat2,scaleFactor] = LMS2rgbLinimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
 
 % Get modulation for isochromatic plate modulation.
 % MIGHT ADD A QUICK COMMENT ABOUT WHAT THIS IS DOING.
 % MAYBE CHANGE NAME TO getConeDirectedModulation for clarity.
-lmsModulationImgFormat = getModulation(rgbImageCalFormat,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
+lmsModulationImgFormat = getModulation(rgbLinImageCalFormat2,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
 
 % Create isochromatic plates
 [RGBModulated lmsModuledCalFormat] = isochromaticPlates(image,renderType,lmsModulationImgFormat,bScale, ...

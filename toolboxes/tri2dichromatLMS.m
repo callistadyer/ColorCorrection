@@ -2,12 +2,25 @@ function [dichromatLMS] = tri2dichromatLMS(lmsImageCalFormat,renderType,cone_mea
 
 % function takes in trichromat lms values and converts them into dichromat lms values
 %
-% inputs
-% lmsImageCalFormat: lms values of the image for a trichromat
-% renderType:        type of dichromacy
-%                    Deuteranopia
-%                    Protanopia
-%                    Tritanopia
+% Syntax:
+%   [dichromatLMS] = tri2dichromatLMS(lmsImageCalFormat,renderType,cone_mean_orig)
+%
+% Description:
+%
+% Inputs:
+%   lmsImageCalFormat  LMS values of the image for a trichromat
+%   renderType         Type of dichromacy
+%                        Deuteranopia
+%                        Protanopia
+%                        Tritanopia
+%   cone_mean_orig     Mean of missing cone values for trichromat (original image)
+%                      This is used to calculate missing cone value for dichromat 
+%
+% Outputs:
+%   dichromatLMS       LMS values for dichromat type specified by renderType
+%
+% Optional key/value pairs:
+%   None
 
 l_cone = lmsImageCalFormat(1,:);
 m_cone = lmsImageCalFormat(2,:);
