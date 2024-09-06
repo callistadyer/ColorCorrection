@@ -36,9 +36,9 @@ s_cone = lmsImageCalFormat(3,:);
 % deuterMFromLScale = mean(m_cone)/mean(l_cone);
 deuterMFromLScale = cone_mean_orig/mean(l_cone);
 
-protoLFromMScale  = mean(l_cone)/mean(m_cone);
-tritanSFromMScale = mean(s_cone)/mean(m_cone); 
-tritanSFromLScale = mean(s_cone)/mean(l_cone);
+protoLFromMScale  = cone_mean_orig/mean(m_cone);
+tritanSFromMScale = cone_mean_orig/mean(m_cone); 
+tritanSFromLScale = cone_mean_orig/mean(l_cone);
 
 % Make dichromat manipulation - missing cone
 switch (renderType)

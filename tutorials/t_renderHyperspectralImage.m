@@ -1,4 +1,4 @@
-function t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod)
+function [lmsImageCalFormatTrichromat,lmsModuledCalFormatTrichromat,cone_mean_orig] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod)
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
@@ -40,7 +40,7 @@ function t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod
 %{
 t_renderHyperspectralImage([],'Deuteranopia'  ,0,1,0)          
 t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0,1,0)    
-t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1,0)    
+[lmsImageCalFormat,lmsModuledCalFormat] = t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1,0);    
 t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1,0)    
 t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1,0)  
 t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1,0)    
@@ -63,14 +63,14 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
 % Render lms image that a trichromat sees.  Convert from cal format to
 % image as well.
-lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
-[RGBImageCalFormat_trichromat,rgbLinImageCalFormat,scaleFactor] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
+lmsImageCalFormatTrichromat = T_cones*hyperspectralImageCalFormat;
+[RGBImageCalFormat_trichromat,rgbLinImageCalFormat,scaleFactor] = LMS2RGBimg(lmsImageCalFormatTrichromat,d,T_cones,P_monitor,m,n,bScale);
 RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 
 % Get original image into rgb so you can maximize gamut contrast.
 % CAN MODIFY LMS2RGB image to return linear rgb image as well, since it is
 % computed on the way.
-[rgbLinImageCalFormat2,scaleFactor] = LMS2rgbLinimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
+[rgbLinImageCalFormat2,scaleFactor] = LMS2rgbLinimg(lmsImageCalFormatTrichromat,d,T_cones,P_monitor,m,n,bScale);
 
 % Get modulation for isochromatic plate modulation.
 % MIGHT ADD A QUICK COMMENT ABOUT WHAT THIS IS DOING.
@@ -78,22 +78,22 @@ RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 lmsModulationImgFormat = getModulation(rgbLinImageCalFormat2,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
 
 % Create isochromatic plates
-[RGBModulated lmsModuledCalFormat] = isochromaticPlates(image,renderType,lmsModulationImgFormat,bScale, ...
+[RGBModulated lmsModuledCalFormatTrichromat] = isochromaticPlates(image,renderType,lmsModulationImgFormat,bScale, ...
     'verbose',true);
 
 % Mean of absent cone in original image. Used for replacing that cone value in dichromat image 
 switch (renderType)
     case 'Deuteranopia' % m cone deficiency
-        cone_mean_orig = mean(lmsImageCalFormat(2,:));
+        cone_mean_orig = mean(lmsImageCalFormatTrichromat(2,:));
     case 'Protanopia'   % l cone deficiency
-        cone_mean_orig = mean(lmsImageCalFormat(1,:));
+        cone_mean_orig = mean(lmsImageCalFormatTrichromat(1,:));
     case 'Tritanopia'   % s cone deficiency
-        cone_mean_orig = mean(lmsImageCalFormat(3,:));
+        cone_mean_orig = mean(lmsImageCalFormatTrichromat(3,:));
 end 
 
 % Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)  
-lmsDichromImageCalFormat = tri2dichromatLMS(lmsImageCalFormat,renderType,cone_mean_orig); % gray
-lmsModuledCalFormat      = tri2dichromatLMS(lmsModuledCalFormat,renderType,cone_mean_orig); %
+lmsDichromImageCalFormat = tri2dichromatLMS(lmsImageCalFormatTrichromat,renderType,cone_mean_orig); % gray
+lmsModuledCalFormat      = tri2dichromatLMS(lmsModuledCalFormatTrichromat,renderType,cone_mean_orig); %
 
 % Dichromat LMS --> RGB
 [RGBImage_dichromatCalFormat,scaleFactor_di]       = LMS2RGBimg(lmsDichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale); % no modulation
@@ -121,9 +121,6 @@ title([renderType ' rendering - no modulation'],'FontSize',20);
 subplot(2,2,4);
 imshow(RGBPlate_dichromat);     % DICHROMAT PLATE 
 title([renderType ' rendering - plate'],'FontSize',20);
-
-
-
 
 
 if bPLOTscatter == 1
