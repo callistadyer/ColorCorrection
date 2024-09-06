@@ -76,16 +76,16 @@ figure();
 subplot(2,2,1)
 imshow(RGBImage_trichromat);  
 title('trichromat')
+
 subplot(2,2,2)
 imshow(RGBImage_trichromat_plate);     
 title('trichromat plate')
-
 
 subplot(2,2,3)
 imshow(RGBImage_dichromat);     % DICHROMAT
 title('dichromat corrected')
 
 subplot(2,2,4)
-imshow(RGBImage_dichromat_plate)
+imshow(RGBImage_dichromat_plate);
 title('dichromat corrected - plate')
 end
