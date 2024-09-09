@@ -1,4 +1,4 @@
-function [lmsImageCalFormatTrichromat,lmsModuledCalFormatTrichromat,cone_mean_orig] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod)
+function [lmsImageCalFormatTrichromat,lmsModuledCalFormatTrichromat,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod)
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
@@ -92,12 +92,12 @@ switch (renderType)
 end 
 
 % Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)  
-lmsDichromImageCalFormat = tri2dichromatLMS(lmsImageCalFormatTrichromat,renderType,cone_mean_orig); % gray
-lmsModuledCalFormat      = tri2dichromatLMS(lmsModuledCalFormatTrichromat,renderType,cone_mean_orig); %
+lmsDichromImageCalFormat        = tri2dichromatLMS(lmsImageCalFormatTrichromat,renderType,cone_mean_orig); % gray
+lmsDichromModuledCalFormat      = tri2dichromatLMS(lmsModuledCalFormatTrichromat,renderType,cone_mean_orig); %
 
 % Dichromat LMS --> RGB
 [RGBImage_dichromatCalFormat,scaleFactor_di]       = LMS2RGBimg(lmsDichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale); % no modulation
-[RGBPlate_dichromatCalFormat,scaleFactor_di_plate] = LMS2RGBimg(lmsModuledCalFormat, d,T_cones,P_monitor,m,n,bScale);  % isochromatic plate 
+[RGBPlate_dichromatCalFormat,scaleFactor_di_plate] = LMS2RGBimg(lmsDichromModuledCalFormat, d,T_cones,P_monitor,m,n,bScale);  % isochromatic plate 
 
 % Dichromat RGB cal format --> image format
 RGBImage_dichromat          = CalFormatToImage(RGBImage_dichromatCalFormat,m,n); % no modulation
