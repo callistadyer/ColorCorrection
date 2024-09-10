@@ -50,13 +50,10 @@ imagesc(Dimg2);
 switch (renderType)
     case 'Deuteranopia' % m cone deficiency
         coneGone = 2;
-        coneAvailable = [1 3];
     case 'Protanopia'   % l cone deficiency
         coneGone = 1;
-        coneAvailable = [2 3];
     case 'Tritanopia'   % s cone deficiency
         coneGone = 3;
-        coneAvailable = [1 2];
 end
 
 % Choose M to minimize the difference between Din and Dout
