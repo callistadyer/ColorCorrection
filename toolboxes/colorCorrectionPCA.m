@@ -27,8 +27,8 @@ T_mean = mean(T,2);
 % Mean subtracted LMS values
 T_ms = T - T_mean;
 
-% Map mean subtracted LMS valud onto two principle components (linear regression)   
-D_ms = PC2D \ T_ms;
+% Map mean subtracted LMS valud onto two principle components (linear regression) 
+D_ms = PC2D\T_ms;
 
 % Map mean of LMS onto two principle components (linear regression)
 D_m = PC2D \ T_mean;

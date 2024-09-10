@@ -38,7 +38,7 @@ function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMo
 %
 % Examples:
 %{
-[RGBImage_dichromat] = dichromatCorrection('scene4.mat','Deuteranopia',1,0)
+[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,0)
 %}
 
 % Get trichromatic (LMS) image
