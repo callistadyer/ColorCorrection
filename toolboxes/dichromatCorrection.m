@@ -57,7 +57,7 @@ T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
 P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
-% Create RGB image from LMS
+% Create RGB image from LMS   
 [RGBImage_dichromatCalFormat_orig]  = LMS2RGBimg(lmsDichromImageCalFormat, d,T_cones,P_monitor,m,n,bScale);
 [RGBImage_dichromatCalFormat_plate_orig]  = LMS2RGBimg(lmsDichromModuledCalFormat, d,T_cones,P_monitor,m,n,bScale);      % isochromatic plate 
 

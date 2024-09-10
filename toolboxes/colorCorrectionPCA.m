@@ -33,6 +33,20 @@ D_ms = PC2D \ T_ms;
 % Map mean of LMS onto two principle components (linear regression)
 D_m = PC2D \ T_mean;
 
+% D_mnew(1,:) = D_ms(1,:);
+% D_mnew(2,:) = D_ms(1,:);
+% D_mnew(3,:) = D_ms(2,:);
+
+
+% CHECK: It is at least true that D has two different values
+figure();
+Dimg = CalFormatToImage(D_ms(1,:),256,256);
+imagesc(Dimg); 
+
+figure();
+Dimg2 = CalFormatToImage(D_ms(2,:),256,256);
+imagesc(Dimg2); 
+
 switch (renderType)
     case 'Deuteranopia' % m cone deficiency
         coneGone = 2;
