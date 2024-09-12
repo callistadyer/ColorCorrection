@@ -45,8 +45,8 @@ function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMo
 [lmsImageCalFormatTri,lmsModuledCalFormatTri,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod);    
 
 % Apply pca correction to aid dichromacy
-correctedLMS       = colorCorrectionPCA(lmsImageCalFormatTri,renderType,cone_mean_orig);
-correctedLMS_plate = colorCorrectionPCA(lmsModuledCalFormatTri,renderType,cone_mean_orig);
+correctedLMS       = colorCorrectionPCA(img,lmsImageCalFormatTri,renderType,cone_mean_orig);
+correctedLMS_plate = colorCorrectionPCA(img,lmsModuledCalFormatTri,renderType,cone_mean_orig);
 
 % Plot new image 
 [hyperspectralImage wls d P_monitor] = loadImage(img);
