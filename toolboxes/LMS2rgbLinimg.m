@@ -43,9 +43,9 @@ end
 
 % Transform to cal format
 rgbImageCalFormat = ImageToCalFormat(rgbImage);
-
 rgbImageTruncate = rgbImageCalFormat;
 rgbImageTruncate(rgbImageTruncate < 0) = 0;
 
 rgbImageCalFormat = rgbImageTruncate;
+
 end

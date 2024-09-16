@@ -49,6 +49,7 @@ rgbImageTruncate(rgbImageTruncate < 0) = 0;
 
 % Linear rgb values make sure not below 0
 rgbLinImageCalFormat = rgbImageTruncate; 
+% rgbImageTruncate(rgbImageTruncate > 1) = 1;
 
 % Gamma correct
 iGtable = displayGet(d,'inversegamma');

@@ -52,9 +52,9 @@ bScale = 0;
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
 
 % Initial guess for K
-initialK = [1, 1, 1];
+initialK = diag([1, 1, 1]);
 
-% Define the constraints (if any). Here we assume no constraints.
+% Define the constraints
 A = [];
 b = [];
 Aeq = [];
@@ -63,8 +63,11 @@ lb = []; % Lower bounds
 ub = []; % Upper bounds
 
 % Call fmincon
+% for i = 1:3 % DO WE WANT TO DO EACH K SEPARATELY? HOW DO WE DO THAT? 
 [K_opt, fval] = fmincon(@(K) T_EstObjectiveFunction(K, D_mnew, T_mean, d, T_cones, P_monitor, m, n, bScale), initialK, A, b, Aeq, beq, lb, ub);
+% end
 
+% K_opt = diag(K_opt);
 % Display results
 disp('Optimal K:');
 disp(K_opt);
