@@ -62,9 +62,13 @@ beq = [];
 lb = []; % Lower bounds
 ub = []; % Upper bounds
 
+% Options
+ options = optimset('fmincon');
+ options = optimset(options,'Diagnostics','off','Display','iter','LargeScale','off','Algorithm','active-set');
+
 % Call fmincon
 % for i = 1:3 % DO WE WANT TO DO EACH K SEPARATELY? HOW DO WE DO THAT? 
-[K_opt, fval] = fmincon(@(K) T_EstObjectiveFunction(K, D_mnew, T_mean, d, T_cones, P_monitor, m, n, bScale), initialK, A, b, Aeq, beq, lb, ub);
+[K_opt, fval] = fmincon(@(K) T_EstObjectiveFunction(K, D_mnew, T_mean, d, T_cones, P_monitor, m, n, bScale), initialK, A, b, Aeq, beq, lb, ub, [], options);
 % end
 
 % K_opt = diag(K_opt);
@@ -90,41 +94,42 @@ T_est_rgbImg = LMS2rgbLinimg(T_opt, d, T_cones, P_monitor, m, n, bScale);
 % Dimg2 = CalFormatToImage(D_ms(2,:),256,256);
 % imagesc(Dimg2); 
 
-switch (renderType)
-    case 'Deuteranopia' % m cone deficiency
-        coneGone = 2;
-    case 'Protanopia'   % l cone deficiency
-        coneGone = 1;
-    case 'Tritanopia'   % s cone deficiency
-        coneGone = 3;
-end
-
-% Choose M to minimize the difference between Din and Dout
-% D_in = T(1:end ~= coneGone,:); % original LMS values, but only 2 rows for the available cones  
+% switch (renderType)
+%     case 'Deuteranopia' % m cone deficiency
+%         coneGone = 2;
+%     case 'Protanopia'   % l cone deficiency
+%         coneGone = 1;
+%     case 'Tritanopia'   % s cone deficiency
+%         coneGone = 3;
+% end
 % 
-% % Get M via linear regression
-% M = [D_ms + D_m]' \ D_in';
+% % Choose M to minimize the difference between Din and Dout
+% % D_in = T(1:end ~= coneGone,:); % original LMS values, but only 2 rows for the available cones  
+% % 
+% % % Get M via linear regression
+% % M = [D_ms + D_m]' \ D_in';
+% % 
+% % % Get estimate of two cones available
+% % D_est = M' * (D_ms + D_m);
 % 
-% % Get estimate of two cones available
-% D_est = M' * (D_ms + D_m);
-
-% How to decide which D is paired with which LMS? 
-switch (renderType)
-    case 'Deuteranopia' % m cone deficiency
-        LMSimageCalFormat(1,:) = T_opt(1,:);
-        LMSimageCalFormat(2,:) = ones(1,length(LMSimageCalFormat(1,:)));
-        LMSimageCalFormat(3,:) = T_opt(2,:);
-    case 'Protanopia'   % l cone deficiency
-        LMSimageCalFormat(2,:) = T_opt(1,:);
-        LMSimageCalFormat(1,:) = ones(1,length(LMSimageCalFormat(2,:)));
-        LMSimageCalFormat(3,:) = T_opt(2,:);
-    case 'Tritanopia'   % s cone deficiency
-        LMSimageCalFormat(1,:) = T_opt(1,:);
-        LMSimageCalFormat(2,:) = T_opt(2,:);
-        LMSimageCalFormat(3,:) = ones(1,length(LMSimageCalFormat(1,:)));
-end
+% % How to decide which D is paired with which LMS? 
+% switch (renderType)
+%     case 'Deuteranopia' % m cone deficiency
+%         LMSimageCalFormat(1,:) = T_opt(1,:);
+%         LMSimageCalFormat(2,:) = ones(1,length(LMSimageCalFormat(1,:)));
+%         LMSimageCalFormat(3,:) = T_opt(2,:);
+%     case 'Protanopia'   % l cone deficiency
+%         LMSimageCalFormat(2,:) = T_opt(1,:);
+%         LMSimageCalFormat(1,:) = ones(1,length(LMSimageCalFormat(2,:)));
+%         LMSimageCalFormat(3,:) = T_opt(2,:);
+%     case 'Tritanopia'   % s cone deficiency
+%         LMSimageCalFormat(1,:) = T_opt(1,:);
+%         LMSimageCalFormat(2,:) = T_opt(2,:);
+%         LMSimageCalFormat(3,:) = ones(1,length(LMSimageCalFormat(1,:)));
+% end
 
 % Get values for missing cone
-[correctedLMS] = tri2dichromatLMS(LMSimageCalFormat,renderType,cone_mean_orig);
+% [correctedLMS] = tri2dichromatLMS(LMSimageCalFormat,renderType,cone_mean_orig);
+correctedLMS = T_opt;
 
 end
