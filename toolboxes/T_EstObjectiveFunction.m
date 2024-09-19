@@ -1,10 +1,13 @@
-function obj = T_EstObjectiveFunction(K, D_mnew, T_mean, d, T_cones, P_monitor, m, n, bScale)
+function obj = T_EstObjectiveFunction(kVec, D_mnew, T_mean, d, T_cones, P_monitor, m, n, bScale)
 
 % Make sure K hasn't entered the twilight zone
-if (any(isnan(K(:))))
+if (any(isnan(kVec(:))))
     obj = Inf;
     return;
 end
+
+% Convert kVec to diagonal matrix K
+K = diag(kVec);
 
 % Cone values scaled by some K, then add back in T_mean
 % K is what you are optimizing
@@ -37,7 +40,7 @@ else
         return
     end
 
-    obj = -sum(K(:).^2);
+    obj = -sqrt(sum(K(:).^2));
 
 end
 

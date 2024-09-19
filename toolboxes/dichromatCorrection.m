@@ -39,8 +39,7 @@ function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMo
 % Examples:
 %{
 [RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,0)
-[RGBImage_dichromat] = dichromatCorrection('scene.mat','Deuteranopia',1,0)
-
+[RGBImage_dichromat] = dichromatCorrection('scene2.mat','Deuteranopia',1,0)
 %}
 
 % Get trichromatic (LMS) image
@@ -75,9 +74,10 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 [RGBImage_dichromatCalFormat_plate,scaleFactor_di]  = LMS2RGBimg(correctedLMS_plate, d,T_cones,P_monitor,m,n,bScale);       % isochromatic plate 
 
 % Corrected dichromat image via pca LMS values
-LMSfixedDichromat_plate                  = tri2dichromatLMS(correctedLMS_plate,renderType,cone_mean_orig);      % isochromatic plate 
+cone_mean_processed = mean(correctedLMS,2);
+LMSfixedDichromat_plate                  = tri2dichromatLMS(correctedLMS_plate,renderType,cone_mean_processed(2));      % isochromatic plate 
 [RGBImage_fixedDichromatCalFormat_plate] = LMS2RGBimg(LMSfixedDichromat_plate, d,T_cones,P_monitor,m,n,bScale); % isochromatic plate 
-LMSfixedDichromat                        = tri2dichromatLMS(correctedLMS,renderType,cone_mean_orig); 
+LMSfixedDichromat                        = tri2dichromatLMS(correctedLMS,renderType,cone_mean_processed(2)); 
 [RGBImage_fixedDichromatCalFormat]       = LMS2RGBimg(LMSfixedDichromat, d,T_cones,P_monitor,m,n,bScale);
 
 

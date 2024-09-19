@@ -1,4 +1,4 @@
-function [correctedLMS K_opt D_mnew T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig)
+function [correctedLMS, K_opt, D_mnew, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig)
 
 
 % Perform PCA
@@ -53,7 +53,7 @@ bScale = 0;
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
 
 % Initial guess for K
-initialK = diag([1, 1, 1]);
+initialKvec = [0, 0, 0];
 
 % Define the constraints
 A = [];
@@ -68,12 +68,12 @@ ub = []; % Upper bounds
  options = optimset(options,'Diagnostics','off','Display','iter','LargeScale','off','Algorithm','active-set');
 
 % Call fmincon
-[K_opt, fval] = fmincon(@(K) T_EstObjectiveFunction(K, D_mnew, T_mean, d, T_cones, P_monitor, m, n, bScale), initialK, A, b, Aeq, beq, lb, ub, [], options);
+[K_optvec, fval] = fmincon(@(kVec) T_EstObjectiveFunction(kVec, D_mnew, T_mean, d, T_cones, P_monitor, m, n, bScale), initialKvec, A, b, Aeq, beq, lb, ub, [], options);
 
-% K_opt = diag(K_opt);
+K_opt = diag(K_optvec);
 % Display results
 disp('Optimal K:');
-disp(K_opt);
+disp(K_optvec);
 disp('Objective Function Value:');
 disp(fval);
 
