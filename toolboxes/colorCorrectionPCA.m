@@ -79,7 +79,7 @@ disp(K_opt);
 disp('Objective Function Value:');
 disp(fval);
 
-T_opt = K_opt * D_mnew; % + T_mean;
+T_opt = K_opt * D_mnew + T_mean;
 
 T_est_rgbImg = LMS2rgbLinimg(T_opt, d, T_cones, P_monitor, m, n, bScale);
 
