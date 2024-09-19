@@ -13,7 +13,7 @@ T_est = K * D_mnew + T_mean;
 M_rgb2cones = T_cones*P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 rgbLinImageCalFormat = M_cones2rgb*T_est;
-
+rgbLinImageCalFormat
 if min(rgbLinImageCalFormat(:)) < 0 || max(rgbLinImageCalFormat(:)) > 1
     obj = Inf;
 
@@ -30,32 +30,11 @@ else
         error('Something is not consistent.');
     end
 
-    % Goal: resulting rgb needs to be between 0 and 1
-    % Calculate Pneg and Ppos
-    % if minrgb >= 0
-    %     Pneg = 0;
-    % elseif minrgb < 0
-    %     Pneg = 10e50*minrgb^2;
-    % end
-    %
-    % if maxrgb <= 1
-    %     Ppos = 0;
-    % elseif maxrgb > 1
-    %     Ppos = 10e50*maxrgb^2;
-    % end
-
     if minrgb < 0 || maxrgb > 1
         obj = Inf;
         return
     end
 
-    % Compute the penalty
-    % penalty = Ppos + Pneg;
-
-    % object to minimize
-    % want to maximize k
-    % largest value will be the smallest (most negative) value
-    % obj = -sum(K(:).^2) + penalty;
     obj = -sum(K(:).^2);
 
 end

@@ -39,14 +39,17 @@ function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMo
 % Examples:
 %{
 [RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,0)
+[RGBImage_dichromat] = dichromatCorrection('scene.mat','Deuteranopia',1,0)
+
 %}
 
 % Get trichromatic (LMS) image
 [lmsImageCalFormatTri,lmsModuledCalFormatTri,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod);    
 
 % Apply pca correction to aid dichromacy
-correctedLMS       = colorCorrectionPCA(img,lmsImageCalFormatTri,renderType,cone_mean_orig);
-correctedLMS_plate = colorCorrectionPCA(img,lmsModuledCalFormatTri,renderType,cone_mean_orig);
+[correctedLMS K_opt D_mnew T_mean]                         = colorCorrectionPCA(img,lmsImageCalFormatTri,renderType,cone_mean_orig);   % Original image
+[correctedLMS_plate K_opt_plate D_mnew_plate T_mean_plate] = colorCorrectionPCA(img,lmsModuledCalFormatTri,renderType,cone_mean_orig); % Image with plate
+correctedLMS = K_opt_plate * D_mnew + T_mean_plate;
 
 % Plot new image 
 [hyperspectralImage wls d P_monitor] = loadImage(img);
@@ -57,50 +60,72 @@ T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
 P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
-% Create RGB image from LMS   
-[RGBImage_dichromatCalFormat_orig]  = LMS2RGBimg(lmsDichromImageCalFormat, d,T_cones,P_monitor,m,n,bScale);
-[RGBImage_dichromatCalFormat_plate_orig]  = LMS2RGBimg(lmsDichromModuledCalFormat, d,T_cones,P_monitor,m,n,bScale);      % isochromatic plate 
+% Create RGB image from LMS  
 
-% corrected via pca lms values
-[RGBImage_dichromatCalFormat,scaleFactor_di_plate]  = LMS2RGBimg(correctedLMS, d,T_cones,P_monitor,m,n,bScale);
-[RGBImage_dichromatCalFormat_plate,scaleFactor_di]  = LMS2RGBimg(correctedLMS_plate, d,T_cones,P_monitor,m,n,bScale);      % isochromatic plate 
-% original lms values
+% Dichromat simulation of original image
+[RGBImage_dichromatCalFormat_orig]        = LMS2RGBimg(lmsDichromImageCalFormat, d,T_cones,P_monitor,m,n,bScale);
+[RGBImage_dichromatCalFormat_plate_orig]  = LMS2RGBimg(lmsDichromModuledCalFormat, d,T_cones,P_monitor,m,n,bScale);         % isochromatic plate 
+
+% Trichromat simulation of original image
 [RGBImage_trichromatCalFormat,scaleFactor_tri_plate] = LMS2RGBimg(lmsImageCalFormatTri, d,T_cones,P_monitor,m,n,bScale);
 [RGBImage_trichromatCalFormat_plate,scaleFactor_tri] = LMS2RGBimg(lmsModuledCalFormatTri, d,T_cones,P_monitor,m,n,bScale);  % isochromatic plate 
 
+% Corrected trichromat image via pca LMS values
+[RGBImage_dichromatCalFormat,scaleFactor_di_plate]  = LMS2RGBimg(correctedLMS, d,T_cones,P_monitor,m,n,bScale);
+[RGBImage_dichromatCalFormat_plate,scaleFactor_di]  = LMS2RGBimg(correctedLMS_plate, d,T_cones,P_monitor,m,n,bScale);       % isochromatic plate 
 
+% Corrected dichromat image via pca LMS values
+LMSfixedDichromat_plate                  = tri2dichromatLMS(correctedLMS_plate,renderType,cone_mean_orig);      % isochromatic plate 
+[RGBImage_fixedDichromatCalFormat_plate] = LMS2RGBimg(LMSfixedDichromat_plate, d,T_cones,P_monitor,m,n,bScale); % isochromatic plate 
+LMSfixedDichromat                        = tri2dichromatLMS(correctedLMS,renderType,cone_mean_orig); 
+[RGBImage_fixedDichromatCalFormat]       = LMS2RGBimg(LMSfixedDichromat, d,T_cones,P_monitor,m,n,bScale);
+
+
+% Transform from cal format to image for viewing
 RGBImage_dichromat_orig          = CalFormatToImage(RGBImage_dichromatCalFormat_orig,m,n); % no modulation
 RGBImage_dichromat_plate_orig    = CalFormatToImage(RGBImage_dichromatCalFormat_plate_orig,m,n); % modulation
 
-RGBImage_dichromat          = CalFormatToImage(RGBImage_dichromatCalFormat,m,n); % no modulation
-RGBImage_dichromat_plate    = CalFormatToImage(RGBImage_dichromatCalFormat_plate,m,n); % modulation
+RGBImage_dichromat               = CalFormatToImage(RGBImage_dichromatCalFormat,m,n); % no modulation
+RGBImage_dichromat_plate         = CalFormatToImage(RGBImage_dichromatCalFormat_plate,m,n); % modulation
 
-RGBImage_trichromat         = CalFormatToImage(RGBImage_trichromatCalFormat,m,n); % no modulation
-RGBImage_trichromat_plate   = CalFormatToImage(RGBImage_trichromatCalFormat_plate,m,n); % modulation
+RGBImage_trichromat              = CalFormatToImage(RGBImage_trichromatCalFormat,m,n); % no modulation
+RGBImage_trichromat_plate        = CalFormatToImage(RGBImage_trichromatCalFormat_plate,m,n); % modulation
+
+RGBImage_FixedDichromat_plate    = CalFormatToImage(RGBImage_fixedDichromatCalFormat_plate,m,n); % plate
+RGBImage_FixedDichromat          = CalFormatToImage(RGBImage_fixedDichromatCalFormat,m,n); % no modulation
 
 
 figure();
-subplot(3,2,1)
+subplot(4,2,1)
 imshow(RGBImage_trichromat);  
 title('trichromat')
 
-subplot(3,2,2)
+subplot(4,2,2)
 imshow(RGBImage_trichromat_plate);     
 title('trichromat plate')
 
-subplot(3,2,3)
+subplot(4,2,3)
 imshow(RGBImage_dichromat_orig);     % DICHROMAT
 title('dichromat')
 
-subplot(3,2,4)
+subplot(4,2,4)
 imshow(RGBImage_dichromat_plate_orig);
 title('dichromat - plate')
 
-subplot(3,2,5)
+subplot(4,2,5)
 imshow(RGBImage_dichromat);     % DICHROMAT
+title('trichromat corrected')
+
+subplot(4,2,6)
+imshow(RGBImage_dichromat_plate);
+title('trichromat corrected - plate')
+
+subplot(4,2,7)
+imshow(RGBImage_FixedDichromat);
 title('dichromat corrected')
 
-subplot(3,2,6)
-imshow(RGBImage_dichromat_plate);
+subplot(4,2,8)
+imshow(RGBImage_FixedDichromat_plate);
 title('dichromat corrected - plate')
+
 end

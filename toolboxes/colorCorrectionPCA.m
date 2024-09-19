@@ -1,4 +1,4 @@
-function correctedLMS = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig)
+function [correctedLMS K_opt D_mnew T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig)
 
 
 % Perform PCA
@@ -7,15 +7,15 @@ PC2D(:,1) = coeff(:, 1); % First principal component
 PC2D(:,2) = coeff(:, 2); % Second principal component
 
 % Plot cloud of points visualization
-figure();
-x = originalLMS(1,:);
-y = originalLMS(2,:);
-z = originalLMS(3,:);
-
-scatter3(x, y, z, 'filled'); hold on;
-xlabel('L')
-ylabel('M')
-zlabel('S')
+% figure();
+% x = originalLMS(1,:);
+% y = originalLMS(2,:);
+% z = originalLMS(3,:);
+% 
+% scatter3(x, y, z, 'filled'); hold on;
+% xlabel('L')
+% ylabel('M')
+% zlabel('S')
 
 % Map PCA onto available cones
 % LMS image
@@ -25,13 +25,14 @@ T = originalLMS;
 T_mean = mean(T,2);
 
 % Mean subtracted LMS values
-T_ms = T - T_mean;
+% T_ms = T - T_mean;
+T_ms = T;
 
 % Map mean subtracted LMS valud onto two principle components (linear regression) 
 D_ms = PC2D\T_ms;
 
 % Map mean of LMS onto two principle components (linear regression)
-D_m = PC2D \ T_mean;
+% D_m = PC2D \ T_mean;
 
 % D_mnew(1,:) = D_ms(1,:);
 % D_mnew(2,:) = D_ms(1,:);
@@ -78,7 +79,7 @@ disp(K_opt);
 disp('Objective Function Value:');
 disp(fval);
 
-T_opt = K_opt * D_mnew + T_mean;
+T_opt = K_opt * D_mnew; % + T_mean;
 
 T_est_rgbImg = LMS2rgbLinimg(T_opt, d, T_cones, P_monitor, m, n, bScale);
 
