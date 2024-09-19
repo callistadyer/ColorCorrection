@@ -68,9 +68,7 @@ ub = []; % Upper bounds
  options = optimset(options,'Diagnostics','off','Display','iter','LargeScale','off','Algorithm','active-set');
 
 % Call fmincon
-% for i = 1:3 % DO WE WANT TO DO EACH K SEPARATELY? HOW DO WE DO THAT? 
 [K_opt, fval] = fmincon(@(K) T_EstObjectiveFunction(K, D_mnew, T_mean, d, T_cones, P_monitor, m, n, bScale), initialK, A, b, Aeq, beq, lb, ub, [], options);
-% end
 
 % K_opt = diag(K_opt);
 % Display results
