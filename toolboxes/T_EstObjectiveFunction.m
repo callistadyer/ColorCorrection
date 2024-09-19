@@ -10,10 +10,12 @@ end
 % K is what you are optimizing
 T_est = K * D_mnew + T_mean;
 
+% Get rgb values
 M_rgb2cones = T_cones*P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 rgbLinImageCalFormat = M_cones2rgb*T_est;
-rgbLinImageCalFormat
+
+% Ensure rgb is not <0 or >1
 if min(rgbLinImageCalFormat(:)) < 0 || max(rgbLinImageCalFormat(:)) > 1
     obj = Inf;
 
