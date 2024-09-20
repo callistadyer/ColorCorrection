@@ -46,10 +46,16 @@ function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMo
 [lmsImageCalFormatTri,lmsModuledCalFormatTri,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod);    
 
 % Apply pca correction to aid dichromacy
-[correctedLMS K_opt D_mnew T_mean]                         = colorCorrectionPCA(img,lmsImageCalFormatTri,renderType,cone_mean_orig);   % Original image
-[correctedLMS_plate K_opt_plate D_mnew_plate T_mean_plate] = colorCorrectionPCA(img,lmsModuledCalFormatTri,renderType,cone_mean_orig); % Image with plate
+[correctedLMS K_opt D_mnew T_mean]                         = colorCorrectionPCA(img,lmsImageCalFormatTri,renderType,cone_mean_orig,bScale);   % Original image
+[correctedLMS_plate K_opt_plate D_mnew_plate T_mean_plate] = colorCorrectionPCA(img,lmsModuledCalFormatTri,renderType,cone_mean_orig,bScale); % Image with plate
 correctedLMS = K_opt_plate * D_mnew + T_mean_plate;
 
+% Scale corrected LMS values to be as close to possible to original LMS
+LMS_new = correctedLMSadjust(correctedLMS,lmsImageCalFormatTri);
+LMS_new_plate = correctedLMSadjust(correctedLMS_plate,lmsModuledCalFormatTri);
+
+correctedLMS = LMS_new;
+correctedLMS_plate = LMS_new_plate;
 % Plot new image 
 [hyperspectralImage wls d P_monitor] = loadImage(img);
 % Get cone spectral sensitivities

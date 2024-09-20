@@ -1,4 +1,4 @@
-function [correctedLMS, K_opt, D_mnew, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig)
+function [correctedLMS, K_opt, D_mnew, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig,bScale)
 
 
 % Perform PCA
@@ -26,17 +26,13 @@ T_mean = mean(T,2);
 
 % Mean subtracted LMS values
 % T_ms = T - T_mean;
-T_ms = T;
+T_ms = T; % Looks better when we don't mean subtract here?
 
 % Map mean subtracted LMS valud onto two principle components (linear regression) 
 D_ms = PC2D\T_ms;
 
 % Map mean of LMS onto two principle components (linear regression)
 % D_m = PC2D \ T_mean;
-
-% D_mnew(1,:) = D_ms(1,:);
-% D_mnew(2,:) = D_ms(1,:);
-% D_mnew(3,:) = D_ms(2,:);
 
 %% Find the scaling matrix that maps D_ms onto approximate cone values
 
@@ -49,11 +45,10 @@ D_mnew(3,:) = D_ms(2,:);
 % Get cone spectral sensitivities
 load T_cones_ss2;
 T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
-bScale = 0;
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
 
 % Initial guess for K
-initialKvec = [0, 0, 0];
+initialKvec = [0.1, 0.1, 0.1];
 
 % Define the constraints
 A = [];
@@ -64,8 +59,8 @@ lb = []; % Lower bounds
 ub = []; % Upper bounds
 
 % Options
- options = optimset('fmincon');
- options = optimset(options,'Diagnostics','off','Display','iter','LargeScale','off','Algorithm','active-set');
+options = optimset('fmincon');
+options = optimset(options,'Diagnostics','off','Display','iter','LargeScale','off','Algorithm','active-set');
 
 % Call fmincon
 [K_optvec, fval] = fmincon(@(kVec) T_EstObjectiveFunction(kVec, D_mnew, T_mean, d, T_cones, P_monitor, m, n, bScale), initialKvec, A, b, Aeq, beq, lb, ub, [], options);
@@ -77,58 +72,12 @@ disp(K_optvec);
 disp('Objective Function Value:');
 disp(fval);
 
-T_opt = K_opt * D_mnew + T_mean;
+T_opt = K_opt * D_mnew;
+% T_opt = K_opt * D_mnew + T_mean;
 
 T_est_rgbImg = LMS2rgbLinimg(T_opt, d, T_cones, P_monitor, m, n, bScale);
 
-
-%% 
-
-% CHECK: It is at least true that D has two different values
-% figure();
-% Dimg = CalFormatToImage(D_ms(1,:),256,256);
-% imagesc(Dimg); 
-% 
-% figure();
-% Dimg2 = CalFormatToImage(D_ms(2,:),256,256);
-% imagesc(Dimg2); 
-
-% switch (renderType)
-%     case 'Deuteranopia' % m cone deficiency
-%         coneGone = 2;
-%     case 'Protanopia'   % l cone deficiency
-%         coneGone = 1;
-%     case 'Tritanopia'   % s cone deficiency
-%         coneGone = 3;
-% end
-% 
-% % Choose M to minimize the difference between Din and Dout
-% % D_in = T(1:end ~= coneGone,:); % original LMS values, but only 2 rows for the available cones  
-% % 
-% % % Get M via linear regression
-% % M = [D_ms + D_m]' \ D_in';
-% % 
-% % % Get estimate of two cones available
-% % D_est = M' * (D_ms + D_m);
-% 
-% % How to decide which D is paired with which LMS? 
-% switch (renderType)
-%     case 'Deuteranopia' % m cone deficiency
-%         LMSimageCalFormat(1,:) = T_opt(1,:);
-%         LMSimageCalFormat(2,:) = ones(1,length(LMSimageCalFormat(1,:)));
-%         LMSimageCalFormat(3,:) = T_opt(2,:);
-%     case 'Protanopia'   % l cone deficiency
-%         LMSimageCalFormat(2,:) = T_opt(1,:);
-%         LMSimageCalFormat(1,:) = ones(1,length(LMSimageCalFormat(2,:)));
-%         LMSimageCalFormat(3,:) = T_opt(2,:);
-%     case 'Tritanopia'   % s cone deficiency
-%         LMSimageCalFormat(1,:) = T_opt(1,:);
-%         LMSimageCalFormat(2,:) = T_opt(2,:);
-%         LMSimageCalFormat(3,:) = ones(1,length(LMSimageCalFormat(1,:)));
-% end
-
 % Get values for missing cone
-% [correctedLMS] = tri2dichromatLMS(LMSimageCalFormat,renderType,cone_mean_orig);
 correctedLMS = T_opt;
 
 end
