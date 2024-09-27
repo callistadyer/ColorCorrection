@@ -2,7 +2,7 @@ function [correctedLMS, K_opt, D_mnew, T_mean]  = colorCorrectionPCA(img,origina
 
 
 % Perform PCA
-coeff = pca(originalLMS','Centered','on');
+coeff = pca(originalLMS');
 PC2D(:,1) = coeff(:, 1); % First principal component
 PC2D(:,2) = coeff(:, 2); % Second principal component
 
