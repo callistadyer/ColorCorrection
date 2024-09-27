@@ -64,7 +64,7 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 % Render lms image that a trichromat sees.  Convert from cal format to
 % image as well.
 lmsImageCalFormatTrichromat = T_cones*hyperspectralImageCalFormat;
-[RGBImageCalFormat_trichromat,rgbLinImageCalFormat,scaleFactor] = LMS2RGBimg(lmsImageCalFormatTrichromat,d,T_cones,P_monitor,m,n,bScale);
+[RGBImageCalFormat_trichromat,rgbLinImageCalFormat,scaleFactor] = LMS2RGBCalFormat(lmsImageCalFormatTrichromat,d,T_cones,P_monitor,m,n,bScale);
 RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 
 % Get original image into rgb so you can maximize gamut contrast.
@@ -96,8 +96,8 @@ lmsDichromImageCalFormat        = tri2dichromatLMS(lmsImageCalFormatTrichromat,r
 lmsDichromModuledCalFormat      = tri2dichromatLMS(lmsModuledCalFormatTrichromat,renderType,cone_mean_orig); %
 
 % Dichromat LMS --> RGB
-[RGBImage_dichromatCalFormat,scaleFactor_di]       = LMS2RGBimg(lmsDichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale); % no modulation
-[RGBPlate_dichromatCalFormat,scaleFactor_di_plate] = LMS2RGBimg(lmsDichromModuledCalFormat, d,T_cones,P_monitor,m,n,bScale);  % isochromatic plate 
+[RGBImage_dichromatCalFormat,scaleFactor_di]       = LMS2RGBCalFormat(lmsDichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale); % no modulation
+[RGBPlate_dichromatCalFormat,scaleFactor_di_plate] = LMS2RGBCalFormat(lmsDichromModuledCalFormat, d,T_cones,P_monitor,m,n,bScale);  % isochromatic plate 
 
 % Dichromat RGB cal format --> image format
 RGBImage_dichromat          = CalFormatToImage(RGBImage_dichromatCalFormat,m,n); % no modulation

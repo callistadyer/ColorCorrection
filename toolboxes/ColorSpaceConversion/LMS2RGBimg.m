@@ -1,10 +1,10 @@
-function [RGBImageCalFormat,rgbLinImageCalFormat,scaleFactor] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale)
+function [RGBImageCalFormat,rgbLinImageCalFormat,scaleFactor] = LMS2RGBCalFormat(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale)
 
 % Converts LMS cone images to RGB images. Outputs both linear and gamma
 % corrected rgb/RGB values
 %
 % Syntax:
-%   [RGBImageCalFormat,rgbImageCalFormat,scaleFactor] = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale)
+%   [RGBImageCalFormat,rgbImageCalFormat,scaleFactor] = LMS2RGBCalFormat(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale)
 %
 % Description:
 %

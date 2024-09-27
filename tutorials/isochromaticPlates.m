@@ -51,7 +51,7 @@ lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
 lmsImage          = CalFormatToImage(lmsImageCalFormat,m,n);
 
 % get original image
-RGB_CalFormat     = LMS2RGBimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
+RGB_CalFormat     = LMS2RGBCalFormat(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
 RGB_img           = CalFormatToImage(RGB_CalFormat,m,n);
 
 switch (renderType)
@@ -79,7 +79,7 @@ lmsImage_mod = lmsImage + delta_lms;
 % turn lmsImage to cal format so you can convert to RGB
 lmsModuledCalFormat = ImageToCalFormat(lmsImage_mod);
 % convert to RGB
-RGB_modulatedCalFormat = LMS2RGBimg(lmsModuledCalFormat,d,T_cones,P_monitor,m,n,bScale);
+RGB_modulatedCalFormat = LMS2RGBCalFormat(lmsModuledCalFormat,d,T_cones,P_monitor,m,n,bScale);
 % convert to image for viewing
 RGBmodulatedCalFormat = CalFormatToImage(RGB_modulatedCalFormat,m,n);
 
