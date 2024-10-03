@@ -31,9 +31,8 @@ M_rgb2cones = T_cones*P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 
 % Get linear RGB from LMS
-% THIS SHOULD CALL LMS2rgbLinimg().
-rgbLinImageCalFormat = M_cones2rgb*lmsImageCalFormat;
-rgbImage = CalFormatToImage(rgbLinImageCalFormat,m,n);
+[rgbImageCalFormat,scaleFactor] = LMS2rgbLinCalFormat(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
+rgbImage = CalFormatToImage(rgbImageCalFormat,m,n);
 
 if bScale == 1
     % For right now, normalize so that maximum value in rgb is 1

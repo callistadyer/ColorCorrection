@@ -1,4 +1,4 @@
-function [rgbImageCalFormat,scaleFactor] = LMS2rgbLinimg(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale)
+function [rgbImageCalFormat,scaleFactor] = LMS2rgbLinCalFormat(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale)
 
 % function takes an LMS image in cal format and outputs and rgb image in cal format
 % also outputs the scale factor used to normalize the rgbImage 

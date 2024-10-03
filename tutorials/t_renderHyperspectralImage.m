@@ -70,7 +70,7 @@ RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 % Get original image into rgb so you can maximize gamut contrast.
 % CAN MODIFY LMS2RGB image to return linear rgb image as well, since it is
 % computed on the way.
-[rgbLinImageCalFormat2,scaleFactor] = LMS2rgbLinimg(lmsImageCalFormatTrichromat,d,T_cones,P_monitor,m,n,bScale);
+[rgbLinImageCalFormat2,scaleFactor] = LMS2rgbLinCalFormat(lmsImageCalFormatTrichromat,d,T_cones,P_monitor,m,n,bScale);
 
 % Get modulation for isochromatic plate modulation.
 % MIGHT ADD A QUICK COMMENT ABOUT WHAT THIS IS DOING.
@@ -126,7 +126,7 @@ title([renderType ' rendering - plate'],'FontSize',20);
 if bPLOTscatter == 1
 
     % Get dichromat image for comparing lms values
-    [rgbImage_dichromatCalFormat,scaleFactor_di] = LMS2rgbLinimg(lmsDichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
+    [rgbImage_dichromatCalFormat,scaleFactor_di] = LMS2rgbLinCalFormat(lmsDichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
     rgbImage_dichromat                           = CalFormatToImage(rgbImage_dichromatCalFormat,m,n);
 
     % Check by reversing RGB to LMS image

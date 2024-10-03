@@ -26,7 +26,7 @@ if min(rgbLinImageCalFormat(:)) < 0 || max(rgbLinImageCalFormat(:)) > 1
 else
 
     % Compute rgb values from the new cone estimates
-    % T_est_rgbImg = LMS2rgbLinimg(T_est, d, T_cones, P_monitor, m, n, bScale);
+    % T_est_rgbImg = LMS2rgbLinCalFormat(T_est, d, T_cones, P_monitor, m, n, bScale);
     [~,T_est_rgbImg] = LMS2RGBCalFormat(T_est,d,T_cones,P_monitor,m,n,bScale);
 
     % Compute min and max of rgb values
