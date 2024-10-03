@@ -1,5 +1,36 @@
 function [correctedLMS, K_opt, D_mnew, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig,bScale)
 
+% Correcting an image so a dichromat can see color contrasts that she could
+% not see otherwise. Correction is happening via a PCA 
+%
+% Syntax:
+%   [correctedLMS, K_opt, D_mnew, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig,bScale)
+%
+% Description:
+%
+% Inputs:
+%   img:          - String. Name of image to be rendered. If passed as the empty matrix, you get a
+%                   hyperspectral image of some stuffed animals. Some other options are
+%                       'sceneN.mat' - N is 1 to 5. One of our hypespectral scenes.
+%                       'gray'       - Gray spatially uniform field.            
+%   originalLMS:  - original LMS values of a trichromat seeing img
+%   renderType    - String. Type of dichromat.  Options are:
+%                       'Deuteranopia'
+%                       'Protanopia'
+%                       'Tritanopia'
+%   cone_mean_orig- original mean of the missing cone value
+%   bScale:       - Boolean. Scale the image values into display range (1
+%                   or 0).  A good idea except for 'gray'.
+%
+% Outputs:
+%   correctedLMS  - new LMS values after PCA manipulation (for trichromat)
+%   K_opt         - optimal K scalars 
+%   D_mnew        - LMS values before scaling
+%   T_mean        - mean of LMS values 
+%
+% Optional key/value pairs:
+%   None
+%
 
 % Perform PCA
 coeff = pca(originalLMS',"Centered",true); % Centered true subtracts mean
@@ -77,7 +108,6 @@ T_opt = K_opt * D_mnew + T_mean;
 
 T_est_rgbImg = LMS2rgbLinCalFormat(T_opt, d, T_cones, P_monitor, m, n, bScale);
 
-% Get values for missing cone
 correctedLMS = T_opt;
 
 end
