@@ -1,4 +1,4 @@
-function [dichromatLMS] = tri2dichromatLMS(lmsImageCalFormat,renderType,cone_mean_orig)
+function [dichromatLMSCalFormat] = tri2dichromatLMSCalFormat(lmsImageCalFormat,renderType,cone_mean_orig)
 
 % function takes in trichromat lms values and converts them into dichromat lms values
 %
@@ -50,6 +50,6 @@ switch (renderType)
         lmsImageCalFormat(3,:)       = (tritanSFromMScale*m_cone + tritanSFromLScale*l_cone)/2; % replace S cones with M cone PLATE
 end
 
-dichromatLMS = lmsImageCalFormat;
+dichromatLMSCalFormat = lmsImageCalFormat;
 
 end

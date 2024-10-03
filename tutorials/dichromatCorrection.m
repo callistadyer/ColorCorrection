@@ -81,9 +81,9 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
 % Corrected dichromat image via pca LMS values
 cone_mean_processed = mean(correctedLMS,2);
-LMSfixedDichromat_plate                  = tri2dichromatLMS(correctedLMS_plate,renderType,cone_mean_processed(2));      % isochromatic plate 
+LMSfixedDichromat_plate                  = tri2dichromatLMSCalFormat(correctedLMS_plate,renderType,cone_mean_processed(2));      % isochromatic plate 
 [RGBImage_fixedDichromatCalFormat_plate] = LMS2RGBCalFormat(LMSfixedDichromat_plate, d,T_cones,P_monitor,m,n,bScale); % isochromatic plate 
-LMSfixedDichromat                        = tri2dichromatLMS(correctedLMS,renderType,cone_mean_processed(2)); 
+LMSfixedDichromat                        = tri2dichromatLMSCalFormat(correctedLMS,renderType,cone_mean_processed(2)); 
 [RGBImage_fixedDichromatCalFormat]       = LMS2RGBCalFormat(LMSfixedDichromat, d,T_cones,P_monitor,m,n,bScale);
 
 

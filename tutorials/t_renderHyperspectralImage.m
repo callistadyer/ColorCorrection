@@ -91,8 +91,8 @@ switch (renderType)
 end 
 
 % Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)  
-lmsDichromImageCalFormat        = tri2dichromatLMS(lmsImageCalFormatTrichromat,renderType,cone_mean_orig); % gray
-lmsDichromModuledCalFormat      = tri2dichromatLMS(lmsModuledCalFormatTrichromat,renderType,cone_mean_orig); %
+lmsDichromImageCalFormat        = tri2dichromatLMSCalFormat(lmsImageCalFormatTrichromat,renderType,cone_mean_orig); % gray
+lmsDichromModuledCalFormat      = tri2dichromatLMSCalFormat(lmsModuledCalFormatTrichromat,renderType,cone_mean_orig); %
 
 % Dichromat LMS --> RGB
 [RGBImage_dichromatCalFormat,scaleFactor_di]       = LMS2RGBCalFormat(lmsDichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale); % no modulation
