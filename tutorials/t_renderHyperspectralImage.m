@@ -71,11 +71,10 @@ RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 % CAN MODIFY LMS2RGB image to return linear rgb image as well, since it is
 % computed on the way.
 [rgbLinImageCalFormat2,scaleFactor] = LMS2rgbLinCalFormat(lmsImageCalFormatTrichromat,d,T_cones,P_monitor,m,n,bScale);
-
 % Get modulation for isochromatic plate modulation.
-% MIGHT ADD A QUICK COMMENT ABOUT WHAT THIS IS DOING.
-% MAYBE CHANGE NAME TO getConeDirectedModulation for clarity.
-lmsModulationImgFormat = getModulation(rgbLinImageCalFormat2,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
+% This function is taking rgbLinImageCalFormat2 and using MaximizeGamutContrast to determine how much we can move 
+% in a given cone direction (specifically, the direction of the missing cone) without going out of gamut
+lmsModulationImgFormat = getDichromatConfusionModulation(rgbLinImageCalFormat2,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
 
 % Create isochromatic plates
 [RGBModulated lmsModuledCalFormatTrichromat] = isochromaticPlates(image,renderType,lmsModulationImgFormat,bScale, ...
