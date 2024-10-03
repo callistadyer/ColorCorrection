@@ -1,10 +1,10 @@
 
-function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMod)
-% Uses PCA to move 3D trichromatic image into 2 dimensions in attempt to
+function [RGBImage_dichromat] = t_dichromatCorrection()
+% Tutorial for dichromatCorrection (no n. Uses PCA to move 3D trichromatic image into 2 dimensions in attempt to
 % create an accessible image for a dichromat
 %
 % Syntax:
-%   [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMod)
+%   [RGBImage_dichromat] = t_dichromatCorrection()
 %
 % Description:
 %
@@ -31,16 +31,15 @@ function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMo
 % Optional key/value pairs:
 %   None
 %
-% Examples are included within the code
 
 % History
-%   09/05/2024  cmd  Initial go.
+%   10/03/2024  cmd  Initial go.
 %
-% Examples:
-%{
-[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,0)
-[RGBImage_dichromat] = dichromatCorrection('scene2.mat','Deuteranopia',1,0)
-%}
+
+img        = 'gray';
+renderType = 'Deuteranopia';
+bScale     = 0;
+bMinMod    = 0;
 
 % Get trichromatic (LMS) image
 [lmsImageCalFormatTri,lmsModuledCalFormatTri,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod);    
@@ -54,9 +53,8 @@ correctedLMS = K_opt_plate * D_mnew + T_mean_plate;
 LMS_new       = correctedLMSadjust(correctedLMS,lmsImageCalFormatTri);
 LMS_new_plate = correctedLMSadjust(correctedLMS_plate,lmsModuledCalFormatTri);
 
-correctedLMS       = LMS_new;
+correctedLMS = LMS_new;
 correctedLMS_plate = LMS_new_plate;
-
 % Plot new image 
 [hyperspectralImage wls d P_monitor] = loadImage(img);
 % Get cone spectral sensitivities

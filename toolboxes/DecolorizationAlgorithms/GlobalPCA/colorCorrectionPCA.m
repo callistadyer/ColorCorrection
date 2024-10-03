@@ -2,7 +2,7 @@ function [correctedLMS, K_opt, D_mnew, T_mean]  = colorCorrectionPCA(img,origina
 
 
 % Perform PCA
-coeff = pca(originalLMS');
+coeff = pca(originalLMS',"Centered",true); % Centered true subtracts mean
 PC2D(:,1) = coeff(:, 1); % First principal component
 PC2D(:,2) = coeff(:, 2); % Second principal component
 
@@ -25,8 +25,8 @@ T = originalLMS;
 T_mean = mean(T,2);
 
 % Mean subtracted LMS values
-% T_ms = T - T_mean;
-T_ms = T; % Looks better when we don't mean subtract here?
+% T_ms = T - T_mean; % already subtracted off in "centered true" in PCA
+T_ms = T;
 
 % Map mean subtracted LMS valud onto two principle components (linear regression) 
 D_ms = PC2D\T_ms;
@@ -72,10 +72,10 @@ disp(K_optvec);
 disp('Objective Function Value:');
 disp(fval);
 
-T_opt = K_opt * D_mnew;
-% T_opt = K_opt * D_mnew + T_mean;
+% T_opt = K_opt * D_mnew;
+T_opt = K_opt * D_mnew + T_mean;
 
-T_est_rgbImg = LMS2rgbLinimg(T_opt, d, T_cones, P_monitor, m, n, bScale);
+T_est_rgbImg = LMS2rgbLinCalFormat(T_opt, d, T_cones, P_monitor, m, n, bScale);
 
 % Get values for missing cone
 correctedLMS = T_opt;

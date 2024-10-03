@@ -11,8 +11,8 @@ K = diag(kVec);
 
 % Cone values scaled by some K, then add back in T_mean
 % K is what you are optimizing
-T_est = K * D_mnew;
-% T_est = K * D_mnew + T_mean;
+% T_est = K * D_mnew;
+T_est = K * D_mnew + T_mean;
 
 % Get rgb values
 M_rgb2cones = T_cones*P_monitor;
