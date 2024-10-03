@@ -68,8 +68,6 @@ lmsImageCalFormatTrichromat = T_cones*hyperspectralImageCalFormat;
 RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 
 % Get original image into rgb so you can maximize gamut contrast.
-% CAN MODIFY LMS2RGB image to return linear rgb image as well, since it is
-% computed on the way.
 [rgbLinImageCalFormat2,scaleFactor] = LMS2rgbLinCalFormat(lmsImageCalFormatTrichromat,d,T_cones,P_monitor,m,n,bScale);
 % Get modulation for isochromatic plate modulation.
 % This function is taking rgbLinImageCalFormat2 and using MaximizeGamutContrast to determine how much we can move 
