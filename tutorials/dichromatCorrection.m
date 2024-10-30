@@ -1,5 +1,5 @@
 
-function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMod)
+function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMod,nSquares)
 % Uses PCA to move 3D trichromatic image into 2 dimensions in attempt to
 % create an accessible image for a dichromat
 %
@@ -43,7 +43,7 @@ function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMo
 %}
 
 % Get trichromatic (LMS) image
-[lmsImageCalFormatTri,lmsModuledCalFormatTri,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod);    
+[lmsImageCalFormatTri,lmsModuledCalFormatTri,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod,nSquares);    
 
 % Apply pca correction to aid dichromacy
 [correctedLMS K_opt D_mnew T_mean]                         = colorCorrectionPCA(img,lmsImageCalFormatTri,renderType,cone_mean_orig,bScale);   % Original image

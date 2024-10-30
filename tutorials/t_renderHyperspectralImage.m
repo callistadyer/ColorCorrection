@@ -1,4 +1,4 @@
-function [lmsImageCalFormatTrichromat,lmsModuledCalFormatTrichromat,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod)
+function [lmsImageCalFormatTrichromat,lmsModuledCalFormatTrichromat,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod,nSquares)
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
@@ -72,10 +72,17 @@ RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 % Get modulation for isochromatic plate modulation.
 % This function is taking rgbLinImageCalFormat2 and using MaximizeGamutContrast to determine how much we can move 
 % in a given cone direction (specifically, the direction of the missing cone) without going out of gamut
-lmsModulationImgFormat = getDichromatConfusionModulation(rgbLinImageCalFormat2,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
+
+if strcmp(image,'gray')
+    for i = 1:nSquares
+        lmsModulationImgFormat(:,:,:,i) = getDichromatConfusionModulation(rgbLinImageCalFormat2,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
+    end
+else
+    lmsModulationImgFormat = getDichromatConfusionModulation(rgbLinImageCalFormat2,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
+end
 
 % Create isochromatic plates
-[RGBModulated lmsModuledCalFormatTrichromat] = isochromaticPlates(image,renderType,lmsModulationImgFormat,bScale, ...
+[RGBModulated lmsModuledCalFormatTrichromat] = isochromaticPlates(image,renderType,lmsModulationImgFormat,bScale,nSquares, ...
     'verbose',true);
 
 % Mean of absent cone in original image. Used for replacing that cone value in dichromat image 
