@@ -1,4 +1,4 @@
-function [RGBmodulatedCalFormat lmsModuledCalFormat] = isochromaticPlates(img,renderType,lmsModulationImgFormat,bScale,nSquares,options)
+function [RGBmodulatedCalFormat lmsModuledCalFormat] = isochromaticPlates(img,renderType,lmsModulationImgFormat,Disp,bScale,nSquares,options)
 
 % function create isochromatic plates for testing dichromacy
 %
@@ -30,6 +30,7 @@ arguments
     img
     renderType
     lmsModulationImgFormat
+    Disp struct
     bScale
     nSquares
     options.verbose (1,1) logical = false;
@@ -41,48 +42,34 @@ end
 
 % Load hyperspectral image
 [hyperspectralImage wls d P_monitor] = loadImage(img);
-
-% Get cone spectral sensitivities
-load T_cones_ss2;
-T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
-
 % Get LMS values
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
-lmsImageCalFormat = T_cones*hyperspectralImageCalFormat;
-lmsImage          = CalFormatToImage(lmsImageCalFormat,m,n);
+lmsImageCalFormat = Disp.T_cones*hyperspectralImageCalFormat;
+lmsImage          = CalFormatToImage(lmsImageCalFormat,Disp.m,Disp.n);
 
-% get original image
-RGB_CalFormat     = LMS2RGBCalFormat(lmsImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
-RGB_img           = CalFormatToImage(RGB_CalFormat,m,n);
+% Get original RGB image
+[RGB_CalFormat rgbLinImageCalFormat]  = LMS2RGBCalFormat(lmsImageCalFormat,Disp,bScale);
+RGB_img                               = CalFormatToImage(RGB_CalFormat,Disp.m,Disp.n);
 
-switch (renderType)
-    case 'Deuteranopia' % m cone deficiency
-        idxLMS = 2;
-        slice_lms = lmsImage(:,:,idxLMS);
-    case 'Protanopia'   % l cone deficiency
-        idxLMS = 1;
-        slice_lms = lmsImage(:,:,idxLMS);
-    case 'Tritanopia'   % s cone deficiency
-        idxLMS = 3;
-        slice_lms = lmsImage(:,:,idxLMS);
-end
-
-% carve out an image where there is 0s everywhere except the delta 
-% delta = plateO(size(slice_lms),deltaModulation,100);
-% no longer just for one slice...
-
-% CALL THIS FUNCTION MANY TIMES AND PLACE THE SQUARES AROUND THE IMG
+% CREATE SQUARE MODULATIONS
 delta_lms = plateSquare(size(lmsImage),lmsModulationImgFormat,nSquares);
 
-% add the delta to the L M or S values to modulate one cone type
+% Add the delta to the L M S values to modulate cones (original LMS + modulation) 
 lmsImage_mod = lmsImage + delta_lms;
-% redefine that L M or S cone values
-% lmsImage(:,:,idxLMS) = new_slice;
+
+% CHECK IF MODULATED LMS IS IN GAMUT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+lmsImage_modCalFormat = ImageToCalFormat(lmsImage_mod);
+inGamut = checkLMSGamut(lmsImage_modCalFormat,Disp,bScale);
+if inGamut == 0
+    error(['isochromaticPlates: WARNING! rgb values are out of gamut... lmsImage_mod values outside of the range [0 1]']);
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % turn lmsImage to cal format so you can convert to RGB
 lmsModuledCalFormat = ImageToCalFormat(lmsImage_mod);
 % convert to RGB
-RGB_modulatedCalFormat = LMS2RGBCalFormat(lmsModuledCalFormat,d,T_cones,P_monitor,m,n,bScale);
+RGB_modulatedCalFormat = LMS2RGBCalFormat(lmsModuledCalFormat,Disp,bScale);
 % convert to image for viewing
 RGBmodulatedCalFormat = CalFormatToImage(RGB_modulatedCalFormat,m,n);
 

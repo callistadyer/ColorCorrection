@@ -43,7 +43,7 @@ function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMo
 %}
 
 % Get trichromatic (LMS) image
-[lmsImageCalFormatTri,lmsModuledCalFormatTri,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod,nSquares);    
+[lmsImageCalFormatTri,lmsModuledCalFormatTri,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig,Disp] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod,nSquares);    
 
 % Apply pca correction to aid dichromacy
 [correctedLMS K_opt D_mnew T_mean]                         = colorCorrectionPCA(img,lmsImageCalFormatTri,renderType,cone_mean_orig,bScale);   % Original image
@@ -67,7 +67,6 @@ T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
 P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
 % Create RGB image from LMS  
-
 % Dichromat simulation of original image
 [RGBImage_dichromatCalFormat_orig]        = LMS2RGBCalFormat(lmsDichromImageCalFormat, d,T_cones,P_monitor,m,n,bScale);
 [RGBImage_dichromatCalFormat_plate_orig]  = LMS2RGBCalFormat(lmsDichromModuledCalFormat, d,T_cones,P_monitor,m,n,bScale);         % isochromatic plate 

@@ -1,4 +1,4 @@
-function lmsImage = rgbLin2LMSimg(rgbImage,T_cones,P_monitor,scaleFactor,m,n,bScale)
+function lmsImage = rgbLin2LMSimg(rgbImage,Disp,scaleFactor,bScale)
 
 % function takes rgb image in image format and outputs LMS image in image format 
 %
@@ -9,11 +9,12 @@ function lmsImage = rgbLin2LMSimg(rgbImage,T_cones,P_monitor,scaleFactor,m,n,bSc
 %
 % Inputs:
 %   rgbImage              - linear rgb image
-%   T_cones               - [3xnWl]. Cone spectral sensitivities
-%   P_monitor             - [nWlx3]. Display primaries
-%   scaleFactor           - scale factor used to scale img values
-%   m                     - Scalar.  Row dimension of image     
-%   n                     - Scalar.  Column dimension of image     
+%   Disp includes:
+%       Disp.T_cones               - [3xnWl]. Cone spectral sensitivities
+%       Disp.P_monitor             - [nWlx3]. Display primaries
+%       Disp.m                     - Scalar.  Row dimension of image     
+%       Disp.n                     - Scalar.  Column dimension of image  
+%   scaleFactor           - scale factor used to scale img values   
 %   bScale                - Boolean. Scale or not 
 %
 % Outputs:
@@ -32,9 +33,9 @@ end
 rgbImageCalFormat = ImageToCalFormat(rgbImage);
 
 % LMS image
-M_rgb2cones = T_cones*P_monitor;
+M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 lmsImageCalFormat = M_rgb2cones * rgbImageCalFormat;
 
 % Turn back into image format from cal format
-lmsImage = CalFormatToImage(lmsImageCalFormat,m,n);
+lmsImage = CalFormatToImage(lmsImageCalFormat,Disp.m,Disp.n);
 end

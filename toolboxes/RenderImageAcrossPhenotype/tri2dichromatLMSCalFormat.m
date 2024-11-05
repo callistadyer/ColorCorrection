@@ -43,7 +43,7 @@ tritanSFromLScale = cone_mean_orig/mean(l_cone);
 % Make dichromat manipulation - missing cone
 switch (renderType)
     case 'Deuteranopia' % m cone deficiency
-        lmsImageCalFormat(2,:)       =  deuterMFromLScale * l_cone; % replace M cones with L cone PLATE
+        lmsImageCalFormat(2,:)       = deuterMFromLScale * l_cone; % replace M cones with L cone PLATE
     case 'Protanopia'   % l cone deficiency
         lmsImageCalFormat(1,:)       = protoLFromMScale*m_cone; % replace L cones with M cone PLATE
     case 'Tritanopia'   % s cone deficiency
