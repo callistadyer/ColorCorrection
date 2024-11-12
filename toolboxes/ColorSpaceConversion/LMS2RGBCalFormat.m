@@ -45,7 +45,7 @@ end
 
 % Truncated version for gamma correction
 rgbImageTruncate = rgbImage;
-rgbImageTruncate(rgbImageTruncate < 0) = 0;
+% rgbImageTruncate(rgbImageTruncate < 0) = 0;
 
 % Linear rgb values make sure not below 0
 rgbLinImage = rgbImageTruncate; 
@@ -54,7 +54,7 @@ rgbLinImageCalFormat = ImageToCalFormat(rgbLinImage);
 
 % Values of rgbImageTruncate should be between 0 and 1... if not, there's
 % gonna be an error in rgb2dac
-if any(unique(rgbImageTruncate) > 1 | unique(rgbImageTruncate) < 0)
+if any(rgbImageTruncate(:) > 1 | rgbImageTruncate(:) < 0)
     error(['LMS2RGBCalFormat: WARNING! rgb values are out of gamut... rgbImageTruncate values outside of the range [0 1]']);
 end
 

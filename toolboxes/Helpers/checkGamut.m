@@ -1,4 +1,4 @@
-function inGamutOrNO = checkGamut(LMSimageCalFormat,Disp,bScale)
+function [inGamut, rgbImageCalFormat] = checkGamut(LMSimageCalFormat,Disp,bScale)
 
 % Build matrix that goes from cones to monitor linear rgb
 M_rgb2cones = Disp.T_cones*Disp.P_monitor;
@@ -18,12 +18,14 @@ end
 
 % Truncated version for gamma correction
 rgbImageTruncate = rgbImage;
-rgbImageTruncate(rgbImageTruncate < 0) = 0;
+% rgbImageTruncate(rgbImageTruncate < 0) = 0;
 
 % Values of rgbImageTruncate should be between 0 and 1... if not, there's
 % gonna be an error in rgb2dac
-if any(unique(rgbImageTruncate) > 1 | unique(rgbImageTruncate) < 0)
-    inGamutOrNO = 0;
+if any(rgbImageTruncate(:) > 1 | rgbImageTruncate(:) < 0)
+    inGamut = 0;
+    % min(rgbImage(:))
+    % max(rgbImage(:))
 else 
-    inGamutOrNO = 1;
+    inGamut = 1;
 end

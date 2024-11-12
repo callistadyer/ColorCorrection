@@ -51,6 +51,10 @@ if takeMin == 1
 scaleFactor_rgb = min(scaleFactor_rgb(:));        % minimum modulation of all pixels
 end
 
+% Stay away from the very edge
+toleranceFactor = 0.9;
+scaleFactor_rgb = toleranceFactor*scaleFactor_rgb;
+
 % Scale modulation direction by scale factor to get modulation
 modulation_rgb = scaleFactor_rgb.*modulationDirection_rgb;
 

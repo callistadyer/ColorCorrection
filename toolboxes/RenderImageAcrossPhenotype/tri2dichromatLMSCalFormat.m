@@ -41,14 +41,20 @@ tritanSFromLScale = cone_mean_orig/mean(l_cone);
 % Make dichromat manipulation - missing cone
 switch (renderType)
     case 'Deuteranopia' % m cone deficiency
-        lmsImageCalFormat(2,:)       = deuterMFromLScale * l_cone; % replace M cones with L cone PLATE
+        lmsImageCalFormat(2,:)       = l_cone; 
+        [scaleFactor,dichromatLMSCalFormat,inGamut] = findDichromMappingScaleFactor(2,lmsImageCalFormat,Disp,bScale);
+
     case 'Protanopia'   % l cone deficiency
-        lmsImageCalFormat(1,:)       = protoLFromMScale*m_cone; % replace L cones with M cone PLATE
+        lmsImageCalFormat(2,:)       = m_cone; 
+        [scaleFactor,dichromatLMSCalFormat,inGamut] = findDichromMappingScaleFactor(1,lmsImageCalFormat,Disp,bScale); 
+        
     case 'Tritanopia'   % s cone deficiency
-        lmsImageCalFormat(3,:)       = (tritanSFromMScale*m_cone + tritanSFromLScale*l_cone)/2; % replace S cones with M cone PLATE
+        lmsImageCalFormat(3,:)       = (m_cone + l_cone)/2;
+        [scaleFactor,dichromatLMSCalFormat,inGamut] = findDichromMappingScaleFactor(3,lmsImageCalFormat,Disp,bScale);
+
 end
 
-dichromatLMSCalFormat = lmsImageCalFormat;
+%dichromatLMSCalFormat = lmsImageCalFormat;
 
 % CHECK IF MODULATED LMS IS IN GAMUT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
