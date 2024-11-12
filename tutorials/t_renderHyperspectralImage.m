@@ -1,4 +1,4 @@
-function [lmsImageCalFormatTrichromat,lmsModuledCalFormatTrichromat,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig,Disp] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod,nSquares)
+function [lmsImageCalFormatTrichromat,lmsModuledCalFormatTrichromat,lmsDichromImageCalFormat,lmsDichromModulatedCalFormat,cone_mean_orig,Disp] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod,nSquares)
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
@@ -110,13 +110,13 @@ switch (renderType)
 end 
 
 % Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)  
-lmsDichromImageCalFormat        = tri2dichromatLMSCalFormat(lmsImageCalFormatTrichromat,renderType,cone_mean_orig); % gray
+lmsDichromImageCalFormat        = tri2dichromatLMSCalFormat(lmsImageCalFormatTrichromat,renderType,cone_mean_orig,Disp,bScale); % gray
 %%%%%%%%%%%%%%% BUG HERE!! THIS FUNCTION PUSHES OUT OF GAMUT !! %%%%%%%%%%%%%%%
-lmsDichromModuledCalFormat      = tri2dichromatLMSCalFormat(lmsModuledCalFormatTrichromat,renderType,cone_mean_orig); % modulated 
+lmsDichromModulatedCalFormat    = tri2dichromatLMSCalFormat(lmsModuledCalFormatTrichromat,renderType,cone_mean_orig,Disp,bScale); % modulated 
 
 % Dichromat LMS --> RGB
 [RGBImage_dichromatCalFormat,scaleFactor_di]       = LMS2RGBCalFormat(lmsDichromImageCalFormat,Disp,bScale); % no modulation
-[RGBPlate_dichromatCalFormat,scaleFactor_di_plate] = LMS2RGBCalFormat(lmsDichromModuledCalFormat, Disp,bScale);  % isochromatic plate 
+[RGBPlate_dichromatCalFormat,scaleFactor_di_plate] = LMS2RGBCalFormat(lmsDichromModulatedCalFormat, Disp,bScale);  % isochromatic plate 
 
 % Dichromat RGB cal format --> image format
 RGBImage_dichromat          = CalFormatToImage(RGBImage_dichromatCalFormat,m,n); % no modulation

@@ -1,11 +1,11 @@
-function inGamutOrNO = checkLMSGamut(lmsImageCalFormat,Disp,bScale)
+function inGamutOrNO = checkGamut(LMSimageCalFormat,Disp,bScale)
 
 % Build matrix that goes from cones to monitor linear rgb
 M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 
 % Get linear RGB from LMS
-[rgbImageCalFormat,scaleFactor] = LMS2rgbLinCalFormat(lmsImageCalFormat,Disp,bScale);
+[rgbImageCalFormat,scaleFactor] = LMS2rgbLinCalFormat(LMSimageCalFormat,Disp,bScale);
 rgbImage = CalFormatToImage(rgbImageCalFormat,Disp.m,Disp.n);
 
 if bScale == 1

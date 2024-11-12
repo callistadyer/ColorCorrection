@@ -1,4 +1,4 @@
-function [dichromatLMSCalFormat] = tri2dichromatLMSCalFormat(lmsImageCalFormat,renderType,cone_mean_orig)
+function [dichromatLMSCalFormat] = tri2dichromatLMSCalFormat(lmsImageCalFormat,renderType,cone_mean_orig,Disp,bScale)
 
 % function takes in trichromat lms values and converts them into dichromat lms values
 %
@@ -32,10 +32,8 @@ s_cone = lmsImageCalFormat(3,:);
 % right.  Presumably this could be done once by analyzing a full ensemble
 % of images, but we are going to worry about that later.
 
-% Cannot rely on 
-% deuterMFromLScale = mean(m_cone)/mean(l_cone);
+% NOTICE!! THINK THIS IS MESSING WITH THE GAMUT
 deuterMFromLScale = cone_mean_orig/mean(l_cone);
-
 protoLFromMScale  = cone_mean_orig/mean(m_cone);
 tritanSFromMScale = cone_mean_orig/mean(m_cone); 
 tritanSFromLScale = cone_mean_orig/mean(l_cone);
@@ -51,5 +49,13 @@ switch (renderType)
 end
 
 dichromatLMSCalFormat = lmsImageCalFormat;
+
+% CHECK IF MODULATED LMS IS IN GAMUT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+inGamut = checkGamut(dichromatLMSCalFormat,Disp,bScale);
+if inGamut == 0
+    error(['tri2dichromatLMSCalFormat: WARNING! rgb values are out of gamut... lmsImage_mod values outside of the range [0 1]']);
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 end

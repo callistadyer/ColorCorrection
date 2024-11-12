@@ -60,7 +60,7 @@ lmsImage_mod = lmsImage + delta_lms;
 % CHECK IF MODULATED LMS IS IN GAMUT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lmsImage_modCalFormat = ImageToCalFormat(lmsImage_mod);
-inGamut = checkLMSGamut(lmsImage_modCalFormat,Disp,bScale);
+inGamut = checkGamut(lmsImage_modCalFormat,Disp,bScale);
 if inGamut == 0
     error(['isochromaticPlates: WARNING! rgb values are out of gamut... lmsImage_mod values outside of the range [0 1]']);
 end
