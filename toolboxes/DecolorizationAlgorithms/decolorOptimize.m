@@ -1,4 +1,4 @@
-function [PCs projected_data] = decolorOptimize(data,numPCs)
+function [PCs projected_data] = decolorOptimize(data,numPCs,bPLOT)
 % Uses fmincon to find the axis of projection that maximizes variance 
 %
 % Syntax:
@@ -74,26 +74,27 @@ end
 % Plot original data
 % figure;
 % scatter3(data(1,:),data(2,:),data(3,:),'filled')
+if bPLOT == 1
+    % Plot the projected data and PCS
+    figure;
+    scatter3(centered_data(1, :), centered_data(2, :), centered_data(3, :), 'filled');
+    hold on;
 
-% Plot the projected data and PCS
-figure;
-scatter3(centered_data(1, :), centered_data(2, :), centered_data(3, :), 'filled');
-hold on;
+    % Plot PCs
+    origin = mean_data; % Data mean = the origin for the PCs
+    for i = 1:numPCs
+        quiver3(origin(1), origin(2), origin(3), PCs(1, i), PCs(2, i), PCs(3, i),'LineWidth', 2, 'MaxHeadSize', 0.5);
+    end
 
-% Plot PCs
-origin = mean_data; % Data mean = the origin for the PCs
-for i = 1:numPCs
-    quiver3(origin(1), origin(2), origin(3), PCs(1, i), PCs(2, i), PCs(3, i),'LineWidth', 2, 'MaxHeadSize', 0.5);
+    title('3D Data and Principal Components');
+    xlabel('X1');
+    ylabel('X2');
+    zlabel('X3');
+    grid on;
+    axis equal;
+    legend({'Data', 'PC1', 'PC2'}, 'Location', 'Best');
+    view(3);
+    rotate3d on;
 end
-
-title('3D Data and Principal Components');
-xlabel('X1');
-ylabel('X2');
-zlabel('X3');
-grid on;
-axis equal;
-legend({'Data', 'PC1', 'PC2'}, 'Location', 'Best');
-view(3);
-rotate3d on;
 
 end
