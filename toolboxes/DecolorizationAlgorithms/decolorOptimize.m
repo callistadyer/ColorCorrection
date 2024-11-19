@@ -51,7 +51,7 @@ for pcIdx = 1:numPCs
     variance = @(X) -var(centered_data' * X); % Maximize variance = minimize negative variance.
     
     % Nonlinear constraint function
-    constraint_function = @(X) deal([], abs(sum(X.^2)) - 1); % Constraint ||X||^2 = 1.
+    constraint_function = @(X) deal([], abs(sum(X.^2)) - 1); % Constraint ||X||^2 = 1 ... Forces PC to be a unit vector
     
     % Initial guess that satisfies constraint
     X0 = [1; 0; 0]; 
@@ -63,7 +63,7 @@ for pcIdx = 1:numPCs
     PCs(:, pcIdx) = PC;
     
     % Remove current PC
-    projected_data(:,pcIdx)     = centered_data' * PC;         % Projection onto current PC
+    projected_data(:,pcIdx)     = centered_data' * PC;                  % Projection onto current PC
     variance_explained          = PC * projected_data(:,pcIdx)';            
     centered_data               = centered_data - variance_explained;   % Remove variance explained
 end
