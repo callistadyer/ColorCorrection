@@ -71,9 +71,11 @@ end
 % disp('All Principal Components (column-wise):');
 % disp(PCs);
 
+% % Uncomment to plot original data
 % Plot original data
 % figure;
 % scatter3(data(1,:),data(2,:),data(3,:),'filled')
+
 if bPLOT == 1
     % Plot the projected data and PCS
     figure;
@@ -90,7 +92,6 @@ if bPLOT == 1
     xlabel('X1');
     ylabel('X2');
     zlabel('X3');
-    grid on;
     axis equal;
     legend({'Data', 'PC1', 'PC2'}, 'Location', 'Best');
     view(3);
