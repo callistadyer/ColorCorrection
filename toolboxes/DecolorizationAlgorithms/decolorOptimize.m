@@ -25,7 +25,7 @@ function [PCs projected_data] = decolorOptimize(data,numPCs)
 %
 % Examples:
 %{
-
+[PCs projected_data] = decolorOptimize([],2)
 %}
 
 % Sample data to see how code works
