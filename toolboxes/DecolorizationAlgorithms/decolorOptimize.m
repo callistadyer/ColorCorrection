@@ -47,10 +47,11 @@ centered_data = data - mean_data;
 PCs = zeros(size(data, 1), numPCs); % Matrix to store principal components
 options = optimoptions('fmincon', 'Algorithm', 'sqp', 'Display', 'iter');
 
+theRemainingData = centered_data;
 % Loop to get PCs
 for pcIdx = 1:numPCs
     % Maximize variance
-    variance = @(X) -var(centered_data' * X); % Maximize variance = minimize negative variance
+    variance = @(X) -var(theRemainingData' * X); % Maximize variance = minimize negative variance
     
     % Initial guess that satisfies constraint
     X0 = [1; 0; 0]; 
@@ -61,11 +62,21 @@ for pcIdx = 1:numPCs
     % Store PC
     PCs(:, pcIdx) = PC;
     
-    % Remove current PC
+    theNullSpace = null((PCs(:,1:pcIdx))');
+    
+    % Project the data onto the null space.  This in essence 'gets rid'
+    % of the part of the data that are explained by the PCA components that
+    % we have so far, so that we can then find the direction that has
+    % maximum variance when we project this part onto it.
+    theRemainingData = (theNullSpace*(theNullSpace'*centered_data));
+
     projected_data(:,pcIdx)     = centered_data' * PC;                  % Projection onto current PC
-    variance_explained          = PC * projected_data(:,pcIdx)';            
-    centered_data               = centered_data - variance_explained;   % Remove variance explained
 end
+
+
+% Check with pca function: NOTE, is same but has sign flips
+[pcaAuto] = pca(centered_data');
+
 
 % disp('All Principal Components (column-wise):');
 % disp(PCs);
