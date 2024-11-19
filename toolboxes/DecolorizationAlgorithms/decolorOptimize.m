@@ -63,9 +63,9 @@ for pcIdx = 1:numPCs
     PCs(:, pcIdx) = PC;
     
     % Remove current PC
-    projected_data(:,pcIdx)     = centered_data' * PC;                 % Projection onto current PC
-    variance_explained = PC * projected_data(:,pcIdx)';            
-    centered_data      = centered_data - variance_explained;   % Remove variance explained
+    projected_data(:,pcIdx)     = centered_data' * PC;         % Projection onto current PC
+    variance_explained          = PC * projected_data(:,pcIdx)';            
+    centered_data               = centered_data - variance_explained;   % Remove variance explained
 end
 
 % disp('All Principal Components (column-wise):');
