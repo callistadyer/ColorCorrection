@@ -9,6 +9,8 @@ function [PCs projected_data] = decolorOptimize(data,numPCs,bPLOT)
 % Inputs:
 %   data:   data to be projected
 %   numPCs: number of principal components to project onto
+%   bPLOT:  1 -> plot
+%           0 -> dont
 %
 % Outputs:
 %   PCs:            principal components
@@ -42,23 +44,20 @@ end
 mean_data = mean(data, 2);
 centered_data = data - mean_data; 
 
-PCs = zeros(size(data, 1), numPCs); % Matrix to store principal components.
+PCs = zeros(size(data, 1), numPCs); % Matrix to store principal components
 options = optimoptions('fmincon', 'Algorithm', 'sqp', 'Display', 'iter');
 
 % Loop to get PCs
 for pcIdx = 1:numPCs
     % Maximize variance
-    variance = @(X) -var(centered_data' * X); % Maximize variance = minimize negative variance.
-    
-    % Nonlinear constraint function
-    constraint_function = @(X) deal([], abs(sum(X.^2)) - 1); % Constraint ||X||^2 = 1 ... Forces PC to be a unit vector
+    variance = @(X) -var(centered_data' * X); % Maximize variance = minimize negative variance
     
     % Initial guess that satisfies constraint
     X0 = [1; 0; 0]; 
-    
+
     % Find current principal component via minimizing the negative variance
-    [PC, ~] = fmincon(@(X) variance(X), X0, [], [], [], [], [], [], constraint_function, options);
-    
+    [PC, fval] = fmincon(variance, X0, [], [], [], [], [], [], @constraint_function, options);
+
     % Store PC
     PCs(:, pcIdx) = PC;
     
@@ -98,4 +97,13 @@ if bPLOT == 1
     rotate3d on;
 end
 
+
+end
+
+function [c, ceq] = constraint_function(X)
+    % c    : Inequality constraints (none)
+    % ceq  : Equality constraints (||X||^2 - 1 = 0 to ensure unit norm)
+    
+    c = []; 
+    ceq = sum(X.^2) - 1; % Equality constraint ||X||^2 = 1
 end
