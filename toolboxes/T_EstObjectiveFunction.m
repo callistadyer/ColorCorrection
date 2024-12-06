@@ -1,4 +1,4 @@
-function obj = T_EstObjectiveFunction(kVec, D_mnew, T_mean, d, T_cones, P_monitor, m, n, bScale)
+function obj = T_EstObjectiveFunction(kVec, D_mnew, T_mean, ≈, bScale)
 % Objective function for choosing how to scale values after PCA to be in
 % similar range as LMS values
 %
@@ -45,7 +45,7 @@ K = diag(kVec);
 T_est = K * D_mnew + T_mean;
 
 % Get rgb values
-M_rgb2cones = T_cones*P_monitor;
+M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 rgbLinImageCalFormat = M_cones2rgb*T_est;
 

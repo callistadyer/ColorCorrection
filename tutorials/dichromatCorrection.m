@@ -56,15 +56,15 @@ LMS_new_plate = correctedLMSadjust(correctedLMS_plate,lmsModuledCalFormatTri);
 
 correctedLMS       = LMS_new;
 correctedLMS_plate = LMS_new_plate;
-
-% Plot new image 
-[hyperspectralImage wls d P_monitor] = loadImage(img);
-% Get cone spectral sensitivities
-load T_cones_ss2;
-T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
-% Do this to get m n dimensions
-[hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
-P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
+% 
+% % Plot new image 
+% [hyperspectralImage wls d P_monitor] = loadImage(img);
+% % Get cone spectral sensitivities
+% load T_cones_ss2;
+% T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
+% % Do this to get m n dimensions
+% [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
+% P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
 % Create RGB image from LMS  
 % Dichromat simulation of original image

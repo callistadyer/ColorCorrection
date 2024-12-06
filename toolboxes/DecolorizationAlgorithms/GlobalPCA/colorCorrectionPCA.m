@@ -41,60 +41,54 @@ if strcmp(PCAway,'easy')
     coeff = pca(originalLMS',"Centered",true); % Centered true subtracts mean
     PC2D(:,1) = coeff(:, 1); % First principal component
     PC2D(:,2) = coeff(:, 2); % Second principal component
+
+    % Plot cloud of points visualization
+    % figure();
+    % x = originalLMS(1,:);
+    % y = originalLMS(2,:);
+    % z = originalLMS(3,:);
+    %
+    % scatter3(x, y, z, 'filled'); hold on;
+    % xlabel('L')
+    % ylabel('M')
+    % zlabel('S')
+
+    % Map PCA onto available cones
+    % LMS image
+    T = originalLMS;
+
+    % LMS means
+    T_mean = mean(T,2);
+
+    % Mean subtracted LMS values
+    % T_ms = T - T_mean; % already subtracted off in "centered true" in PCA
+    T_ms = T;
+
+    % Map mean subtracted LMS valud onto two principle components (linear regression)
+    D_ms = PC2D\T_ms;
+
+    % Map mean of LMS onto two principle components (linear regression)
+    % D_m = PC2D \ T_mean;
+
 elseif strcmp(PCAway,'hard')
     % PCA (the hard way):
     numPCs = 2;
     % decolorOptimize does mean subtraction, then maximizes variance fmincon 
     % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]   
     [PC2D, projected_data] = decolorOptimize(originalLMS,numPCs,0);
+    T_mean = mean(originalLMS,2);
+    D_ms = projected_data;
 end
 
-% Plot cloud of points visualization
-% figure();
-% x = originalLMS(1,:);
-% y = originalLMS(2,:);
-% z = originalLMS(3,:);
-% 
-% scatter3(x, y, z, 'filled'); hold on;
-% xlabel('L')
-% ylabel('M')
-% zlabel('S')
-
-% Map PCA onto available cones
-% LMS image
-T = originalLMS;
-
-% LMS means
-T_mean = mean(T,2);
-
-% Mean subtracted LMS values
-% T_ms = T - T_mean; % already subtracted off in "centered true" in PCA
-T_ms = T;
-
-% Map mean subtracted LMS valud onto two principle components (linear regression) 
-D_ms = PC2D\T_ms;
-
-% Map mean of LMS onto two principle components (linear regression)
-% D_m = PC2D \ T_mean;
-
 %% Find the scaling matrix that maps D_ms onto approximate cone values
-% Get image
-[hyperspectralImage wls d P_monitor] = loadImage(img);
-% Get cone spectral sensitivities
-load T_cones_ss2;
-T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
-[hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
+
+D_mnew(1,:) = D_ms(:,1);
+D_mnew(2,:) = D_ms(:,1);
+D_mnew(3,:) = D_ms(:,2);
 
 if sum(sum(projected_data)) < .00001
     K_opt = [1 1 1];
-    D_mnew(1,:) = projected_data(:,1);
-    D_mnew(2,:) = projected_data(:,1);
-    D_mnew(3,:) = projected_data(:,2);
 else
-
-D_mnew(1,:) = D_ms(1,:);
-D_mnew(2,:) = D_ms(1,:);
-D_mnew(3,:) = D_ms(2,:);
 
 % Initial guess for K
 initialKvec = [0.1, 0.1, 0.1];
@@ -112,7 +106,7 @@ options = optimset('fmincon');
 options = optimset(options,'Diagnostics','off','Display','iter','LargeScale','off','Algorithm','active-set');
 
 % Call fmincon
-[K_optvec, fval] = fmincon(@(kVec) T_EstObjectiveFunction(kVec, D_mnew, T_mean, d, T_cones, P_monitor, m, n, bScale), initialKvec, A, b, Aeq, beq, lb, ub, [], options);
+[K_optvec, fval] = fmincon(@(kVec) T_EstObjectiveFunction(kVec, D_mnew, T_mean, Disp, bScale), initialKvec, A, b, Aeq, beq, lb, ub, [], options);
 
 K_opt = diag(K_optvec);
 % Display results
