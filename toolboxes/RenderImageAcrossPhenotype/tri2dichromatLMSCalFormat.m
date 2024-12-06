@@ -3,7 +3,7 @@ function [dichromatLMSCalFormat] = tri2dichromatLMSCalFormat(lmsImageCalFormat,r
 % function takes in trichromat lms values and converts them into dichromat lms values
 %
 % Syntax:
-%   [dichromatLMS] = tri2dichromatLMS(lmsImageCalFormat,renderType,cone_mean_orig)
+%   [dichromatLMS] = tri2dichromatLMSCalFormat(lmsImageCalFormat,renderType,cone_mean_orig,Disp,bScale)
 %
 % Description:
 %

@@ -73,11 +73,9 @@ for pcIdx = 1:numPCs
     projected_data(:,pcIdx)     = centered_data' * PC;                  % Projection onto current PC
 end
 
-
 % Check with pca function: NOTE, is same but has sign flips
 [pcaAuto] = pca(data',"Centered",true);
-% not the same as [pcaAuto] = pca(centered_data',"Centered",false); WHY
-% NOT???
+% not the same as [pcaAuto] = pca(centered_data',"Centered",false); WHY?
 
 % disp('All Principal Components (column-wise):');
 % disp(PCs);

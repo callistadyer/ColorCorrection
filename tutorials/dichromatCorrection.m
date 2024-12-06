@@ -72,24 +72,24 @@ correctedLMS_plate = LMS_new_plate;
 
 % Corrected dichromat image via pca LMS values
 cone_mean_processed = mean(correctedLMS,2);
-LMSfixedDichromat_plate                  = tri2dichromatLMSCalFormat(correctedLMS_plate,renderType,cone_mean_processed(2));      % isochromatic plate 
+LMSfixedDichromat_plate                  = tri2dichromatLMSCalFormat(correctedLMS_plate,renderType,cone_mean_processed(2),Disp,bScale);      % isochromatic plate 
 [RGBImage_fixedDichromatCalFormat_plate] = LMS2RGBCalFormat(LMSfixedDichromat_plate, Disp,bScale); % isochromatic plate 
-LMSfixedDichromat                        = tri2dichromatLMSCalFormat(correctedLMS,renderType,cone_mean_processed(2)); 
+LMSfixedDichromat                        = tri2dichromatLMSCalFormat(correctedLMS,renderType,cone_mean_processed(2),Disp,bScale); 
 [RGBImage_fixedDichromatCalFormat]       = LMS2RGBCalFormat(LMSfixedDichromat, Disp,bScale);
 
 
 % Transform from cal format to image for viewing
-RGBImage_dichromat_orig          = CalFormatToImage(RGBImage_dichromatCalFormat_orig,m,n); % no modulation
-RGBImage_dichromat_plate_orig    = CalFormatToImage(RGBImage_dichromatCalFormat_plate_orig,m,n); % modulation
+RGBImage_dichromat_orig          = CalFormatToImage(RGBImage_dichromatCalFormat_orig,Disp.m,Disp.n); % no modulation
+RGBImage_dichromat_plate_orig    = CalFormatToImage(RGBImage_dichromatCalFormat_plate_orig,Disp.m,Disp.n); % modulation
 
-RGBImage_dichromat               = CalFormatToImage(RGBImage_dichromatCalFormat,m,n); % no modulation
-RGBImage_dichromat_plate         = CalFormatToImage(RGBImage_dichromatCalFormat_plate,m,n); % modulation
+RGBImage_dichromat               = CalFormatToImage(RGBImage_dichromatCalFormat,Disp.m,Disp.n); % no modulation
+RGBImage_dichromat_plate         = CalFormatToImage(RGBImage_dichromatCalFormat_plate,Disp.m,Disp.n); % modulation
 
-RGBImage_trichromat              = CalFormatToImage(RGBImage_trichromatCalFormat,m,n); % no modulation
-RGBImage_trichromat_plate        = CalFormatToImage(RGBImage_trichromatCalFormat_plate,m,n); % modulation
+RGBImage_trichromat              = CalFormatToImage(RGBImage_trichromatCalFormat,Disp.m,Disp.n); % no modulation
+RGBImage_trichromat_plate        = CalFormatToImage(RGBImage_trichromatCalFormat_plate,Disp.m,Disp.n); % modulation
 
-RGBImage_FixedDichromat_plate    = CalFormatToImage(RGBImage_fixedDichromatCalFormat_plate,m,n); % plate
-RGBImage_FixedDichromat          = CalFormatToImage(RGBImage_fixedDichromatCalFormat,m,n); % no modulation
+RGBImage_FixedDichromat_plate    = CalFormatToImage(RGBImage_fixedDichromatCalFormat_plate,Disp.m,Disp.n); % plate
+RGBImage_FixedDichromat          = CalFormatToImage(RGBImage_fixedDichromatCalFormat,Disp.m,Disp.n); % no modulation
 
 
 figure();

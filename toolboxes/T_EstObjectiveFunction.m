@@ -1,9 +1,9 @@
-function obj = T_EstObjectiveFunction(kVec, D_mnew, T_mean, ≈, bScale)
+function obj = T_EstObjectiveFunction(kVec, D_mnew, T_mean, Disp, bScale)
 % Objective function for choosing how to scale values after PCA to be in
 % similar range as LMS values
 %
 % Syntax:
-%   obj = T_EstObjectiveFunction(kVec, D_mnew, T_mean, d, T_cones, P_monitor, m, n, bScale)
+%   obj = T_EstObjectiveFunction(kVec, D_mnew, T_mean, Disp, bScale)
 %
 % Description:
 %

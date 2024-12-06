@@ -66,16 +66,16 @@ elseif strcmp(PCAway,'hard')
     % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]   
     [PC2D, projected_data] = decolorOptimize(originalLMS,numPCs,0);
     T_mean = mean(originalLMS,2);
-    D_ms = projected_data;
+    D_ms = projected_data';
 end
 
 %% Find the scaling matrix that maps D_ms onto approximate cone values
 
-D_mnew(1,:) = D_ms(:,1);
-D_mnew(2,:) = D_ms(:,1);
-D_mnew(3,:) = D_ms(:,2);
+D_mnew(1,:) = D_ms(1,:);
+D_mnew(2,:) = D_ms(1,:);
+D_mnew(3,:) = D_ms(2,:);
 
-if sum(sum(projected_data)) < .00001
+if sum(sum(D_ms)) < .00001
     K_opt = [1 1 1];
 else
 
