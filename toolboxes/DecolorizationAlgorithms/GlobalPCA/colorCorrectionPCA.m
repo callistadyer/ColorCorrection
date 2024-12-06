@@ -1,4 +1,4 @@
-function [correctedLMS, K_opt, D_mnew, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig,bScale)
+function [correctedLMS, K_opt, D_mnew, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig,Disp,bScale)
 
 % Correcting an image so a dichromat can see color contrasts that she could
 % not see otherwise. Correction is happening via a PCA 
@@ -33,9 +33,21 @@ function [correctedLMS, K_opt, D_mnew, T_mean]  = colorCorrectionPCA(img,origina
 %
 
 % Perform PCA
-coeff = pca(originalLMS',"Centered",true); % Centered true subtracts mean
-PC2D(:,1) = coeff(:, 1); % First principal component
-PC2D(:,2) = coeff(:, 2); % Second principal component
+
+% Perform the easy or hard way? (easy = matlab pca(), hard = fmincon)
+PCAway = 'hard';
+% PCA (the easy way):
+if strcmp(PCAway,'easy')
+    coeff = pca(originalLMS',"Centered",true); % Centered true subtracts mean
+    PC2D(:,1) = coeff(:, 1); % First principal component
+    PC2D(:,2) = coeff(:, 2); % Second principal component
+elseif strcmp(PCAway,'hard')
+    % PCA (the hard way):
+    numPCs = 2;
+    % decolorOptimize does mean subtraction, then maximizes variance fmincon 
+    % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]   
+    [PC2D, projected_data] = decolorOptimize(originalLMS,numPCs,0);
+end
 
 % Plot cloud of points visualization
 % figure();
@@ -66,17 +78,23 @@ D_ms = PC2D\T_ms;
 % D_m = PC2D \ T_mean;
 
 %% Find the scaling matrix that maps D_ms onto approximate cone values
-
-D_mnew(1,:) = D_ms(1,:);
-D_mnew(2,:) = D_ms(1,:);
-D_mnew(3,:) = D_ms(2,:);
-
 % Get image
 [hyperspectralImage wls d P_monitor] = loadImage(img);
 % Get cone spectral sensitivities
 load T_cones_ss2;
 T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
+
+if sum(sum(projected_data)) < .00001
+    K_opt = [1 1 1];
+    D_mnew(1,:) = projected_data(:,1);
+    D_mnew(2,:) = projected_data(:,1);
+    D_mnew(3,:) = projected_data(:,2);
+else
+
+D_mnew(1,:) = D_ms(1,:);
+D_mnew(2,:) = D_ms(1,:);
+D_mnew(3,:) = D_ms(2,:);
 
 % Initial guess for K
 initialKvec = [0.1, 0.1, 0.1];
@@ -103,10 +121,12 @@ disp(K_optvec);
 disp('Objective Function Value:');
 disp(fval);
 
+end
+
 % T_opt = K_opt * D_mnew;
 T_opt = K_opt * D_mnew + T_mean;
 
-T_est_rgbImg = LMS2rgbLinCalFormat(T_opt, d, T_cones, P_monitor, m, n, bScale);
+T_est_rgbImg = LMS2rgbLinCalFormat(T_opt, Disp, bScale);
 
 correctedLMS = T_opt;
 

@@ -46,8 +46,8 @@ function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMo
 [lmsImageCalFormatTri,lmsModuledCalFormatTri,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig,Disp] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod,nSquares);    
 
 % Apply pca correction to aid dichromacy
-[correctedLMS K_opt D_mnew T_mean]                         = colorCorrectionPCA(img,lmsImageCalFormatTri,renderType,cone_mean_orig,bScale);   % Original image
-[correctedLMS_plate K_opt_plate D_mnew_plate T_mean_plate] = colorCorrectionPCA(img,lmsModuledCalFormatTri,renderType,cone_mean_orig,bScale); % Image with plate
+[correctedLMS K_opt D_mnew T_mean]                         = colorCorrectionPCA(img,lmsImageCalFormatTri,renderType,cone_mean_orig,Disp,bScale);   % Original image
+[correctedLMS_plate K_opt_plate D_mnew_plate T_mean_plate] = colorCorrectionPCA(img,lmsModuledCalFormatTri,renderType,cone_mean_orig,Disp,bScale); % Image with plate
 correctedLMS = K_opt_plate * D_mnew + T_mean_plate;
 
 % Scale corrected LMS values to be as close to possible to original LMS
@@ -68,23 +68,23 @@ P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
 % Create RGB image from LMS  
 % Dichromat simulation of original image
-[RGBImage_dichromatCalFormat_orig]        = LMS2RGBCalFormat(lmsDichromImageCalFormat, d,T_cones,P_monitor,m,n,bScale);
-[RGBImage_dichromatCalFormat_plate_orig]  = LMS2RGBCalFormat(lmsDichromModuledCalFormat, d,T_cones,P_monitor,m,n,bScale);         % isochromatic plate 
+[RGBImage_dichromatCalFormat_orig]        = LMS2RGBCalFormat(lmsDichromImageCalFormat, Disp,bScale);
+[RGBImage_dichromatCalFormat_plate_orig]  = LMS2RGBCalFormat(lmsDichromModuledCalFormat, Disp,bScale);         % isochromatic plate 
 
 % Trichromat simulation of original image
-[RGBImage_trichromatCalFormat,scaleFactor_tri_plate] = LMS2RGBCalFormat(lmsImageCalFormatTri, d,T_cones,P_monitor,m,n,bScale);
-[RGBImage_trichromatCalFormat_plate,scaleFactor_tri] = LMS2RGBCalFormat(lmsModuledCalFormatTri, d,T_cones,P_monitor,m,n,bScale);  % isochromatic plate 
+[RGBImage_trichromatCalFormat,scaleFactor_tri_plate] = LMS2RGBCalFormat(lmsImageCalFormatTri, Disp,bScale);
+[RGBImage_trichromatCalFormat_plate,scaleFactor_tri] = LMS2RGBCalFormat(lmsModuledCalFormatTri, Disp,bScale);  % isochromatic plate 
 
 % Corrected trichromat image via pca LMS values
-[RGBImage_dichromatCalFormat,scaleFactor_di_plate]  = LMS2RGBCalFormat(correctedLMS, d,T_cones,P_monitor,m,n,bScale);
-[RGBImage_dichromatCalFormat_plate,scaleFactor_di]  = LMS2RGBCalFormat(correctedLMS_plate, d,T_cones,P_monitor,m,n,bScale);       % isochromatic plate 
+[RGBImage_dichromatCalFormat,scaleFactor_di_plate]  = LMS2RGBCalFormat(correctedLMS, Disp,bScale);
+[RGBImage_dichromatCalFormat_plate,scaleFactor_di]  = LMS2RGBCalFormat(correctedLMS_plate, Disp,bScale);       % isochromatic plate 
 
 % Corrected dichromat image via pca LMS values
 cone_mean_processed = mean(correctedLMS,2);
 LMSfixedDichromat_plate                  = tri2dichromatLMSCalFormat(correctedLMS_plate,renderType,cone_mean_processed(2));      % isochromatic plate 
-[RGBImage_fixedDichromatCalFormat_plate] = LMS2RGBCalFormat(LMSfixedDichromat_plate, d,T_cones,P_monitor,m,n,bScale); % isochromatic plate 
+[RGBImage_fixedDichromatCalFormat_plate] = LMS2RGBCalFormat(LMSfixedDichromat_plate, Disp,bScale); % isochromatic plate 
 LMSfixedDichromat                        = tri2dichromatLMSCalFormat(correctedLMS,renderType,cone_mean_processed(2)); 
-[RGBImage_fixedDichromatCalFormat]       = LMS2RGBCalFormat(LMSfixedDichromat, d,T_cones,P_monitor,m,n,bScale);
+[RGBImage_fixedDichromatCalFormat]       = LMS2RGBCalFormat(LMSfixedDichromat, Disp,bScale);
 
 
 % Transform from cal format to image for viewing

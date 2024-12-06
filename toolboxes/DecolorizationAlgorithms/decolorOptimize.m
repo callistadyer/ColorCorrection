@@ -1,8 +1,8 @@
-function [PCs projected_data] = decolorOptimize(data,numPCs,bPLOT)
+function [PCs, projected_data] = decolorOptimize(data,numPCs,bPLOT)
 % Uses fmincon to find the axis of projection that maximizes variance 
 %
 % Syntax:
-%   [PCs projected_data] = decolorOptimize(data,numPCs)
+%   [PCs projected_data] = decolorOptimize(data,numPCs,bPLOT)
 %
 % Description:
 %
@@ -27,7 +27,7 @@ function [PCs projected_data] = decolorOptimize(data,numPCs,bPLOT)
 %
 % Examples:
 %{
-[PCs projected_data] = decolorOptimize([],2)
+[PCs projected_data] = decolorOptimize([],2,1)
 %}
 
 % Sample data to see how code works
@@ -42,7 +42,7 @@ end
 
 % Subtract mean 
 mean_data = mean(data, 2);
-centered_data = data - mean_data; 
+centered_data = round(data,4) - round(mean_data,4); 
 
 PCs = zeros(size(data, 1), numPCs); % Matrix to store principal components
 options = optimoptions('fmincon', 'Algorithm', 'sqp', 'Display', 'iter');
@@ -75,8 +75,9 @@ end
 
 
 % Check with pca function: NOTE, is same but has sign flips
-[pcaAuto] = pca(centered_data');
-
+[pcaAuto] = pca(data',"Centered",true);
+% not the same as [pcaAuto] = pca(centered_data',"Centered",false); WHY
+% NOT???
 
 % disp('All Principal Components (column-wise):');
 % disp(PCs);
