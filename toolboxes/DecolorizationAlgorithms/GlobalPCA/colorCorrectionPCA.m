@@ -42,17 +42,6 @@ if strcmp(PCAway,'easy')
     PC2D(:,1) = coeff(:, 1); % First principal component
     PC2D(:,2) = coeff(:, 2); % Second principal component
 
-    % Plot cloud of points visualization
-    % figure();
-    % x = originalLMS(1,:);
-    % y = originalLMS(2,:);
-    % z = originalLMS(3,:);
-    %
-    % scatter3(x, y, z, 'filled'); hold on;
-    % xlabel('L')
-    % ylabel('M')
-    % zlabel('S')
-
     % Map PCA onto available cones
     % LMS image
     T = originalLMS;
