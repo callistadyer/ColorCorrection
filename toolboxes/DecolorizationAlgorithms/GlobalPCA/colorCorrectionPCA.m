@@ -63,8 +63,10 @@ elseif strcmp(PCAway,'hard')
     % PCA (the hard way):
     numPCs = 2;
     % decolorOptimize does mean subtraction, then maximizes variance fmincon 
-    % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]   
-    [PC2D, projected_data] = decolorOptimize(originalLMS,numPCs,0);
+    % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
+    lambda_var = 0.5;
+    lambda_dot = 0.5;
+    [PC2D, projected_data] = decolorOptimize(originalLMS,numPCs,0,lambda_var,lambda_dot);
     T_mean = mean(originalLMS,2);
     D_ms = projected_data';
 end

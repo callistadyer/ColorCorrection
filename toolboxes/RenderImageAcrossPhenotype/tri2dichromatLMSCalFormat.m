@@ -33,10 +33,10 @@ s_cone = lmsImageCalFormat(3,:);
 % of images, but we are going to worry about that later.
 
 % NOTICE!! THINK THIS IS MESSING WITH THE GAMUT
-deuterMFromLScale = cone_mean_orig/mean(l_cone);
-protoLFromMScale  = cone_mean_orig/mean(m_cone);
-tritanSFromMScale = cone_mean_orig/mean(m_cone); 
-tritanSFromLScale = cone_mean_orig/mean(l_cone);
+% deuterMFromLScale = cone_mean_orig/mean(l_cone);
+% protoLFromMScale  = cone_mean_orig/mean(m_cone);
+% tritanSFromMScale = cone_mean_orig/mean(m_cone); 
+% tritanSFromLScale = cone_mean_orig/mean(l_cone);
 
 % Make dichromat manipulation - missing cone
 switch (renderType)
@@ -45,7 +45,8 @@ switch (renderType)
         [scaleFactor,dichromatLMSCalFormat,inGamut] = findDichromMappingScaleFactor(2,lmsImageCalFormat,Disp,bScale);
 
     case 'Protanopia'   % l cone deficiency
-        lmsImageCalFormat(2,:)       = m_cone; 
+        % CHECK: this had a 2 in the index... i changed it to 1. correct?
+        lmsImageCalFormat(1,:)       = m_cone; 
         [scaleFactor,dichromatLMSCalFormat,inGamut] = findDichromMappingScaleFactor(1,lmsImageCalFormat,Disp,bScale); 
         
     case 'Tritanopia'   % s cone deficiency
