@@ -70,30 +70,30 @@ projected_data = zeros(size(centered_data, 2), numPCs);
 for pcIdx = 1:numPCs
 
     % Objective function: Combined weights of variance and dot product 
-    objective = @(X) - ( ...
-        lambda_var * var(theRemainingData' * X) / initial_variance + ...
-        lambda_dot * dot(theRemainingData' * X, theRemainingData' * X) ...
-        );
+    % objective = @(X) - ( ...
+    %     lambda_var * var(theRemainingData' * X) / initial_variance + ...
+    %     lambda_dot * dot(theRemainingData' * X, theRemainingData' * X) ...
+    %     );
 
     %%%%%%%%%%%%%%% OLD WAY: ONLY MAXIMIZING VARIANCE %%%%%%%%%%%%%%%
     % Maximize variance
-    % variance = @(X) -var(theRemainingData' * X); % Maximize variance = minimize negative variance
+    variance = @(X) -var(theRemainingData' * X); % Maximize variance = minimize negative variance
     
     % Initial guess that satisfies constraint
-    % X0 = [1; 0; 0]; 
+    X0 = [1; 0; 0]; 
 
     % Find current principal component via minimizing the negative variance
-    % [PC, fval] = fmincon(variance, X0, [], [], [], [], [], [], @constraint_function, options);
+    [PC, fval] = fmincon(variance, X0, [], [], [], [], [], [], @constraint_function, options);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    % Initial guess: Ensure dot product starts near 1
-      X0 = [1; 0; 0];
+    % Initial guess: Ensure dot product starts near 1????
+      % X0 = [1; 0; 0];
 
     % Constraint to ensure ||PC|| = 1 and dot product >= 0
-    constraint = @(X) constraint_function_with_dot(theRemainingData, X);
+    % constraint = @(X) constraint_function_with_dot(theRemainingData, X);
 
     % Find current principal component
-    [PC, ~] = fmincon(objective, X0, [], [], [], [], [], [], constraint, options);
+    % [PC, ~] = fmincon(objective, X0, [], [], [], [], [], [], constraint, options);
 
     % Store PC
     PCs(:, pcIdx) = PC;
@@ -155,10 +155,10 @@ function [c, ceq] = constraint_function_with_dot(data, X)
     c = - dot(data' * X, projected_data); % Enforce dot product >= 0
     ceq = sum(X.^2) - 1; % Unit norm constraint ||X||^2 = 1
 end
-% function [c, ceq] = constraint_function(X)
-%     % c    : Inequality constraints (none)
-%     % ceq  : Equality constraints (||X||^2 - 1 = 0 to ensure unit norm)
-% 
-%     c = []; 
-%     ceq = sum(X.^2) - 1; % Equality constraint ||X||^2 = 1
-% end
+function [c, ceq] = constraint_function(X)
+    % c    : Inequality constraints (none)
+    % ceq  : Equality constraints (||X||^2 - 1 = 0 to ensure unit norm)
+
+    c = []; 
+    ceq = sum(X.^2) - 1; % Equality constraint ||X||^2 = 1
+end
