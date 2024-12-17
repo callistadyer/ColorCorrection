@@ -166,27 +166,6 @@ end
 %     c = - dot(data' * X, projected_data); % Enforce dot product >= 0
 %     ceq = sum(X.^2) - 1; % Unit norm constraint ||X||^2 = 1
 % end
-% Objective Function with Penalty
-% function value = compute_objective_with_penalty(theRemainingData, X, mean_data, lambda_var, initial_variance,Disp,bScale)
-%     % Project data onto the current direction X
-%     projected_data = theRemainingData' * X;
-% 
-%     % Add back the mean
-%     test_data = mean_data + projected_data';
-% 
-%     % Check the gamut condition
-%     if checkGamut(test_data,Disp,bScale) == 0
-%         penalty = 1e12;  % big big penalty for out of gamut
-%     else
-%         penalty = 0;
-%     end
-% 
-%     % Compute variance objective
-%     variance = var(projected_data);
-% 
-%     % Final objective value: Negative variance + penalty
-%     value = -(lambda_var * variance / initial_variance) + penalty;
-% end
 
 function [c, ceq] = constraint_function(X)
     % c    : Inequality constraints (none)
