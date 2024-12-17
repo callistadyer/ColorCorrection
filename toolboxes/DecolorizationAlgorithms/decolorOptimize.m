@@ -95,7 +95,6 @@ for pcIdx = 1:numPCs
     % Find current principal component with penalty enforcement
     % [PC, fval] = fmincon(objective, X0, [], [], [], [], [], [], @constraint_function, options);
 
-
     % Constraint to ensure ||PC|| = 1 and dot product >= 0
     % constraint = @(X) constraint_function_with_dot(theRemainingData, X);
 
