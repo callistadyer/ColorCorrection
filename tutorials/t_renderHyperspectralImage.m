@@ -1,4 +1,4 @@
-function [lmsImageCalFormatTrichromat,lmsModuledCalFormatTrichromat,lmsDichromImageCalFormat,lmsDichromModulatedCalFormat,cone_mean_orig,Disp] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod,nSquares)
+function [lmsImageCalFormatTrichromat,lmsModuledCalFormatTrichromat,lmsDichromImageCalFormat,lmsDichromModulatedCalFormat,cone_mean_orig,Disp,modDirection] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod,nSquares)
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
@@ -35,16 +35,15 @@ function [lmsImageCalFormatTrichromat,lmsModuledCalFormatTrichromat,lmsDichromIm
 % History
 %   07/30/2024  dhb, cmd  Initial go.
 %   08/27/2024  dhb, cmd  It's working, cleaning up.
-
 % Examples:
 %{
-t_renderHyperspectralImage([],'Deuteranopia'  ,0,1,0)          
-t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0,1,0)    
-[lmsImageCalFormat,lmsModuledCalFormat] = t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1,0);    
-t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1,0)    
-t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1,0)  
-t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1,0)    
-t_renderHyperspectralImage('gray','Deuteranopia',0,0,0)           
+t_renderHyperspectralImage([],'Deuteranopia'  ,0,1,0,10)
+t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0,1,0,10)    
+[lmsImageCalFormat,lmsModuledCalFormat] = t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1,0,10);    
+t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1,0,10)    
+t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1,0,10)  
+t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1,0,10)    
+t_renderHyperspectralImage('gray','Deuteranopia',0,0,0,10)           
 %}
 
 %% Load hyperspectral image data
@@ -78,10 +77,15 @@ RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 % Get original image into rgb so you can maximize gamut contrast.
 [rgbLinImageCalFormat2,scaleFactor] = LMS2rgbLinCalFormat(lmsImageCalFormatTrichromat,Disp,bScale);
 
-% Choose modulation directions. (nSquares different directions)
-vectors = randn(nSquares, 3);
-magnitudes = sqrt(sum(vectors.^2, 2));
-modDirection = abs(vectors ./ magnitudes);
+% % Choose modulation directions. (nSquares different directions)
+% vectors = abs(randn(nSquares, 3));
+% magnitudes = sqrt(sum(vectors.^2, 2));
+% modDirection = (vectors ./ magnitudes);
+
+% Generate random vectors with all positive components
+vectors = rand(nSquares, 3); % Uniform random values between 0 and 1
+magnitudes = sqrt(sum(vectors.^2, 2)); % Compute the magnitudes
+modDirection = vectors ./ magnitudes;  % Normalize to unit vectors
 
 % Get modulation for isochromatic plate modulation.
 % This function is taking rgbLinImageCalFormat2 and using MaximizeGamutContrast to determine how much we can move 
@@ -95,7 +99,6 @@ else
 end
 
 % Create isochromatic plates
-%%%%%%%%%%%%%%% BUG HERE!! THIS FUNCTION PUSHES OUT OF GAMUT !! %%%%%%%%%%%%%%%
 [RGBModulated lmsModuledCalFormatTrichromat] = isochromaticPlates(image,renderType,lmsModulationImgFormat,Disp,bScale,nSquares, ...
     'verbose',true);
 

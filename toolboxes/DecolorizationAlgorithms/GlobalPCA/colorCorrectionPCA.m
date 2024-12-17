@@ -1,4 +1,4 @@
-function [correctedLMS, K_opt, D_mnew, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig,Disp,bScale)
+function [correctedLMS_scaled, K_opt, D_mnew, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig,Disp,bScale)
 
 % Correcting an image so a dichromat can see color contrasts that she could
 % not see otherwise. Correction is happening via a PCA 
@@ -66,8 +66,8 @@ elseif strcmp(PCAway,'hard')
     % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
     lambda_var = 0.5;
     lambda_dot = 0.5;
-    [PC2D, projected_data] = decolorOptimize(originalLMS,numPCs,0,lambda_var,lambda_dot);
     T_mean = mean(originalLMS,2);
+    [PC2D, projected_data] = decolorOptimize(originalLMS,numPCs,0,lambda_var,lambda_dot,Disp,bScale);
     D_ms = projected_data';
 end
 
@@ -114,5 +114,14 @@ T_opt = K_opt * D_mnew + T_mean;
 T_est_rgbImg = LMS2rgbLinCalFormat(T_opt, Disp, bScale);
 
 correctedLMS = T_opt;
+% OK let's try scaling here to stay in gamut... ideally we would do this in
+% optimization but we cannot because we need ALL cone values to tell if it 
+% is in gamut, but we are optimizing one at a time
+[correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
+
+inGamutColorCorrectionPCA = checkGamut(correctedLMS_scaled,Disp,bScale);
+if inGamutColorCorrectionPCA == 0 
+    error('PCA pushing out of gamut')
+end
 
 end

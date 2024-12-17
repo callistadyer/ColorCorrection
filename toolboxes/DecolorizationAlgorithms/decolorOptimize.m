@@ -1,4 +1,4 @@
-function [PCs, projected_data] = decolorOptimize(data, numPCs, bPLOT, lambda_var, lambda_dot)
+function [PCs, projected_data] = decolorOptimize(data, numPCs, bPLOT, lambda_var, lambda_dot,Disp,bScale)
 % Optimizes PCA projections to balance maximizing variance and similarity to original data.
 %
 % Syntax:
@@ -78,16 +78,23 @@ for pcIdx = 1:numPCs
     %%%%%%%%%%%%%%% OLD WAY: ONLY MAXIMIZING VARIANCE %%%%%%%%%%%%%%%
     % Maximize variance
     variance = @(X) -var(theRemainingData' * X); % Maximize variance = minimize negative variance
-    
-    % Initial guess that satisfies constraint
+    % 
+    % % Initial guess that satisfies constraint
     X0 = [1; 0; 0]; 
-
-    % Find current principal component via minimizing the negative variance
+    % 
+    % % Find current principal component via minimizing the negative variance
     [PC, fval] = fmincon(variance, X0, [], [], [], [], [], [], @constraint_function, options);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+    % MAKING THE ASSUMPTION THAT FIRST CONE MEAN WILL BE ADDED TO FIRST PC
+    % objective = @(X) compute_objective_with_penalty(theRemainingData, X, mean_data(numPCs), lambda_var, initial_variance,Disp,bScale);
+    
     % Initial guess: Ensure dot product starts near 1????
-      % X0 = [1; 0; 0];
+    % X0 = [1; 0; 0]; 
+
+    % Find current principal component with penalty enforcement
+    % [PC, fval] = fmincon(objective, X0, [], [], [], [], [], [], @constraint_function, options);
+
 
     % Constraint to ensure ||PC|| = 1 and dot product >= 0
     % constraint = @(X) constraint_function_with_dot(theRemainingData, X);
@@ -109,6 +116,12 @@ for pcIdx = 1:numPCs
 
     projected_data(:,pcIdx)     = centered_data' * PC;                  % Projection onto current PC
 end
+% allData(1,:) = projected_data(1,:);
+% allData(2,:) = projected_data(1,:);
+% allData(3,:) = projected_data(2,:);
+
+
+%% Find the scaling matrix that maps D_ms onto approximate cone values
 
 % Check with pca function: NOTE, is same but has sign flips
 [pcaAuto] = pca(data',"Centered",true);
@@ -145,20 +158,41 @@ if bPLOT == 1
 end
 
 
-end
+% function [c, ceq] = constraint_function_with_dot(data, X)
+%     % Project data onto X
+%     projected_data = data' * X; % Size: m x 1
+% 
+%     % Compute the dot product between original and projected data
+%     c = - dot(data' * X, projected_data); % Enforce dot product >= 0
+%     ceq = sum(X.^2) - 1; % Unit norm constraint ||X||^2 = 1
+% end
+% Objective Function with Penalty
+% function value = compute_objective_with_penalty(theRemainingData, X, mean_data, lambda_var, initial_variance,Disp,bScale)
+%     % Project data onto the current direction X
+%     projected_data = theRemainingData' * X;
+% 
+%     % Add back the mean
+%     test_data = mean_data + projected_data';
+% 
+%     % Check the gamut condition
+%     if checkGamut(test_data,Disp,bScale) == 0
+%         penalty = 1e12;  % big big penalty for out of gamut
+%     else
+%         penalty = 0;
+%     end
+% 
+%     % Compute variance objective
+%     variance = var(projected_data);
+% 
+%     % Final objective value: Negative variance + penalty
+%     value = -(lambda_var * variance / initial_variance) + penalty;
+% end
 
-function [c, ceq] = constraint_function_with_dot(data, X)
-    % Project data onto X
-    projected_data = data' * X; % Size: m x 1
-
-    % Compute the dot product between original and projected data
-    c = - dot(data' * X, projected_data); % Enforce dot product >= 0
-    ceq = sum(X.^2) - 1; % Unit norm constraint ||X||^2 = 1
-end
 function [c, ceq] = constraint_function(X)
     % c    : Inequality constraints (none)
     % ceq  : Equality constraints (||X||^2 - 1 = 0 to ensure unit norm)
 
     c = []; 
     ceq = sum(X.^2) - 1; % Equality constraint ||X||^2 = 1
+end
 end
