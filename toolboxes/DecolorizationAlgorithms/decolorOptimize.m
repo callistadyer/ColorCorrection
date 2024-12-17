@@ -116,9 +116,6 @@ for pcIdx = 1:numPCs
 
     projected_data(:,pcIdx)     = centered_data' * PC;                  % Projection onto current PC
 end
-% allData(1,:) = projected_data(1,:);
-% allData(2,:) = projected_data(1,:);
-% allData(3,:) = projected_data(2,:);
 
 
 %% Find the scaling matrix that maps D_ms onto approximate cone values
