@@ -56,12 +56,13 @@ I = data'; % data = [3 x nPix]
 M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 
-lambda = 0.2;                       % WEIGHT FOR THE VARIANCE TERM
+lambda = 0.5;                       % WEIGHT FOR THE VARIANCE TERM
 nPix   = size(data,2);
 % Constraint matrix (A, includes lots of I iterations) and vector (b)
 A_upper = blkdiag(I, I, I);      % Upper constraint blocks
 A_lower = -A_upper;              % FOR -I * X <= 0
 A = [A_upper; A_lower];
+% sparseA = sparse(A);
 b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
 x0 = eye(3, 3);
 
@@ -153,6 +154,8 @@ inGamutAfterTransform = checkGamut(projected_data,Disp,bScale)
 % scatter3(data(1,:),data(2,:),data(3,:),'filled')
 
 if bPLOT == 1
+    mean_data     = mean(data, 2);
+    centered_data = round(data,4) - round(mean_data,4);
     % Plot the projected data and PCS
     figure;
     scatter3(centered_data(1, :), centered_data(2, :), centered_data(3, :), 'filled');
