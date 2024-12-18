@@ -1,4 +1,4 @@
-function [correctedLMS_scaled, K_opt, D_mnew, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig,Disp,bScale)
+function [correctedLMS, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig,Disp,bScale)
 
 % Correcting an image so a dichromat can see color contrasts that she could
 % not see otherwise. Correction is happening via a PCA 
@@ -67,59 +67,59 @@ elseif strcmp(PCAway,'hard')
     lambda_var = 0.5;
     lambda_dot = 0.5;
     T_mean = mean(originalLMS,2);
-    [PC2D, projected_data] = decolorOptimize(originalLMS,numPCs,0,lambda_var,lambda_dot,Disp,bScale);
-    D_ms = projected_data';
+    [projected_data] = decolorOptimize(originalLMS,numPCs,0,lambda_var,lambda_dot,Disp,bScale);
+    D_mnew = projected_data;
 end
 
 %% Find the scaling matrix that maps D_ms onto approximate cone values
 
-D_mnew(1,:) = D_ms(1,:);
-D_mnew(2,:) = D_ms(1,:);
-D_mnew(3,:) = D_ms(2,:);
+% D_mnew(1,:) = D_ms(1,:);
+% D_mnew(2,:) = D_ms(1,:);
+% D_mnew(3,:) = D_ms(2,:);
 
-if sum(sum(D_ms)) < .00001
-    K_opt = [1 1 1];
-else
-
-% Initial guess for K
-initialKvec = [0.1, 0.1, 0.1];
-
-% Define the constraints
-A = [];
-b = [];
-Aeq = [];
-beq = [];
-lb = []; % Lower bounds
-ub = []; % Upper bounds
-
-% Options
-options = optimset('fmincon');
-options = optimset(options,'Diagnostics','off','Display','iter','LargeScale','off','Algorithm','active-set');
-
-% Call fmincon
-[K_optvec, fval] = fmincon(@(kVec) T_EstObjectiveFunction(kVec, D_mnew, T_mean, Disp, bScale), initialKvec, A, b, Aeq, beq, lb, ub, [], options);
-
-K_opt = diag(K_optvec);
-% Display results
-disp('Optimal K:');
-disp(K_optvec);
-disp('Objective Function Value:');
-disp(fval);
-
-end
+% if sum(sum(D_ms)) < .00001
+%     K_opt = [1 1 1];
+% else
+% 
+% % Initial guess for K
+% initialKvec = [0.1, 0.1, 0.1];
+% 
+% % Define the constraints
+% A = [];
+% b = [];
+% Aeq = [];
+% beq = [];
+% lb = []; % Lower bounds
+% ub = []; % Upper bounds
+% 
+% % Options
+% options = optimset('fmincon');
+% options = optimset(options,'Diagnostics','off','Display','iter','LargeScale','off','Algorithm','active-set');
+% 
+% % Call fmincon
+% [K_optvec, fval] = fmincon(@(kVec) T_EstObjectiveFunction(kVec, D_mnew, T_mean, Disp, bScale), initialKvec, A, b, Aeq, beq, lb, ub, [], options);
+% 
+% K_opt = diag(K_optvec);
+% % Display results
+% disp('Optimal K:');
+% disp(K_optvec);
+% disp('Objective Function Value:');
+% disp(fval);
+% 
+% end
 
 % T_opt = K_opt * D_mnew;
-T_opt = K_opt * D_mnew + T_mean;
+% T_opt = K_opt * D_mnew + T_mean;
 
-T_est_rgbImg = LMS2rgbLinCalFormat(T_opt, Disp, bScale);
+% T_est_rgbImg = LMS2rgbLinCalFormat(T_opt, Disp, bScale);
 
-correctedLMS = T_opt;
+correctedLMS = D_mnew;
 % OK let's try scaling here to stay in gamut... ideally we would do this in
 % optimization but we cannot because we need ALL cone values to tell if it 
 % is in gamut, but we are optimizing one at a time
-[correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
+% [correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
 
-inGamutColorCorrectionPCA = checkGamut(correctedLMS_scaled,Disp,bScale);
+inGamutColorCorrectionPCA = checkGamut(correctedLMS,Disp,bScale);
 if inGamutColorCorrectionPCA == 0 
     error('PCA pushing out of gamut')
 end
