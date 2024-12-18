@@ -48,9 +48,46 @@ if isempty(data)
     data = [x; y; z];
 end
 
+%% Find optimal transformation matrix
+
+% NOTE: I = LMS values [nPix x 3]
+I = data'; % data = [3 x nPix]
+% M = transformation matrix [3x3]
+M_rgb2cones = Disp.T_cones*Disp.P_monitor;
+M_cones2rgb = inv(M_rgb2cones);
+
+lambda = 0.2;                       % WEIGHT FOR THE VARIANCE TERM
+nPix   = size(data,2);
+% Constraint matrix (A, includes lots of I iterations) and vector (b)
+A_upper = blkdiag(I, I, I);      % Upper constraint blocks
+A_lower = -A_upper;              % FOR -I * X <= 0
+A = [A_upper; A_lower];
+b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
+x0 = eye(3, 3);
+
+% OPTIMIZATION SETUP
+options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter');
+[x_opt, fval] = fmincon(@(x) loss_function(x, I, lambda), ...
+    x0, [], [], [], [], [], [], ...
+    @(x) constraint_function(x, A, b), options);
+% RESHAPE THE OPTIMAL SOLUTION INTO MATRIX FORM
+optimal_X = reshape(x_opt, 3, 3);
+
+%  X = MT aka T = inv(M) * X
+Transformation_opt = inv(M_cones2rgb) * optimal_X;
+
+% Calculate optimal output from input * optimal transform 
+output = I * Transformation_opt;
+projected_data = output';
+
+% Check if is in gamut
+inGamutAfterTransform = checkGamut(projected_data,Disp,bScale)
+
+%% PCA the hard way
+
 % Subtract mean 
-mean_data     = mean(data, 2);
-centered_data = round(data,4) - round(mean_data,4); 
+% mean_data     = mean(data, 2);
+% centered_data = round(data,4) - round(mean_data,4); 
 
 % Normalize data for initial variance calculation
 % Why do this? Magnitude of variance might be very different than dot prod
@@ -58,7 +95,6 @@ centered_data = round(data,4) - round(mean_data,4);
 % if initial_variance == 0
 %     initial_variance = eps; % Small positive value to prevent division by zero
 % end
-
 
 % PCs = zeros(size(data, 1), numPCs); % Matrix to store principal components
 % options = optimoptions('fmincon', 'Algorithm', 'sqp', 'Display', 'iter');
@@ -86,39 +122,10 @@ centered_data = round(data,4) - round(mean_data,4);
     % [PC, fval] = fmincon(variance, X0, [], [], [], [], [], [], @constraint_function, options);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    % NOTE: I = LMS values [nPix x 3]
-    I = data'; % data = [3 x nPix]
-    % M = transformation matrix [3x3]
-    M_rgb2cones = Disp.T_cones*Disp.P_monitor;
-    M_cones2rgb = inv(M_rgb2cones);
-
-    lambda = 0.5;                       % WEIGHT FOR THE VARIANCE TERM
-    nPix   = size(data,2);
-    % Constraint matrix (A, includes lots of I iterations) and vector (b)
-    A_upper = blkdiag(I, I, I);      % Upper constraint blocks
-    A_lower = -A_upper;              % FOR -I * X <= 0
-    A = [A_upper; A_lower];
-    b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
-
-    x0 = eye(3, 3);
-
-    % OPTIMIZATION SETUP
-    options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter');
-    [x_opt, fval] = fmincon(@(x) loss_function(x, I, lambda), ...
-        x0, [], [], [], [], [], [], ...
-        @(x) constraint_function(x, A, b), options);
     % [x_opt, fval] = fmincon(@(x) loss_function(x, I, lambda), ...
     %     x0, [], [], [], [], [], [], ...
     %     @(x) constraint_function(x, I), options);
 
-    % RESHAPE THE OPTIMAL SOLUTION INTO MATRIX FORM
-    optimal_X = reshape(x_opt, 3, 3);
-
-    %  X = MT aka T = inv(M) * X
-    Transformation_opt = inv(M_cones2rgb) * optimal_X;
-
-    output = I * Transformation_opt;
-    projected_data = output';
     % Store PC
     % PCs(:, pcIdx) = PC;
     % 
@@ -134,9 +141,7 @@ centered_data = round(data,4) - round(mean_data,4);
     % projected_data(:,pcIdx)     = centered_data' * PC;                  % Projection onto current PC
 % end
 
-inGamutAfterTransform = checkGamut(projected_data,Disp,bScale)
-
-%% Find the scaling matrix that maps D_ms onto approximate cone values
+%% Plot? 
 
 % Check with pca function: NOTE, is same but has sign flips
 % [pcaAuto] = pca(data',"Centered",true);
@@ -169,6 +174,7 @@ if bPLOT == 1
     rotate3d on;
 end
 
+%% Functions 
 
 % OBJECTIVE FUNCTION
 function loss = loss_function(x_vec, I, lambda)
@@ -182,20 +188,6 @@ function loss = loss_function(x_vec, I, lambda)
     % TOTAL LOSS
     loss = var_term + dot_term;
 end
-
-% % LINEAR INEQUALITY CONSTRAINT FUNCTION
-% function [c, ceq] = constraint_function(x, I)
-%     % RESHAPE x INTO MATRIX FORM
-%     X = reshape(x, 3, 3);
-% 
-%     % CONSTRAINTS: I * X(:,j) <= 1 AND -I * X(:,j) <= 0 FOR j = 1:3
-%     c_upper = [ I * X(:,1) - 1; I * X(:,2) - 1; I * X(:,3) - 1]; % Upper constraints
-%     c_lower = [-I * X(:,1);    -I * X(:,2);    -I * X(:,3)];     % Lower constraints
-% 
-%     % COMBINE CONSTRAINTS
-%     c = [c_upper; c_lower];
-%     ceq = []; % NO EQUALITY CONSTRAINTS
-% end
 
 % LINEAR INEQUALITY MATRIX CONSTRAINT FUNCTION 
 function [c, ceq] = constraint_function(x, A, b)
