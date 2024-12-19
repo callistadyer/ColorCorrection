@@ -67,10 +67,10 @@ b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
 x0 = eye(3, 3);
 
 % OPTIMIZATION SETUP
-options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter');
+options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',400);
 [x_opt, fval] = fmincon(@(x) loss_function(x, I, lambda), ...
-    x0, [], [], [], [], [], [], ...
-    @(x) constraint_function(x, A, b), options);
+    x0, A, b, [], [], [], [], ...
+    [], options);
 % RESHAPE THE OPTIMAL SOLUTION INTO MATRIX FORM
 optimal_X = reshape(x_opt, 3, 3);
 
@@ -78,7 +78,7 @@ optimal_X = reshape(x_opt, 3, 3);
 Transformation_opt = inv(M_cones2rgb) * optimal_X;
 
 % Calculate optimal output from input * optimal transform 
-output = I * Transformation_opt;
+output = I * Transformation_opt';
 projected_data = output';
 
 % Check if is in gamut
@@ -180,9 +180,9 @@ end
 %% Functions 
 
 % OBJECTIVE FUNCTION
-function loss = loss_function(x_vec, I, lambda)
+function loss = loss_function(x_vec, I, M, lambda)
     X = reshape(x_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
-    O = I * X';                     % CALCULATE O = X * I
+    O = I * X'*inv(M');                     % CALCULATE O = X * I
     % VARIANCE TERM
     var_term = lambda * (var(O(:, 1)) + var(O(:, 3)));
     % ALIGNMENT TERM
