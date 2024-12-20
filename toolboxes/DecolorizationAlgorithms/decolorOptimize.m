@@ -64,21 +64,25 @@ A_lower = -A_upper;              % FOR -I * X <= 0
 A = [A_upper; A_lower];
 % sparseA = sparse(A);
 b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
-x0 = eye(3, 3);
-
+% x0 = eye(3, 3);
+% x0 = x0(:);
+T0 = eye(3, 3);
+T0 = T0(:);
 % OPTIMIZATION SETUP
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',400);
-[x_opt, fval] = fmincon(@(x) loss_function(x, I, lambda), ...
-    x0, A, b, [], [], [], [], ...
+[T_opt, fval] = fmincon(@(T) loss_function(T, I, M_cones2rgb, lambda), ...
+    T0, A, b, [], [], [], [], ...
     [], options);
+
 % RESHAPE THE OPTIMAL SOLUTION INTO MATRIX FORM
-optimal_X = reshape(x_opt, 3, 3);
+% optimal_X = reshape(x_opt, 3, 3);
+optimal_T = reshape(T_opt, 3, 3);
 
 %  X = MT aka T = inv(M) * X
-Transformation_opt = inv(M_cones2rgb) * optimal_X;
+% Transformation_opt = inv(M_cones2rgb) * optimal_X;
 
 % Calculate optimal output from input * optimal transform 
-output = I * Transformation_opt';
+output = I * M_cones2rgb * optimal_T;
 projected_data = output';
 
 % Check if is in gamut
@@ -180,9 +184,12 @@ end
 %% Functions 
 
 % OBJECTIVE FUNCTION
-function loss = loss_function(x_vec, I, M, lambda)
-    X = reshape(x_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
-    O = I * X'*inv(M');                     % CALCULATE O = X * I
+function loss = loss_function(t_vec, I, M, lambda)
+    T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
+    % X = M_cones2rgb * T 
+    % O = I * X
+    O = I * M * T;
+    % O = I * X'*inv(M');                     % CALCULATE O = X * I
     % VARIANCE TERM
     var_term = lambda * (var(O(:, 1)) + var(O(:, 3)));
     % ALIGNMENT TERM
@@ -193,11 +200,11 @@ function loss = loss_function(x_vec, I, M, lambda)
 end
 
 % LINEAR INEQUALITY MATRIX CONSTRAINT FUNCTION 
-function [c, ceq] = constraint_function(x, A, b)
-    x_vec = reshape(x', 9, 1);
-    c = A * x_vec - b;    % INEQUALITY CONSTRAINT: A * x_vec <= b
-    ceq = [];             % NO EQUALITY CONSTRAINTS
-end
+% function [c, ceq] = constraint_function(x, A, b)
+%     x_vec = reshape(x', 9, 1);
+%     c = A * x_vec - b;    % INEQUALITY CONSTRAINT: A * x_vec <= b
+%     ceq = [];             % NO EQUALITY CONSTRAINTS
+% end
 
 % % MAXIMIZING VARIANCE CONSTRAINT FUNCTION
 % function [c, ceq] = constraint_function(X)
