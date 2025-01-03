@@ -62,14 +62,13 @@ nPix   = size(data,2);
 A_upper = blkdiag(I, I, I);      % Upper constraint blocks
 A_lower = -A_upper;              % FOR -I * X <= 0
 A = [A_upper; A_lower];
-% sparseA = sparse(A);
+
 b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
-% x0 = eye(3, 3);
-% x0 = x0(:);
+
 T0 = eye(3, 3);
 T0 = T0(:);
 % OPTIMIZATION SETUP
-options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',400);
+options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',100);
 [T_opt, fval] = fmincon(@(T) loss_function(T, I, M_cones2rgb, lambda), ...
     T0, A, b, [], [], [], [], ...
     [], options);
@@ -188,9 +187,12 @@ function loss = loss_function(t_vec, I, M, lambda)
     T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
     % X = M_cones2rgb * T 
     % O = I * X
-    O = I * M * T;
     % O = I * X'*inv(M');                     % CALCULATE O = X * I
-    % VARIANCE TERM
+   
+    O = I * M * T;
+
+    % VARIANCE TERM 
+    % NOTE!!! CURRENTLY ASSUMING M CONE ABSENT (HENCE 1 AND 3 HERE)
     var_term = lambda * (var(O(:, 1)) + var(O(:, 3)));
     % ALIGNMENT TERM
     dot_term = (1 - lambda) *   (dot(O(:, 1), I(:, 1)) / norm(I(:, 1))) + ...
