@@ -86,7 +86,7 @@ end
 
 
 %% PCA the hard way
-if strcmp(method,hardPCA)
+if strcmp(method,"hardPCA")
     % Subtract mean
     mean_data     = mean(data, 2);
     centered_data = round(data,4) - round(mean_data,4);
@@ -107,7 +107,7 @@ if strcmp(method,hardPCA)
     % Loop to get PCs
     for pcIdx = 1:numPCs
 
-        Objective function: Combined weights of variance and dot product
+        % Objective function: Combined weights of variance and dot product
         objective = @(X) - ( ...
             lambda_var * var(theRemainingData' * X) / initial_variance + ...
             (1-lambda_var) * dot(theRemainingData' * X, theRemainingData' * X) ...
@@ -124,11 +124,7 @@ if strcmp(method,hardPCA)
         [PC, fval] = fmincon(variance, X0, [], [], [], [], [], [], @constraint_function, options);
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        [x_opt, fval] = fmincon(@(x) loss_function(x, I, lambda), ...
-            x0, [], [], [], [], [], [], ...
-            @(x) constraint_function(x, I), options);
-
-        Store PC
+        % Store PC
         PCs(:, pcIdx) = PC;
 
         % Define the nullspace of the
@@ -187,16 +183,24 @@ function loss = loss_function(t_vec, I, M, lambda)
     % O = I * X
     % O = I * X'*inv(M');                     % CALCULATE O = X * I
    
+    % I - LMS
+    % O - RGB
+    % M - LMS2RGB
+    % T - RGB TRANSFORMATION
     O = I * M * T;
 
     % VARIANCE TERM 
     % NOTE!!! CURRENTLY ASSUMING M CONE ABSENT (HENCE 1 AND 3 HERE)
     var_term = lambda * (var(O(:, 1)) + var(O(:, 3)));
-    % ALIGNMENT TERM
+    % SIMILARITY/NATURAL TERM
     dot_term = (1 - lambda) *   (dot(O(:, 1), I(:, 1)) / norm(I(:, 1))) + ...
                                 (dot(O(:, 3), I(:, 3)) / norm(I(:, 3)));
     % TOTAL LOSS
     loss = var_term + dot_term;
+    
+    if any(O(:)>1) || any(O(:)<0)
+        loss = loss + 100000000;
+    end
 end
 
 % LINEAR INEQUALITY MATRIX CONSTRAINT FUNCTION 
@@ -207,11 +211,11 @@ end
 % end
 
 % % MAXIMIZING VARIANCE CONSTRAINT FUNCTION
-% function [c, ceq] = constraint_function(X)
-%     % c    : Inequality constraints (none)
-%     % ceq  : Equality constraints (||X||^2 - 1 = 0 to ensure unit norm)
-% 
-%     c = []; 
-%     ceq = sum(X.^2) - 1; % Equality constraint ||X||^2 = 1
-% end
+function [c, ceq] = constraint_function(X)
+    % c    : Inequality constraints (none)
+    % ceq  : Equality constraints (||X||^2 - 1 = 0 to ensure unit norm)
+
+    c = []; 
+    ceq = sum(X.^2) - 1; % Equality constraint ||X||^2 = 1
+end
 end

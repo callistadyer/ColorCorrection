@@ -84,6 +84,16 @@ RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 
 % Generate random vectors with all positive components
 vectors = rand(nSquares, 3); % Uniform random values between 0 and 1
+% all deuteronope blind
+vectors(:,1) = zeros(nSquares,1);
+vectors(:,3) = zeros(nSquares,1);
+
+% if size(vectors,1) >3 1
+% vectors(1,:) = [1 0 0];
+% vectors(2,:) = [0 1 0];
+% vectors(3,:) = [0 0 1];
+% end
+
 magnitudes = sqrt(sum(vectors.^2, 2)); % Compute the magnitudes
 modDirection = vectors ./ magnitudes;  % Normalize to unit vectors
 
