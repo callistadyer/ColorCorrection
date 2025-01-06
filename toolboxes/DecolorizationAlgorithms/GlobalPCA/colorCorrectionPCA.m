@@ -35,9 +35,9 @@ function [correctedLMS, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType
 % Perform PCA
 
 % Perform the easy or hard way? (easy = matlab pca(), hard = fmincon)
-PCAway = 'hard';
+method = 'easyPCA';
 % PCA (the easy way):
-if strcmp(PCAway,'easy')
+if strcmp(method,'easyPCA')
     coeff = pca(originalLMS',"Centered",true); % Centered true subtracts mean
     PC2D(:,1) = coeff(:, 1); % First principal component
     PC2D(:,2) = coeff(:, 2); % Second principal component
@@ -58,17 +58,20 @@ if strcmp(PCAway,'easy')
 
     % Map mean of LMS onto two principle components (linear regression)
     % D_m = PC2D \ T_mean;
-
-elseif strcmp(PCAway,'hard')
+    projected_data(1,:) = D_ms(1,:);
+    projected_data(2,:) = D_ms(1,:);
+    projected_data(3,:) = D_ms(2,:);
+elseif strcmp(method,'hardPCA')
     % PCA (the hard way):
     numPCs = 2;
+    [projected_data] = decolorOptimize(originalLMS,method,numPCs,0,lambda_var,Disp,bScale);
+
+elseif strcmp(method,'ddd')
     % decolorOptimize does mean subtraction, then maximizes variance fmincon 
     % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
     lambda_var = 0.5;
-    lambda_dot = 0.5;
     T_mean = mean(originalLMS,2);
-    [projected_data] = decolorOptimize(originalLMS,numPCs,0,lambda_var,lambda_dot,Disp,bScale);
-    D_mnew = projected_data;
+    [projected_data] = decolorOptimize(originalLMS,method,numPCs,0,lambda_var,Disp,bScale);
 end
 
 %% Find the scaling matrix that maps D_ms onto approximate cone values
@@ -113,12 +116,12 @@ end
 
 % T_est_rgbImg = LMS2rgbLinCalFormat(T_opt, Disp, bScale);
 
-correctedLMS = D_mnew;
+correctedLMS = projected_data;
 % OK let's try scaling here to stay in gamut... ideally we would do this in
 % optimization but we cannot because we need ALL cone values to tell if it 
 % is in gamut, but we are optimizing one at a time
-% [correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
-
+[correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
+correctedLMS = correctedLMS_scaled;
 inGamutColorCorrectionPCA = checkGamut(correctedLMS,Disp,bScale);
 if inGamutColorCorrectionPCA == 0 
     error('PCA pushing out of gamut')
