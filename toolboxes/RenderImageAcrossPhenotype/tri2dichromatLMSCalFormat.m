@@ -38,6 +38,8 @@ s_cone = lmsImageCalFormat(3,:);
 % tritanSFromMScale = cone_mean_orig/mean(m_cone); 
 % tritanSFromLScale = cone_mean_orig/mean(l_cone);
 
+%%%%%%%%%%%%%%%%%%% CALLISTA WORK ON THIS!!!!
+% error(['callista work on this']);
 % Make dichromat manipulation - missing cone
 switch (renderType)
     case 'Deuteranopia' % m cone deficiency

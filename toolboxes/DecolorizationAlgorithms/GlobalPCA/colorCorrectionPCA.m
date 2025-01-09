@@ -129,7 +129,9 @@ correctedLMS = T_est_rgbImg;
 % correctedLMS = correctedLMS_scaled;
 inGamutColorCorrectionPCA = checkGamut(correctedLMS,Disp,bScale);
 if inGamutColorCorrectionPCA == 0 
-    error('PCA pushing out of gamut')
+    [correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
+    correctedLMS = correctedLMS_scaled;
+    % error('PCA pushing out of gamut')
 end
 
 end

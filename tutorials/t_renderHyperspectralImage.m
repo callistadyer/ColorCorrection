@@ -84,9 +84,9 @@ RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 
 % Generate random vectors with all positive components
 vectors = rand(nSquares, 3); % Uniform random values between 0 and 1
-% all deuteronope blind
-vectors(:,1) = zeros(nSquares,1);
-vectors(:,3) = zeros(nSquares,1);
+% % all deuteronope blind
+% vectors(:,1) = zeros(nSquares,1);
+% vectors(:,3) = zeros(nSquares,1);
 
 % if size(vectors,1) >3 1
 % vectors(1,:) = [1 0 0];
@@ -124,7 +124,6 @@ end
 
 % Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)  
 lmsDichromImageCalFormat        = tri2dichromatLMSCalFormat(lmsImageCalFormatTrichromat,renderType,cone_mean_orig,Disp,bScale); % gray
-%%%%%%%%%%%%%%% BUG HERE!! THIS FUNCTION PUSHES OUT OF GAMUT !! %%%%%%%%%%%%%%%
 lmsDichromModulatedCalFormat    = tri2dichromatLMSCalFormat(lmsModuledCalFormatTrichromat,renderType,cone_mean_orig,Disp,bScale); % modulated 
 
 % Dichromat LMS --> RGB
@@ -135,7 +134,7 @@ lmsDichromModulatedCalFormat    = tri2dichromatLMSCalFormat(lmsModuledCalFormatT
 RGBImage_dichromat          = CalFormatToImage(RGBImage_dichromatCalFormat,m,n); % no modulation
 RGBPlate_dichromat          = CalFormatToImage(RGBPlate_dichromatCalFormat,m,n); % isochromatic plate
 
-% plotting
+% Plotting
 % Show the trichromatic image, dichromatic image, and trichromatic plate, dichromatic plate
 figure('position',[ 896         364        1231         883]); 
 subplot(2,2,1);

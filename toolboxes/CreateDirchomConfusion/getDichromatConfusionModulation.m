@@ -17,19 +17,22 @@ function [modulationLMS] = getDichromatConfusionModulation(rgbImageCalFormat,mod
 % scaleFactor:       how much to scale the rgbImage values (or undo it)
 % bScale:            do you wanna scale or not?
 
-% Grab 
+ 
 M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 
+% THIS OVERWRITES MODULATION INPUT TO MAKE ONLY INVISIBLE SQUARES... FOR
+% TESTING
+renderType = 'Deuteranopia';
 % Which cone do you want to modulate
-% switch (renderType)
-%     case 'Deuteranopia' % m cone deficiency
-%         modulationDirection = [0 1 0]';
-%     case 'Protanopia'   % l cone deficiency
-%         modulationDirection = [1 0 0]';
-%     case 'Tritanopia'   % s cone deficiency
-%         modulationDirection = [0 0 1]';
-% end
+switch (renderType)
+    case 'Deuteranopia' % m cone deficiency
+        modulationDirection_LMS = [0 1 0]';
+    case 'Protanopia'   % l cone deficiency
+        modulationDirection_LMS = [1 0 0]';
+    case 'Tritanopia'   % s cone deficiency
+        modulationDirection_LMS = [0 0 1]';
+end
 
 % Convert modulation direction from LMS space to rgb space
 modulationDirection_rgb = M_cones2rgb*modulationDirection_LMS;
