@@ -52,38 +52,51 @@ if strcmp(method,"linTransform")
     M_rgb2cones = Disp.T_cones*Disp.P_monitor;
     M_cones2rgb = inv(M_rgb2cones);
 
-    lambda = 0.5;                       % WEIGHT FOR THE VARIANCE TERM
+    % Weight for variance term
+    lambda = 0.5;             
+    % Number of pixels
     nPix   = size(data,2);
+
     % Constraint matrix (A, includes lots of I iterations) and vector (b)
     A_upper = blkdiag(I, I, I);      % Upper constraint blocks
-    A_lower = -A_upper;              % FOR -I * X <= 0
-    A = [A_upper; A_lower];
-
+    A_lower = -A_upper;              % for -I * X <= 0
+    A = [A_upper; A_lower]; 
     b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
 
+    % Initial guess at transformation matrix - start with identity
     T0 = eye(3, 3);
     T0 = T0(:);
+
     % OPTIMIZATION SETUP
-    options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',100);
-    [T_opt, fval] = fmincon(@(T) loss_function(T, I, M_cones2rgb, lambda), ...
+    options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',30);
+    [T_opt, fval] = fmincon(@(T) loss_function(T, I, M_cones2rgb, lambda, Disp), ...
         T0, A, b, [], [], [], [], ...
         [], options);
 
     % RESHAPE THE OPTIMAL SOLUTION INTO MATRIX FORM
-    % optimal_X = reshape(x_opt, 3, 3);
     optimal_T = reshape(T_opt, 3, 3);
-
-    %  X = MT aka T = inv(M) * X
-    % Transformation_opt = inv(M_cones2rgb) * optimal_X;
-
     % Calculate optimal output from input * optimal transform
-    output = I * M_cones2rgb * optimal_T;
-    projected_data = output';
+    outputLinRGB = I * M_cones2rgb * optimal_T;
+
+    % Check if given O is in gamut
+    % Get LMS values
+    lmsImageCalFormat = M_rgb2cones * outputLinRGB';
 
     % Check if is in gamut
-    inGamutAfterTransform = checkGamut(projected_data,Disp,bScale)
+    inGamutAfterTransform = checkGamut(lmsImageCalFormat,Disp,bScale);
+    if inGamutAfterTransform == 0
+        error(['ERROR: decolorOptimize, constraint is not working, transformation is pushing out of gamut'])
+    else
+
+    outputRGB = LMS2RGBCalFormat(outputLMSCalFormat,Disp,0);
+    projected_data = outputRGB';
+    end
+
+
+ 
 end
 
+disp(['Note: "pca the hard way"... problem because variance is 0 at starting point'])
 
 %% PCA the hard way
 if strcmp(method,"hardPCA")
@@ -107,12 +120,6 @@ if strcmp(method,"hardPCA")
     % Loop to get PCs
     for pcIdx = 1:numPCs
 
-        % Objective function: Combined weights of variance and dot product
-        objective = @(X) - ( ...
-            lambda_var * var(theRemainingData' * X) / initial_variance + ...
-            (1-lambda_var) * dot(theRemainingData' * X, theRemainingData' * X) ...
-            );
-
         %%%%%%%%%%%%%% OLD WAY: ONLY MAXIMIZING VARIANCE %%%%%%%%%%%%%%%
         % Maximize variance
         variance = @(X) -var(theRemainingData' * X); % Maximize variance = minimize negative variance
@@ -123,6 +130,12 @@ if strcmp(method,"hardPCA")
         % % Find current principal component via minimizing the negative variance
         [PC, fval] = fmincon(variance, X0, [], [], [], [], [], [], @constraint_function, options);
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Objective function: Combined weights of variance and dot product
+        % objective = @(X) - ( ...
+        %     lambda_var * var(theRemainingData' * X) / initial_variance + ...
+        %     (1-lambda_var) * dot(theRemainingData' * X, theRemainingData' * X) ...
+        %     );
+
 
         % Store PC
         PCs(:, pcIdx) = PC;
@@ -139,6 +152,8 @@ if strcmp(method,"hardPCA")
         projected_data(:,pcIdx)     = centered_data' * PC;                  % Projection onto current PC
     end
 end
+
+
 %% Plot? 
 
 % Check with pca function: NOTE, is same but has sign flips
@@ -150,57 +165,78 @@ end
 % figure;
 % scatter3(data(1,:),data(2,:),data(3,:),'filled')
 
-if bPLOT == 1
-    mean_data     = mean(data, 2);
-    centered_data = round(data,4) - round(mean_data,4);
-    % Plot the projected data and PCS
-    figure;
-    scatter3(centered_data(1, :), centered_data(2, :), centered_data(3, :), 'filled');
-    hold on;
-
-    % Plot PCs
-    origin = mean_data; % Data mean = the origin for the PCs
-    for i = 1:numPCs
-        quiver3(origin(1), origin(2), origin(3), PCs(1, i), PCs(2, i), PCs(3, i),'LineWidth', 2, 'MaxHeadSize', 0.5);
-    end
-
-    title('3D Data and Principal Components');
-    xlabel('X1');
-    ylabel('X2');
-    zlabel('X3');
-    axis equal;
-    legend({'Data', 'PC1', 'PC2'}, 'Location', 'Best');
-    view(3);
-    rotate3d on;
-end
+% if bPLOT == 1
+%     mean_data     = mean(data, 2);
+%     centered_data = round(data,4) - round(mean_data,4);
+%     % Plot the projected data and PCS
+%     figure;
+%     scatter3(centered_data(1, :), centered_data(2, :), centered_data(3, :), 'filled');
+%     hold on;
+% 
+%     % Plot PCs
+%     origin = mean_data; % Data mean = the origin for the PCs
+%     for i = 1:numPCs
+%         quiver3(origin(1), origin(2), origin(3), PCs(1, i), PCs(2, i), PCs(3, i),'LineWidth', 2, 'MaxHeadSize', 0.5);
+%     end
+% 
+%     title('3D Data and Principal Components');
+%     xlabel('X1');
+%     ylabel('X2');
+%     zlabel('X3');
+%     axis equal;
+%     legend({'Data', 'PC1', 'PC2'}, 'Location', 'Best');
+%     view(3);
+%     rotate3d on;
+% end
 
 %% Functions 
 
 % OBJECTIVE FUNCTION
-function loss = loss_function(t_vec, I, M, lambda)
+function loss = loss_function(t_vec, I, M, lambda,Disp)
     T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
     % X = M_cones2rgb * T 
     % O = I * X
     % O = I * X'*inv(M');                     % CALCULATE O = X * I
    
     % I - LMS
-    % O - RGB
+    % O - linear RGB
     % M - LMS2RGB
     % T - RGB TRANSFORMATION
     O = I * M * T;
 
-    % VARIANCE TERM 
-    % NOTE!!! CURRENTLY ASSUMING M CONE ABSENT (HENCE 1 AND 3 HERE)
-    var_term = lambda * (var(O(:, 1)) + var(O(:, 3)));
-    % SIMILARITY/NATURAL TERM
-    dot_term = (1 - lambda) *   (dot(O(:, 1), I(:, 1)) / norm(I(:, 1))) + ...
-                                (dot(O(:, 3), I(:, 3)) / norm(I(:, 3)));
+    % How to implement constraints?
+
+
+    % Check if given O is in gamut
+    % Convert to LMS
+    O_LMSCalFormat = inv(M) * O';
+    inGamut = checkGamut(O_LMSCalFormat,Disp,0);
+
+    % Penalize out of gamut
+    if inGamut == 0
+        loss = 100000000;
+    else
+
+    % If not out of gamut, turn into RGB and calculate loss for current
+    % transformation matrix
+
+    % Gamma correct
+    iGtable = displayGet(Disp.d,'inversegamma');
+    O_RGB = rgb2dac(O,iGtable)/(2^displayGet(Disp.d,'dacsize')-1);
+    % Transform to cal format
+    O_RGBCalFormat = ImageToCalFormat(O_RGB);
+
+    disp(['NOTE!!! CURRENTLY ASSUMING DEUTERONOPIA... CHANGE BEFORE CODE IS READY TO USE'])
+    % Variance term
+    var_term = lambda * (var(O_RGBCalFormat(:, 1)) + var(O_RGBCalFormat(:, 3)));
+    % Similarity term
+    dot_term = (1 - lambda) *   (dot(O_RGBCalFormat(:, 1), I(:, 1)) / norm(I(:, 1))) + ...
+                                (dot(O_RGBCalFormat(:, 3), I(:, 3)) / norm(I(:, 3)));
     % TOTAL LOSS
     loss = var_term + dot_term;
     
-    if any(O(:)>1) || any(O(:)<0)
-        loss = loss + 100000000;
     end
+
 end
 
 % LINEAR INEQUALITY MATRIX CONSTRAINT FUNCTION 

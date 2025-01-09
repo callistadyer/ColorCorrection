@@ -35,7 +35,7 @@ function [correctedLMS, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType
 % Perform PCA
 
 % Perform the easy or hard way? (easy = matlab pca(), hard = fmincon)
-method = 'easyPCA';
+method = 'linTransform';
 % PCA (the easy way):
 if strcmp(method,'easyPCA')
     coeff = pca(originalLMS',"Centered",true); % Centered true subtracts mean
@@ -81,14 +81,12 @@ end
 
 %% Find the scaling matrix that maps D_ms onto approximate cone values
 
-% D_mnew(1,:) = D_ms(1,:);
-% D_mnew(2,:) = D_ms(1,:);
-% D_mnew(3,:) = D_ms(2,:);
-
-% if sum(sum(D_ms)) < .00001
+% if sum(sum(projected_data)) < .00001
 %     K_opt = [1 1 1];
 % else
-% 
+
+if strcmp(method,'easyPCA')
+ 
 % Initial guess for K
 initialKvec = [0.1, 0.1, 0.1];
 
@@ -105,7 +103,7 @@ options = optimset('fmincon');
 options = optimset(options,'Diagnostics','off','Display','iter','LargeScale','off','Algorithm','active-set');
 
 % Call fmincon
-[K_optvec, fval] = fmincon(@(kVec) T_EstObjectiveFunction(kVec, projected_data, T_mean, Disp, bScale), initialKvec, A, b, Aeq, beq, lb, ub, [], options);
+[K_optvec, fval] = fmincon(@(kVec) T_EstObjectiveFunction(kVec, projected_data, T_mean, renderType, Disp, bScale), initialKvec, A, b, Aeq, beq, lb, ub, [], options);
 
 K_opt = diag(K_optvec);
 % Display results
@@ -114,24 +112,27 @@ disp(K_optvec);
 disp('Objective Function Value:');
 disp(fval);
 
-
-% T_opt = K_opt * D_mnew;
+disp(['Note: colorCorrectionPCA scaling in lines 100-120 do NOT work when you dont add mean back in'])
+% T_opt = K_opt * projected_data;
+% Add back in mean when you do easy pca
 T_opt = K_opt * projected_data + T_mean;
 
-T_est_rgbImg = LMS2rgbLinCalFormat(T_opt, Disp, bScale);
-correctedLMS = T_est_rgbImg;
+% T_est_rgbImg = LMS2rgbLinCalFormat(T_opt, Disp, bScale);
+correctedLMS = T_opt;
+else
 
-% correctedLMS = projected_data;
+correctedLMS = projected_data;
+
 % OK let's try scaling here to stay in gamut... ideally we would do this in
 % optimization but we cannot because we need ALL cone values to tell if it 
 % is in gamut, but we are optimizing one at a time
 % [correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
 % correctedLMS = correctedLMS_scaled;
 inGamutColorCorrectionPCA = checkGamut(correctedLMS,Disp,bScale);
-if inGamutColorCorrectionPCA == 0 
-    [correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
-    correctedLMS = correctedLMS_scaled;
-    % error('PCA pushing out of gamut')
-end
+% if inGamutColorCorrectionPCA == 0 
+%     [correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
+%     correctedLMS = correctedLMS_scaled;
+%     % error('PCA pushing out of gamut')
+% end
 
 end

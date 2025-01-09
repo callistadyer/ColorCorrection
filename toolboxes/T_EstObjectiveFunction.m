@@ -1,4 +1,4 @@
-function obj = T_EstObjectiveFunction(kVec, D_mnew, T_mean, Disp, bScale)
+function obj = T_EstObjectiveFunction(kVec, D_mnew, T_mean, renderType, Disp, bScale)
 % Objective function for choosing how to scale values after PCA to be in
 % similar range as LMS values
 %
@@ -49,19 +49,32 @@ M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 rgbLinImageCalFormat = M_cones2rgb*T_est;
 
+% dichromat rendering
+dichromatLMSCalFormat = simulateDichromatBrettel(T_est,renderType,Disp);
+% Get rgb values
+M_rgb2cones = Disp.T_cones*Disp.P_monitor;
+M_cones2rgb = inv(M_rgb2cones);
+di_rgbLinImageCalFormat = M_cones2rgb*dichromatLMSCalFormat;
+
 % Ensure rgb is not <0 or >1
-if min(rgbLinImageCalFormat(:)) < 0 || max(rgbLinImageCalFormat(:)) > 1
+if min(rgbLinImageCalFormat(:)) < 0 || max(rgbLinImageCalFormat(:)) > 1 ...
+        || min(di_rgbLinImageCalFormat(:)) < 0 || max(di_rgbLinImageCalFormat(:)) > 1 
     obj = Inf;
 
 else
 
     % Compute rgb values from the new cone estimates
-    % T_est_rgbImg = LMS2rgbLinCalFormat(T_est, d, T_cones, P_monitor, m, n, bScale);
-    [~,T_est_rgbImg] = LMS2RGBCalFormat(T_est,Disp,bScale);
+    % Trichromat rendering
+    [~,T_est_rgbImg]          = LMS2RGBCalFormat(T_est,Disp,bScale);
+    % Dichromat rendering
+    [~,dichromatRGBCalFormat] = LMS2RGBCalFormat(dichromatLMSCalFormat,Disp,bScale);
 
+    allrgb = [T_est_rgbImg(:), dichromatRGBCalFormat(:)];
     % Compute min and max of rgb values
-    minrgb = min(T_est_rgbImg(:));
-    maxrgb = max(T_est_rgbImg(:));
+    % minrgb = min(T_est_rgbImg(:));
+    % maxrgb = max(T_est_rgbImg(:));
+    minrgb = min(allrgb(:));
+    maxrgb = max(allrgb(:));
     if (minrgb < 0 || maxrgb > 1)
         error('Something is not consistent.');
     end

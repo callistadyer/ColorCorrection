@@ -40,22 +40,25 @@ s_cone = lmsImageCalFormat(3,:);
 
 %%%%%%%%%%%%%%%%%%% CALLISTA WORK ON THIS!!!!
 % error(['callista work on this']);
+lmsImage = CalFormatToImage(lmsImageCalFormat,Disp.m,Disp.n);
+dichromatLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp);
+
 % Make dichromat manipulation - missing cone
-switch (renderType)
-    case 'Deuteranopia' % m cone deficiency
-        lmsImageCalFormat(2,:)       = l_cone; 
-        [scaleFactor,dichromatLMSCalFormat,inGamut] = findDichromMappingScaleFactor(2,lmsImageCalFormat,Disp,bScale);
-
-    case 'Protanopia'   % l cone deficiency
-        % CHECK: this had a 2 in the index... i changed it to 1. correct?
-        lmsImageCalFormat(1,:)       = m_cone; 
-        [scaleFactor,dichromatLMSCalFormat,inGamut] = findDichromMappingScaleFactor(1,lmsImageCalFormat,Disp,bScale); 
-        
-    case 'Tritanopia'   % s cone deficiency
-        lmsImageCalFormat(3,:)       = (m_cone + l_cone)/2;
-        [scaleFactor,dichromatLMSCalFormat,inGamut] = findDichromMappingScaleFactor(3,lmsImageCalFormat,Disp,bScale);
-
-end
+% switch (renderType)
+%     case 'Deuteranopia' % m cone deficiency
+%         lmsImageCalFormat(2,:)       = l_cone; 
+%         [scaleFactor,dichromatLMSCalFormat,inGamut] = findDichromMappingScaleFactor(2,lmsImageCalFormat,Disp,bScale);
+% 
+%     case 'Protanopia'   % l cone deficiency
+%         % CHECK: this had a 2 in the index... i changed it to 1. correct?
+%         lmsImageCalFormat(1,:)       = m_cone; 
+%         [scaleFactor,dichromatLMSCalFormat,inGamut] = findDichromMappingScaleFactor(1,lmsImageCalFormat,Disp,bScale); 
+% 
+%     case 'Tritanopia'   % s cone deficiency
+%         lmsImageCalFormat(3,:)       = (m_cone + l_cone)/2;
+%         [scaleFactor,dichromatLMSCalFormat,inGamut] = findDichromMappingScaleFactor(3,lmsImageCalFormat,Disp,bScale);
+% 
+% end
 
 %dichromatLMSCalFormat = lmsImageCalFormat;
 
