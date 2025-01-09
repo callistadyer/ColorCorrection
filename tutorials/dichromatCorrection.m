@@ -93,37 +93,43 @@ RGBImage_FixedDichromat_plate    = CalFormatToImage(RGBImage_fixedDichromatCalFo
 RGBImage_FixedDichromat          = CalFormatToImage(RGBImage_fixedDichromatCalFormat,Disp.m,Disp.n); % no modulation
 
 
-figure();
-subplot(4,2,1)
-imshow(RGBImage_trichromat);  
-title('trichromat')
+figure('Position',[214         261         501        1076]);
 
-subplot(4,2,2)
-imshow(RGBImage_trichromat_plate);     
-title('trichromat plate')
+% Create a tiled layout
+t = tiledlayout(4, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 
-subplot(4,2,3)
-imshow(RGBImage_dichromat_orig);     % DICHROMAT
-title('dichromat')
+% Add images to the tiles
+nexttile
+imshow(RGBImage_trichromat);
+title('trichromat');
 
-subplot(4,2,4)
-imshow(RGBImage_dichromat_plate_orig);
-title('dichromat - plate')
+nexttile
+imshow(RGBImage_dichromat_orig);
+title('dichromat');
 
-subplot(4,2,5)
-imshow(RGBImage_dichromat);     % DICHROMAT
-title('trichromat corrected')
+nexttile
+imshow(RGBImage_dichromat);
+title('trichromat corrected - no plate');
 
-subplot(4,2,6)
-imshow(RGBImage_dichromat_plate);
-title('trichromat corrected - plate')
-
-subplot(4,2,7)
+nexttile
 imshow(RGBImage_FixedDichromat);
-title('dichromat corrected')
+title('dichromat corrected - no plate');
 
-subplot(4,2,8)
+nexttile
+imshow(RGBImage_trichromat_plate);
+title('trichromat - plate');
+
+nexttile
+imshow(RGBImage_dichromat_plate_orig);
+title('dichromat - plate');
+
+nexttile
+imshow(RGBImage_dichromat_plate);
+title('trichromat corrected - plate');
+
+nexttile
 imshow(RGBImage_FixedDichromat_plate);
-title('dichromat corrected - plate')
+title('dichromat corrected - plate');
 
+sgtitle('Left: Trichromat, Right: Dichromat')
 end

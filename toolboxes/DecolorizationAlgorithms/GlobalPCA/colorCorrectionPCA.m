@@ -35,7 +35,7 @@ function [correctedLMS, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType
 % Perform PCA
 
 % Perform the easy or hard way? (easy = matlab pca(), hard = fmincon)
-method = 'linTransform';
+method = 'easyPCA';
 % PCA (the easy way):
 if strcmp(method,'easyPCA')
     coeff = pca(originalLMS',"Centered",true); % Centered true subtracts mean
