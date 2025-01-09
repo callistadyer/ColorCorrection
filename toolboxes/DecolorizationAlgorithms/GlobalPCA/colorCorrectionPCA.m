@@ -35,7 +35,7 @@ function [correctedLMS, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType
 % Perform PCA
 
 % Perform the easy or hard way? (easy = matlab pca(), hard = fmincon)
-method = 'easyPCA';
+method = 'linTransform';
 % PCA (the easy way):
 if strcmp(method,'easyPCA')
     coeff = pca(originalLMS',"Centered",true); % Centered true subtracts mean
@@ -128,7 +128,7 @@ correctedLMS = projected_data;
 % is in gamut, but we are optimizing one at a time
 % [correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
 % correctedLMS = correctedLMS_scaled;
-inGamutColorCorrectionPCA = checkGamut(correctedLMS,Disp,bScale);
+% inGamutColorCorrectionPCA = checkGamut(correctedLMS,Disp,bScale);
 % if inGamutColorCorrectionPCA == 0 
 %     [correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
 %     correctedLMS = correctedLMS_scaled;

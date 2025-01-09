@@ -42,6 +42,9 @@ function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMo
 [RGBImage_dichromat] = dichromatCorrection('scene2.mat','Deuteranopia',1,0,10)
 %}
 
+% Close out any stray figures
+close all;
+
 % Get trichromatic (LMS) image
 [lmsImageCalFormatTri,lmsModuledCalFormatTri,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod,nSquares);    
 

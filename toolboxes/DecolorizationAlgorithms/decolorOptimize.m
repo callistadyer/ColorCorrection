@@ -58,7 +58,8 @@ if strcmp(method,"linTransform")
     nPix   = size(data,2);
 
     % Constraint matrix (A, includes lots of I iterations) and vector (b)
-    A_upper = blkdiag(I, I, I);      % Upper constraint blocks
+    I_M = I*M_cones2rgb';
+    A_upper = blkdiag(I_M, I_M, I_M);      % Upper constraint blocks
     A_lower = -A_upper;              % for -I * X <= 0
     A = [A_upper; A_lower]; 
     b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
@@ -69,14 +70,21 @@ if strcmp(method,"linTransform")
 
     % OPTIMIZATION SETUP
     options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',30);
-    [T_opt, fval] = fmincon(@(T) loss_function(T, I, M_cones2rgb, lambda, Disp), ...
+    [T_opt, fval] = fmincon(@(T) loss_function(T, I, M_cones2rgb', lambda, Disp), ...
         T0, A, b, [], [], [], [], ...
         [], options);
 
+    fValOpt = loss_function(T_opt, I, M_cones2rgb', lambda, Disp)
+    bCheck = A*T_opt(:);
+    if (any(bCheck > b))
+        fprintf('Failed to satisfy constraint\n');
+    end
+
     % RESHAPE THE OPTIMAL SOLUTION INTO MATRIX FORM
     optimal_T = reshape(T_opt, 3, 3);
+
     % Calculate optimal output from input * optimal transform
-    outputLinRGB = I * M_cones2rgb * optimal_T;
+    outputLinRGB = I * M_cones2rgb' * optimal_T;
 
     % Check if given O is in gamut
     % Get LMS values
@@ -87,13 +95,9 @@ if strcmp(method,"linTransform")
     if inGamutAfterTransform == 0
         error(['ERROR: decolorOptimize, constraint is not working, transformation is pushing out of gamut'])
     else
-
-    outputRGB = LMS2RGBCalFormat(outputLMSCalFormat,Disp,0);
-    projected_data = outputRGB';
+        outputRGB = LMS2RGBCalFormat(lmsImageCalFormat,Disp,0);
+        projected_data = outputRGB';
     end
-
-
- 
 end
 
 disp(['Note: "pca the hard way"... problem because variance is 0 at starting point'])
@@ -209,31 +213,38 @@ function loss = loss_function(t_vec, I, M, lambda,Disp)
 
     % Check if given O is in gamut
     % Convert to LMS
-    O_LMSCalFormat = inv(M) * O';
-    inGamut = checkGamut(O_LMSCalFormat,Disp,0);
+    O_Minv = O*inv(M);
+    O_LMSCalFormat = O_Minv';
+    %inGamut = checkGamut(O_LMSCalFormat,Disp,0);
+    minRGB = min(O(:));
+    maxRGB = max(O(:));
 
     % Penalize out of gamut
-    if inGamut == 0
-        loss = 100000000;
+    if minRGB < 0
+        lossGamutTerm = 100000000*(minRGB.^2);
+    elseif (maxRGB > 1)
+        lossGamutTerm = 100000000*((maxRGB-1).^2);
     else
-
-    % If not out of gamut, turn into RGB and calculate loss for current
-    % transformation matrix
+        lossGamutTerm = 0;
+    end
 
     % Gamma correct
-    iGtable = displayGet(Disp.d,'inversegamma');
-    O_RGB = rgb2dac(O,iGtable)/(2^displayGet(Disp.d,'dacsize')-1);
+    %iGtable = displayGet(Disp.d,'inversegamma');
+    %O_RGB = rgb2dac(O,iGtable)/(2^displayGet(Disp.d,'dacsize')-1);
     % Transform to cal format
-    O_RGBCalFormat = ImageToCalFormat(O_RGB);
+    %O_RGBCalFormat = ImageToCalFormat(O_RGB);
+    O_RGBCalFormat = O';
 
-    disp(['NOTE!!! CURRENTLY ASSUMING DEUTERONOPIA... CHANGE BEFORE CODE IS READY TO USE'])
+    % disp(['NOTE!!! CURRENTLY ASSUMING DEUTERONOPIA... CHANGE BEFORE CODE IS READY TO USE'])
     % Variance term
     var_term = lambda * (var(O_RGBCalFormat(:, 1)) + var(O_RGBCalFormat(:, 3)));
+
     % Similarity term
-    dot_term = (1 - lambda) *   (dot(O_RGBCalFormat(:, 1), I(:, 1)) / norm(I(:, 1))) + ...
-                                (dot(O_RGBCalFormat(:, 3), I(:, 3)) / norm(I(:, 3)));
+    dot_term = (1 - lambda) *   (dot(O_Minv(:, 1), I(:, 1)) / norm(I(:, 1))) + ...
+                                (dot(O_Minv(:, 2), I(:, 2)) / norm(I(:, 2))) + ...
+                                (dot(O_Minv(:, 3), I(:, 3)) / norm(I(:, 3)));
     % TOTAL LOSS
-    loss = var_term + dot_term;
+    loss = -(var_term + dot_term) + lossGamutTerm;
     
     end
 
@@ -253,5 +264,4 @@ function [c, ceq] = constraint_function(X)
 
     c = []; 
     ceq = sum(X.^2) - 1; % Equality constraint ||X||^2 = 1
-end
 end
