@@ -1,15 +1,32 @@
-% DICHROMAT RENDERING SIMULATION BASED ON BRETTEL ET AL. (1997)
-% THIS CODE SIMULATES THE COLOR VISION OF PROTANOPES, DEUTERANOPES, AND TRITANOPES.
 
 function deuterLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp)
-    
-disp(['Note: Im not sure if simulateDichromatBrettel enforces in gamut RGB vals... enforce this'])
-    % INPUTS:
-    % lmsImage   - LMS representation of the input image
-    % renderType - Type of dichromacy ('protanopia', 'deuteranopia', 'tritanopia')
-    % Disp       - contains spectral sensitivities and wls necessary
+% Using Brettel et al. algorithm to try and simulate dichromat rendering
+%
+% Syntax:
+%   function deuterLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp)
+%
+% Description:
+%
+% Inputs:
+%   lmsImage:       - LMS representation of the input image    
+%   renderType:     - Type of dichromacy
+%                       'Deuteranopia'
+%                       'Protanopia'
+%                       'Tritanopia'
+%   Disp            - contains spectral sensitivities and wls necessary
+%
+% Outputs:
+%   deuterLMSCalFormat - LMS values for simulating what deuteronope sees
+%   when input LMS image is shown
+%
+% Optional key/value pairs:
+%   None
+%
 
-    % check if in image format
+disp(['Note: Im not sure if simulateDichromatBrettel enforces in gamut RGB vals... enforce this'])
+
+
+    % check if in image format (if not, reshape it)
     if length(size(lmsImage)) ~= 3
         lmsImage = CalFormatToImage(lmsImage,Disp.m,Disp.n);
     end
@@ -52,6 +69,7 @@ disp(['Note: Im not sure if simulateDichromatBrettel enforces in gamut RGB vals.
     % Call projection logic with dynamically calculated E, A1, and A2
     simulatedLMSimg          = project_to_plane(lmsImage, E, A1, A2, missing);
     deuterLMSCalFormat       = ImageToCalFormat(simulatedLMSimg);
+    % Uncomment these to get conversions to RGB images
     % RGBImgCalFormatSimulated = LMS2RGBCalFormat(deuterLMSCalFormat,Disp,0);
     % RGBImgFormatSimulated    = CalFormatToImage(RGBImgCalFormatSimulated,Disp.m,Disp.n);
 end
@@ -74,9 +92,11 @@ function Qp = project_to_plane(Q, E, A1, A2, missing)
                 anchor = A2; % Closer to A2
             end
             
+            % Calculate plane coefficients (a, b, c)
+            a = E(2) * anchor(3) - E(3) * anchor(2);
+            b = E(3) * anchor(1) - E(1) * anchor(3);
+            c = E(1) * anchor(2) - E(2) * anchor(1);
             % Calculate projection onto the chosen plane
-            coeffs = cross(E, anchor);
-            a = coeffs(1); b = coeffs(2); c = coeffs(3);
             LQp = -(b * Q(:,:,2) + c * Q(:,:,3)) / a;
             Qp = cat(3, Q(:,:,2), LQp, Q(:,:,3));
             % Qp = [LQp; Q(:,:,2); Q(:,:,3)];
@@ -93,9 +113,11 @@ function Qp = project_to_plane(Q, E, A1, A2, missing)
                 anchor = A2; % Closer to A2
             end
             
+            % Calculate plane coefficients (a, b, c)
+            a = E(2) * anchor(3) - E(3) * anchor(2);
+            b = E(3) * anchor(1) - E(1) * anchor(3);
+            c = E(1) * anchor(2) - E(2) * anchor(1);
             % Calculate projection onto the chosen plane
-            coeffs = cross(E, anchor);
-            a = coeffs(1); b = coeffs(2); c = coeffs(3);
             MQp = -(a .* Q(:,:,1) + c .* Q(:,:,3)) / b;
             Qp = cat(3, Q(:,:,1), MQp, Q(:,:,3));
             % Qp = [Q(:,:,1); MQp; Q(:,:,3)];
@@ -111,10 +133,11 @@ function Qp = project_to_plane(Q, E, A1, A2, missing)
             else
                 anchor = A2; % Closer to A2
             end
-            
+            % Calculate plane coefficients (a, b, c)
+            a = E(2) * anchor(3) - E(3) * anchor(2);
+            b = E(3) * anchor(1) - E(1) * anchor(3);
+            c = E(1) * anchor(2) - E(2) * anchor(1);            
             % Calculate projection onto the chosen plane
-            coeffs = cross(E, anchor);
-            a = coeffs(1); b = coeffs(2); c = coeffs(3);
             SQp = -(a * Q(:,:,1) + b * Q(:,:,2)) / c;
             Qp = cat(3, Q(:,:,1), SQp, Q(:,:,2));
             % Qp = [Q(:,:,1); Q(:,:,2); SQp];
