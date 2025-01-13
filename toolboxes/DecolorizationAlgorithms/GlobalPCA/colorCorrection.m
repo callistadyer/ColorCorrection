@@ -59,8 +59,8 @@ if strcmp(method,'easyPCA')
 elseif strcmp(method,'hardPCA')
     % PCA (the hard way):
     numPCs = 2;
-    lambda_var = 0.5;
-    [triLMSCalFormatOpt] = decolorOptimize(triLMSCalFormat,method,numPCs,0,lambda_var,Disp,bScale);
+    lambda_var = 0.8;
+    [triLMSCalFormatOpt] = decolorOptimize(triLMSCalFormat,method,numPCs,renderType,0,lambda_var,Disp,bScale);
     triLMSCalFormatOpt(1,:) = triLMSCalFormatOpt(:,1);
     triLMSCalFormatOpt(2,:) = triLMSCalFormatOpt(:,1);
     triLMSCalFormatOpt(3,:) = triLMSCalFormatOpt(:,2);
@@ -70,7 +70,7 @@ elseif strcmp(method,'linTransform')
     % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
     lambda_var = 0.5;
     triLMSmeans = mean(triLMSCalFormat,2);
-    [triLMSCalFormatOpt] = decolorOptimize(triLMSCalFormat,method,0,0,lambda_var,Disp,bScale);
+    [triLMSCalFormatOpt] = decolorOptimize(triLMSCalFormat,method,0,renderType,0,lambda_var,Disp,bScale);
 
 end
 

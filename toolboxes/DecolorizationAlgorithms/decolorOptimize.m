@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt] = decolorOptimize(triLMSCalFormat,method, numPCs, bPLOT, lambda_var,Disp,bScale)
+function [triLMSCalFormatOpt] = decolorOptimize(triLMSCalFormat,method, numPCs, renderType, bPLOT, lambda_var,Disp,bScale)
 % Optimizes PCA projections to balance maximizing variance and similarity to original data.
 %
 % Syntax:
@@ -72,11 +72,11 @@ if strcmp(method,"linTransform")
 
     % OPTIMIZATION SETUP
     options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',30);
-    [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda, Disp), ...
+    [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda, renderType, Disp), ...
         T0, A, b, [], [], [], [], ...
         [], options);
 
-    fValOpt = loss_function(transformRGB_opt, triLMSCalFormatTran, M_cones2rgb', lambda, Disp)
+    fValOpt = loss_function(transformRGB_opt, triLMSCalFormatTran, M_cones2rgb', lambda,renderType, Disp)
     bCheck = A*transformRGB_opt(:);
     if (any(bCheck > b))
         fprintf('Failed to satisfy constraint\n');
@@ -196,7 +196,7 @@ end
 %% Functions 
 
 % OBJECTIVE FUNCTION
-function loss = loss_function(t_vec, LMSCalFormatTran, M_cones2rgb, lambda,Disp)
+    function loss = loss_function(t_vec, LMSCalFormatTran, M_cones2rgb, lambda, renderType, Disp)
     T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
     % X = M_cones2rgb * T 
     % O = I * X
@@ -232,9 +232,16 @@ function loss = loss_function(t_vec, LMSCalFormatTran, M_cones2rgb, lambda,Disp)
         lossGamutTerm = 0;
     end
 
-    % disp(['NOTE!!! CURRENTLY ASSUMING DEUTERONOPIA... CHANGE BEFORE CODE IS READY TO USE'])
+    switch (renderType)
+        case 'Deuteranopia' % m cone deficiency
+            index = [1 3];
+        case 'Protanopia'   % l cone deficiency
+            index = [2 3];
+        case 'Tritanopia'   % s cone deficiency
+            index = [1 2];
+    end
     % Variance term
-    var_term = lambda * (var(RGBCalFormat(:, 1)) + var(RGBCalFormat(:, 3)));
+    var_term = lambda * (var(RGBCalFormat(index(1), :)) + var(RGBCalFormat(index(2), :)));
 
     % Similarity term
     dot_term = (1 - lambda) *   (dot(LMSCalFormatTran(:, 1), LMSCalFormatTran(:, 1)) / norm(LMSCalFormatTran(:, 1))) + ...
