@@ -93,7 +93,7 @@ if strcmp(method,"linTransform")
     % Get LMS values
     triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
     % Check if is in gamut
-    inGamutAfterTransform = checkGamut(lmsImageCalFormat,Disp,bScale);
+    inGamutAfterTransform = checkGamut(triLMSCalFormatOpt,Disp,bScale);
     if inGamutAfterTransform == 0
         error(['ERROR: decolorOptimize, constraint is not working, transformation is pushing out of gamut'])
     end

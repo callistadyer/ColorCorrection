@@ -1,5 +1,5 @@
 
-function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMod,nSquares)
+function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,bMinMod,nSquares)
 % Uses PCA to move 3D trichromatic image into 2 dimensions in attempt to
 % create an accessible image for a dichromat
 %
@@ -46,46 +46,52 @@ function [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMo
 close all;
 
 % Get trichromatic (LMS) image
-[lmsImageCalFormatTri,lmsModuledCalFormatTri,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod,nSquares);    
+[triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod,nSquares);    
 
 % Apply pca correction to aid dichromacy
-[triLMScalFormatCorrected triLMSmeans]                         = colorCorrection(lmsImageCalFormatTri,renderType,Disp,bScale);   % Original image
-[triLMScalFormatCorrected_plate triLMSmeans_plate]             = colorCorrection(lmsModuledCalFormatTri,renderType,Disp,bScale); % Image with plate
+[triLMScalFormatCorrected       triLMSmeans]                   = colorCorrection(triLMSCalFormat,renderType,Disp,bScale);   % Original image
+[triLMScalFormatCorrected_plate triLMSmeans_plate]             = colorCorrection(triLMSCalFormat_plate,renderType,Disp,bScale); % Image with plate
 % correctedLMS = K_opt_plate * D_mnew + T_mean_plate;
 
 % Create RGB image from LMS  
+
+%%%%% ORIGINAL IMAGE AND PLATE %%%%%
 % Dichromat simulation of original image
-[RGBImage_dichromatCalFormat_orig]        = LMS2RGBCalFormat(lmsDichromImageCalFormat, Disp,bScale);
-[RGBImage_dichromatCalFormat_plate_orig]  = LMS2RGBCalFormat(lmsDichromModuledCalFormat, Disp,bScale);         % isochromatic plate 
+[diRGBCalFormatOrig]        = LMS2RGBCalFormat(diLMSCalFormat, Disp,bScale);
+[diRGBCalFormatOrig_plate]  = LMS2RGBCalFormat(diLMSCalFormat_plate, Disp,bScale);         % isochromatic plate 
 
 % Trichromat simulation of original image
-[RGBImage_trichromatCalFormat,scaleFactor_tri_plate] = LMS2RGBCalFormat(lmsImageCalFormatTri, Disp,bScale);
-[RGBImage_trichromatCalFormat_plate,scaleFactor_tri] = LMS2RGBCalFormat(lmsModuledCalFormatTri, Disp,bScale);  % isochromatic plate 
+[triRGBcalFormatOrig]       = LMS2RGBCalFormat(triLMSCalFormat, Disp,bScale);
+[triRGBcalFormatOrig_plate] = LMS2RGBCalFormat(triLMSCalFormat_plate, Disp,bScale);  % isochromatic plate 
 
-% Corrected trichromat image via pca LMS values
-[RGBImage_dichromatCalFormat,scaleFactor_di_plate]  = LMS2RGBCalFormat(triLMScalFormatCorrected, Disp,bScale);
-[RGBImage_dichromatCalFormat_plate,scaleFactor_di]  = LMS2RGBCalFormat(triLMScalFormatCorrected_plate, Disp,bScale);       % isochromatic plate 
+%%%%% CORRECTED IMAGE AND PLATE %%%%%
+% Corrected trichromat image
+[triRGBcalFormatCorrected]        = LMS2RGBCalFormat(triLMScalFormatCorrected, Disp,bScale);
+[triRGBcalFormatCorrected_plate]  = LMS2RGBCalFormat(triLMScalFormatCorrected_plate, Disp,bScale);       % isochromatic plate 
 
-% Corrected dichromat image via pca LMS values
-cone_mean_processed = mean(triLMScalFormatCorrected,2);
-LMSfixedDichromat_plate                  = tri2dichromatLMSCalFormat(triLMScalFormatCorrected_plate,renderType,cone_mean_processed(2),Disp,bScale);      % isochromatic plate 
-[RGBImage_fixedDichromatCalFormat_plate] = LMS2RGBCalFormat(LMSfixedDichromat_plate, Disp,bScale); % isochromatic plate 
-LMSfixedDichromat                        = tri2dichromatLMSCalFormat(triLMScalFormatCorrected,renderType,cone_mean_processed(2),Disp,bScale); 
-[RGBImage_fixedDichromatCalFormat]       = LMS2RGBCalFormat(LMSfixedDichromat, Disp,bScale);
+% Corrected dichromat image
+diLMSCalFormatCorrected                  = tri2dichromatLMSCalFormat(triLMScalFormatCorrected,renderType,Disp,bScale); 
+diRGBCalFormatCorrected                  = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp,bScale);
+diLMSCalFormatCorrected_plate            = tri2dichromatLMSCalFormat(triLMScalFormatCorrected_plate,renderType,Disp,bScale);      % isochromatic plate 
+diRGBCalFormatCorrected_plate            = LMS2RGBCalFormat(diLMSCalFormatCorrected_plate, Disp,bScale); % isochromatic plate 
 
 
 % Transform from cal format to image for viewing
-RGBImage_dichromat_orig          = CalFormatToImage(RGBImage_dichromatCalFormat_orig,Disp.m,Disp.n); % no modulation
-RGBImage_dichromat_plate_orig    = CalFormatToImage(RGBImage_dichromatCalFormat_plate_orig,Disp.m,Disp.n); % modulation
+% original trichromat
+triRGBImgFormatOrig              = CalFormatToImage(triRGBcalFormatOrig,Disp.m,Disp.n); % no modulation
+triRGBImgFormatOrig_plate        = CalFormatToImage(triRGBcalFormatOrig_plate,Disp.m,Disp.n); % modulation
 
-RGBImage_dichromat               = CalFormatToImage(RGBImage_dichromatCalFormat,Disp.m,Disp.n); % no modulation
-RGBImage_dichromat_plate         = CalFormatToImage(RGBImage_dichromatCalFormat_plate,Disp.m,Disp.n); % modulation
+% corrected trichromat
+triRGBImgFormatCorrected         = CalFormatToImage(triRGBcalFormatCorrected,Disp.m,Disp.n); % no modulation
+triRGBImgFormatCorrected_plate   = CalFormatToImage(triRGBcalFormatCorrected_plate,Disp.m,Disp.n); % modulation
 
-RGBImage_trichromat              = CalFormatToImage(RGBImage_trichromatCalFormat,Disp.m,Disp.n); % no modulation
-RGBImage_trichromat_plate        = CalFormatToImage(RGBImage_trichromatCalFormat_plate,Disp.m,Disp.n); % modulation
+% original dichromat
+diRGBImgFormatOrig          = CalFormatToImage(diRGBCalFormatOrig,Disp.m,Disp.n); % no modulation
+diRGBImgFormatOrig_plate    = CalFormatToImage(diRGBCalFormatOrig_plate,Disp.m,Disp.n); % modulation
 
-RGBImage_FixedDichromat_plate    = CalFormatToImage(RGBImage_fixedDichromatCalFormat_plate,Disp.m,Disp.n); % plate
-RGBImage_FixedDichromat          = CalFormatToImage(RGBImage_fixedDichromatCalFormat,Disp.m,Disp.n); % no modulation
+% corrected dichromat
+diRGBImgFormatCorrected          = CalFormatToImage(diRGBCalFormatCorrected,Disp.m,Disp.n); % no modulation
+diRGBImgFormatCorrected_plate    = CalFormatToImage(diRGBCalFormatCorrected_plate,Disp.m,Disp.n); % plate
 
 
 figure('Position',[214         261         501        1076]);
@@ -95,35 +101,35 @@ t = tiledlayout(4, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 
 % Add images to the tiles
 nexttile
-imshow(RGBImage_trichromat);
+imshow(triRGBImgFormatOrig);
 title('trichromat');
 
 nexttile
-imshow(RGBImage_dichromat_orig);
+imshow(diRGBImgFormatOrig);
 title('dichromat');
 
 nexttile
-imshow(RGBImage_dichromat);
-title('trichromat corrected - no plate');
+imshow(triRGBImgFormatCorrected);
+title('trichromat corrected');
 
 nexttile
-imshow(RGBImage_FixedDichromat);
-title('dichromat corrected - no plate');
+imshow(diRGBImgFormatCorrected);
+title('dichromat corrected');
 
 nexttile
-imshow(RGBImage_trichromat_plate);
+imshow(triRGBImgFormatOrig_plate);
 title('trichromat - plate');
 
 nexttile
-imshow(RGBImage_dichromat_plate_orig);
+imshow(diRGBImgFormatOrig_plate);
 title('dichromat - plate');
 
 nexttile
-imshow(RGBImage_dichromat_plate);
+imshow(triRGBImgFormatCorrected_plate);
 title('trichromat corrected - plate');
 
 nexttile
-imshow(RGBImage_FixedDichromat_plate);
+imshow(diRGBImgFormatCorrected_plate);
 title('dichromat corrected - plate');
 
 sgtitle('Left: Trichromat, Right: Dichromat')

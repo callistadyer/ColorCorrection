@@ -1,30 +1,28 @@
-function [dichromatLMSCalFormat] = tri2dichromatLMSCalFormat(lmsImageCalFormat,renderType,Disp,bScale)
+function [diLMSCalFormat] = tri2dichromatLMSCalFormat(triLMSCalFormat,renderType,Disp,bScale)
 
 % function takes in trichromat lms values and converts them into dichromat lms values
 %
 % Syntax:
-%   [dichromatLMS] = tri2dichromatLMSCalFormat(lmsImageCalFormat,renderType,cone_mean_orig,Disp,bScale)
+%   [diLMSCalFormat] = tri2dichromatLMSCalFormat(triLMSCalFormat,renderType,Disp,bScale)
 %
 % Description:
 %
 % Inputs:
-%   lmsImageCalFormat  LMS values of the image for a trichromat
+%   triLMSCalFormat    LMS values of the image for a trichromat
 %   renderType         Type of dichromacy
 %                        Deuteranopia
 %                        Protanopia
 %                        Tritanopia
-%   cone_mean_orig     Mean of missing cone values for trichromat (original image)
-%                      This is used to calculate missing cone value for dichromat 
 %
 % Outputs:
-%   dichromatLMS       LMS values for dichromat type specified by renderType
+%   diLMSCalFormat     LMS values for dichromat type specified by renderType
 %
 % Optional key/value pairs:
 %   None
 
-l_cone = lmsImageCalFormat(1,:);
-m_cone = lmsImageCalFormat(2,:);
-s_cone = lmsImageCalFormat(3,:);
+l_cone = triLMSCalFormat(1,:);
+m_cone = triLMSCalFormat(2,:);
+s_cone = triLMSCalFormat(3,:);
 
 % NOTE WELL:
 % To get the renderings to look right, we are using the mean value of
@@ -34,8 +32,8 @@ s_cone = lmsImageCalFormat(3,:);
 
 %%%%%%%%%%%%%%%%%%% CALLISTA WORK ON THIS!!!!
 disp(['callista work on this! choose how to simulate dichromat']);
-lmsImage = CalFormatToImage(lmsImageCalFormat,Disp.m,Disp.n);
-dichromatLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp);
+lmsImage = CalFormatToImage(triLMSCalFormat,Disp.m,Disp.n);
+diLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp);
 
 % % Make dichromat manipulation - missing cone
 % switch (renderType)
@@ -58,7 +56,7 @@ dichromatLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp);
 
 % CHECK IF MODULATED LMS IS IN GAMUT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-inGamut = checkGamut(dichromatLMSCalFormat,Disp,bScale);
+inGamut = checkGamut(diLMSCalFormat,Disp,bScale);
 if inGamut == 0
     error(['tri2dichromatLMSCalFormat: WARNING! rgb values are out of gamut... lmsImage_mod values outside of the range [0 1]']);
 end
