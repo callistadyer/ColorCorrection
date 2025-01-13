@@ -31,7 +31,7 @@ s_cone = triLMSCalFormat(3,:);
 % of images, but we are going to worry about that later.
 
 %%%%%%%%%%%%%%%%%%% CALLISTA WORK ON THIS!!!!
-disp(['callista work on this! choose how to simulate dichromat']);
+% disp(['callista work on this! choose how to simulate dichromat']);
 lmsImage = CalFormatToImage(triLMSCalFormat,Disp.m,Disp.n);
 diLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp);
 
