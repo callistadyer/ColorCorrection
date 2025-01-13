@@ -1,4 +1,4 @@
-function [dichromatLMSCalFormat] = tri2dichromatLMSCalFormat(lmsImageCalFormat,renderType,cone_mean_orig,Disp,bScale)
+function [dichromatLMSCalFormat] = tri2dichromatLMSCalFormat(lmsImageCalFormat,renderType,Disp,bScale)
 
 % function takes in trichromat lms values and converts them into dichromat lms values
 %
@@ -31,12 +31,6 @@ s_cone = lmsImageCalFormat(3,:);
 % at the missing cone plane to get the scale of our substitution
 % right.  Presumably this could be done once by analyzing a full ensemble
 % of images, but we are going to worry about that later.
-
-% NOTICE!! THINK THIS IS MESSING WITH THE GAMUT
-% deuterMFromLScale = cone_mean_orig/mean(l_cone);
-% protoLFromMScale  = cone_mean_orig/mean(m_cone);
-% tritanSFromMScale = cone_mean_orig/mean(m_cone); 
-% tritanSFromLScale = cone_mean_orig/mean(l_cone);
 
 %%%%%%%%%%%%%%%%%%% CALLISTA WORK ON THIS!!!!
 disp(['callista work on this! choose how to simulate dichromat']);

@@ -1,4 +1,4 @@
-function [lmsImageCalFormatTrichromat,lmsModuledCalFormatTrichromat,lmsDichromImageCalFormat,lmsDichromModulatedCalFormat,cone_mean_orig,Disp,modDirection] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod,nSquares)
+function [triLMScalFormat,triLMScalFormat_plate,diLMScalFormat,diLMScalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod,nSquares)
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
@@ -71,34 +71,13 @@ t_renderHyperspectralImage('gray','Deuteranopia',0,0,0,10)
 %     'verbose',true);
 % 
 
-
-
-
-
-
-% Get some monitor primaries
-% d = displayCreate('LCD-Apple');
-% P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
-
 % Get cone responses for every pixel of the hyperspectral image
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
 
-% Save display parameters for easy calling later
-% Disp = struct();
-% Disp.T_cones   = T_cones;
-% Disp.d         = d;
-% Disp.P_monitor = P_monitor;
-% Disp.m         = m;
-% Disp.n         = n;
-% Disp.wls       = wls;
-
 % Render lms image that a trichromat sees.  Convert from cal format to image as well.
-lmsImageCalFormatTrichromat = Disp.T_cones*hyperspectralImageCalFormat;
-[RGBImageCalFormat_trichromat,rgbLinImageCalFormat,scaleFactor] = LMS2RGBCalFormat(lmsImageCalFormatTrichromat,Disp,bScale);
-RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
-
-% Get original image into rgb so you can maximize gamut contrast.
-[rgbLinImageCalFormat2,scaleFactor] = LMS2rgbLinCalFormat(lmsImageCalFormatTrichromat,Disp,bScale);
+triLMScalFormat = Disp.T_cones*hyperspectralImageCalFormat;
+[triRGBCalFormat,triRGBLinCalFormat,scaleFactor] = LMS2RGBCalFormat(triLMScalFormat,Disp,bScale);
+triRGBImgFormat                                  = CalFormatToImage(triRGBCalFormat,m,n);
 
 % % Choose modulation directions. (nSquares different directions)
 % vectors = abs(randn(nSquares, 3));
@@ -125,68 +104,57 @@ modDirection = vectors ./ magnitudes;  % Normalize to unit vectors
 % in a given cone direction (specifically, the direction of the missing cone) without going out of gamut
 if strcmp(image,'gray')
     for i = 1:nSquares
-        [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(rgbLinImageCalFormat2,modDirection(i,:)',bMinMod,Disp,scaleFactor,bScale);
+        [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(triRGBCalFormat,modDirection(i,:)',bMinMod,Disp,scaleFactor,bScale);
     end
 else
-    lmsModulationImgFormat = getDichromatConfusionModulation(rgbLinImageCalFormat2,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
+    lmsModulationImgFormat = getDichromatConfusionModulation(triRGBCalFormat,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
 end
-
 % Create isochromatic plates
-[RGBModulated lmsModuledCalFormatTrichromat] = isochromaticPlates(image,renderType,lmsModulationImgFormat,Disp,bScale,nSquares, ...
+[triRGBImgFormat_plate triLMScalFormat_plate] = isochromaticPlates(image,renderType,lmsModulationImgFormat,Disp,bScale,nSquares, ...
     'verbose',true);
 
-% Mean of absent cone in original image. Used for replacing that cone value in dichromat image 
-switch (renderType)
-    case 'Deuteranopia' % m cone deficiency
-        cone_mean_orig = mean(lmsImageCalFormatTrichromat(2,:));
-    case 'Protanopia'   % l cone deficiency
-        cone_mean_orig = mean(lmsImageCalFormatTrichromat(1,:));
-    case 'Tritanopia'   % s cone deficiency
-        cone_mean_orig = mean(lmsImageCalFormatTrichromat(3,:));
-end 
-
 % Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)  
-lmsDichromImageCalFormat        = tri2dichromatLMSCalFormat(lmsImageCalFormatTrichromat,renderType,cone_mean_orig,Disp,bScale); % gray
-lmsDichromModulatedCalFormat    = tri2dichromatLMSCalFormat(lmsModuledCalFormatTrichromat,renderType,cone_mean_orig,Disp,bScale); % modulated 
+diLMScalFormat        = tri2dichromatLMSCalFormat(triLMScalFormat,renderType,Disp,bScale); % gray
+diLMScalFormat_plate  = tri2dichromatLMSCalFormat(triLMScalFormat_plate,renderType,Disp,bScale); % modulated 
 
 % Dichromat LMS --> RGB
-[RGBImage_dichromatCalFormat,scaleFactor_di]       = LMS2RGBCalFormat(lmsDichromImageCalFormat,Disp,bScale); % no modulation
-[RGBPlate_dichromatCalFormat,scaleFactor_di_plate] = LMS2RGBCalFormat(lmsDichromModulatedCalFormat, Disp,bScale);  % isochromatic plate 
+[diRGBCalFormat,scaleFactor_di]             = LMS2RGBCalFormat(diLMScalFormat,Disp,bScale); % no modulation
+[diRGBCalFormat_plate,scaleFactor_di_plate] = LMS2RGBCalFormat(diLMScalFormat_plate, Disp,bScale);  % isochromatic plate 
 
 % Dichromat RGB cal format --> image format
-RGBImage_dichromat          = CalFormatToImage(RGBImage_dichromatCalFormat,m,n); % no modulation
-RGBPlate_dichromat          = CalFormatToImage(RGBPlate_dichromatCalFormat,m,n); % isochromatic plate
+diRGBImgFormat          = CalFormatToImage(diRGBCalFormat,m,n); % no modulation
+diRGBImgFormat_plate    = CalFormatToImage(diRGBCalFormat_plate,m,n); % isochromatic plate
 
 % Plotting
 % Show the trichromatic image, dichromatic image, and trichromatic plate, dichromatic plate
 figure('position',[ 896         364        1231         883]); 
 subplot(2,2,1);
-imshow(RGBImage_trichromat);    % TRICHROMAT  
+imshow(triRGBImgFormat);    % TRICHROMAT  
 title('Trichromat rendering - no modulation','FontSize',20);
 
 subplot(2,2,3);
-imshow(RGBModulated);          % TRICHROMAT PLATE
+imshow(triRGBImgFormat_plate);          % TRICHROMAT PLATE
 title('Trichromat rendering - plate','FontSize',20);
 
 subplot(2,2,2);
-imshow(RGBImage_dichromat);     % DICHROMAT
+imshow(diRGBImgFormat);     % DICHROMAT
 title([renderType ' rendering - no modulation'],'FontSize',20);
 
 subplot(2,2,4);
-imshow(RGBPlate_dichromat);     % DICHROMAT PLATE 
+imshow(diRGBImgFormat_plate);     % DICHROMAT PLATE 
 title([renderType ' rendering - plate'],'FontSize',20);
 
 
 if bPLOTscatter == 1
 
     % Get dichromat image for comparing lms values
-    [rgbImage_dichromatCalFormat,scaleFactor_di] = LMS2rgbLinCalFormat(lmsDichromImageCalFormat,d,T_cones,P_monitor,m,n,bScale);
+    [rgbImage_dichromatCalFormat,scaleFactor_di] = LMS2rgbLinCalFormat(diLMScalFormat,d,T_cones,P_monitor,m,n,bScale);
     rgbImage_dichromat                           = CalFormatToImage(rgbImage_dichromatCalFormat,m,n);
 
     % Check by reversing RGB to LMS image
     lmsImageDichromatFromrgb          = rgbLin2LMSimg(rgbImage_dichromat,T_cones,P_monitor,scaleFactor_di,m,n,bScale);
     lmsImageDichromatFromrgbCalFormat = ImageToCalFormat(lmsImageDichromatFromrgb);
-    lmsImageDichromatFromRGB          = RGB2LMSimg(RGBImage_dichromat,d,T_cones,P_monitor,scaleFactor_di,m,n,bScale);
+    lmsImageDichromatFromRGB          = RGB2LMSimg(diRGBImgFormat,d,T_cones,P_monitor,scaleFactor_di,m,n,bScale);
     lmsImageDichromatFromRGBCalFormat = ImageToCalFormat(lmsImageDichromatFromRGB);
 
     %%% SCATTER PLOTS OF DESIRED VS RECOVERED LMS VALUES %%%

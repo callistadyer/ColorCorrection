@@ -1,4 +1,4 @@
-function [correctedLMS, T_mean]  = colorCorrection(triLMSCalFormat,renderType,Disp,bScale)
+function [triLMScalFormatCorrected, triLMSmeans]  = colorCorrection(triLMSCalFormat,renderType,Disp,bScale)
 
 % Correcting an image so a dichromat can see color contrasts that she could
 % not see otherwise. Correction is happening via a PCA 
@@ -49,74 +49,69 @@ if strcmp(method,'easyPCA')
     % T_ms = triLMSCalFormat - triLMSmeans; % already subtracted off in "centered true" in PCA
 
     % Map mean subtracted LMS valud onto two principle components (linear regression)
-    diLMSCalFormat = PC2D\triLMSCalFormat;
+    triLMSCalFormatOpt = PC2D\triLMSCalFormat;
 
     % Map mean of LMS onto two principle components (linear regression)
     % D_m = PC2D \ T_mean;
-    projected_data(1,:) = diLMSCalFormat(1,:);
-    projected_data(2,:) = diLMSCalFormat(1,:);
-    projected_data(3,:) = diLMSCalFormat(2,:);
+    triLMSCalFormatOpt(1,:) = triLMSCalFormatOpt(1,:);
+    triLMSCalFormatOpt(2,:) = triLMSCalFormatOpt(1,:);
+    triLMSCalFormatOpt(3,:) = triLMSCalFormatOpt(2,:);
 elseif strcmp(method,'hardPCA')
     % PCA (the hard way):
     numPCs = 2;
     lambda_var = 0.5;
-    [projected_data_2D] = decolorOptimize(triLMSCalFormat,method,numPCs,0,lambda_var,Disp,bScale);
-    projected_data(1,:) = projected_data_2D(:,1);
-    projected_data(2,:) = projected_data_2D(:,1);
-    projected_data(3,:) = projected_data_2D(:,2);
-    T_mean = mean(triLMSCalFormat,2);
+    [triLMSCalFormatOpt] = decolorOptimize(triLMSCalFormat,method,numPCs,0,lambda_var,Disp,bScale);
+    triLMSCalFormatOpt(1,:) = triLMSCalFormatOpt(:,1);
+    triLMSCalFormatOpt(2,:) = triLMSCalFormatOpt(:,1);
+    triLMSCalFormatOpt(3,:) = triLMSCalFormatOpt(:,2);
+    triLMSmeans = mean(triLMSCalFormat,2);
 elseif strcmp(method,'linTransform')
     % decolorOptimize does mean subtraction, then maximizes variance fmincon 
     % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
     lambda_var = 0.5;
-    T_mean = mean(triLMSCalFormat,2);
-    [projected_data] = decolorOptimize(triLMSCalFormat,method,0,0,lambda_var,Disp,bScale);
+    triLMSmeans = mean(triLMSCalFormat,2);
+    [triLMSCalFormatOpt] = decolorOptimize(triLMSCalFormat,method,0,0,lambda_var,Disp,bScale);
 
 end
 
 %% Find the scaling matrix that maps D_ms onto approximate cone values
 
-% if sum(sum(projected_data)) < .00001
-%     K_opt = [1 1 1];
-% else
-
 if strcmp(method,'easyPCA')
- 
-% Initial guess for K
-initialKvec = [0.1, 0.1, 0.1];
 
-% Define the constraints
-A = [];
-b = [];
-Aeq = [];
-beq = [];
-lb = []; % Lower bounds
-ub = []; % Upper bounds
+    % Initial guess for K
+    initialKvec = [0.1, 0.1, 0.1];
 
-% Options
-options = optimset('fmincon');
-options = optimset(options,'Diagnostics','off','Display','iter','LargeScale','off','Algorithm','active-set');
+    % Define the constraints
+    A = [];
+    b = [];
+    Aeq = [];
+    beq = [];
+    lb = []; % Lower bounds
+    ub = []; % Upper bounds
 
-% Call fmincon
-[K_optvec, fval] = fmincon(@(kVec) T_EstObjectiveFunction(kVec, projected_data, T_mean, renderType, Disp, bScale), initialKvec, A, b, Aeq, beq, lb, ub, [], options);
+    % Options
+    options = optimset('fmincon');
+    options = optimset(options,'Diagnostics','off','Display','iter','LargeScale','off','Algorithm','active-set');
 
-K_opt = diag(K_optvec);
-% Display results
-disp('Optimal K:');
-disp(K_optvec);
-disp('Objective Function Value:');
-disp(fval);
+    % Call fmincon
+    [K_optvec, fval] = fmincon(@(kVec) T_EstObjectiveFunction(kVec, triLMSCalFormatOpt, triLMSmeans, renderType, Disp, bScale), initialKvec, A, b, Aeq, beq, lb, ub, [], options);
 
-disp(['Note: colorCorrectionPCA scaling in lines 100-120 do NOT work when you dont add mean back in'])
-% T_opt = K_opt * projected_data;
-% Add back in mean when you do easy pca
-T_opt = K_opt * projected_data + T_mean;
+    K_opt = diag(K_optvec);
+    % Display results
+    disp('Optimal K:');
+    disp(K_optvec);
+    disp('Objective Function Value:');
+    disp(fval);
 
-% T_est_rgbImg = LMS2rgbLinCalFormat(T_opt, Disp, bScale);
-correctedLMS = T_opt;
+    disp(['Note: colorCorrectionPCA scaling in lines 100-120 do NOT work when you dont add mean back in'])
+    % T_opt = K_opt * projected_data;
+    % Add back in mean when you do easy pca
+    T_opt = K_opt * triLMSCalFormatOpt + triLMSmeans;
+
+    triLMScalFormatCorrected = T_opt;
 else
 
-correctedLMS = projected_data;
+triLMScalFormatCorrected = triLMSCalFormatOpt;
 
 % OK let's try scaling here to stay in gamut... ideally we would do this in
 % optimization but we cannot because we need ALL cone values to tell if it 

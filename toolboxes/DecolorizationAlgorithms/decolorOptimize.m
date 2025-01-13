@@ -1,4 +1,4 @@
-function [triLMSCalFormat] = decolorOptimize(triLMSCalFormat,method, numPCs, bPLOT, lambda_var,Disp,bScale)
+function [triLMSCalFormatOpt] = decolorOptimize(triLMSCalFormat,method, numPCs, bPLOT, lambda_var,Disp,bScale)
 % Optimizes PCA projections to balance maximizing variance and similarity to original data.
 %
 % Syntax:
@@ -60,8 +60,8 @@ if strcmp(method,"linTransform")
 
     % Constraint matrix (A, includes lots of I iterations) and vector (b)
     % triLMSCalFormatTran: trichromat LMS values in [nPix x 3] form
-    triRGBCalFormatTran = triLMSCalFormatTran * M_cones2rgb';
-    A_upper = blkdiag(triRGBCalFormatTran, triRGBCalFormatTran, triRGBCalFormatTran);      % Upper constraint blocks
+    triRGBCalFormatTranOpt = triLMSCalFormatTran * M_cones2rgb';
+    A_upper = blkdiag(triRGBCalFormatTranOpt, triRGBCalFormatTranOpt, triRGBCalFormatTranOpt);      % Upper constraint blocks
     A_lower = -A_upper;              % for -I * X <= 0
     A = [A_upper; A_lower]; 
     b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
@@ -86,12 +86,12 @@ if strcmp(method,"linTransform")
     transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 
     % Calculate optimal output from input * optimal transform
-    triRGBCalFormatTran = triLMSCalFormatTran * M_cones2rgb' * transformRGBmatrix_opt;
-    triRGBCalFormat     = triRGBCalFormatTran';
+    triRGBCalFormatTranOpt = triLMSCalFormatTran * M_cones2rgb' * transformRGBmatrix_opt;
+    triRGBCalFormatOpt     = triRGBCalFormatTranOpt';
 
     % Check if given O is in gamut
     % Get LMS values
-    triLMSCalFormat = M_rgb2cones * triRGBCalFormat;
+    triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
     % Check if is in gamut
     inGamutAfterTransform = checkGamut(lmsImageCalFormat,Disp,bScale);
     if inGamutAfterTransform == 0

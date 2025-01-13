@@ -1,4 +1,4 @@
-function [RGBmodulatedCalFormat lmsModuledCalFormat] = isochromaticPlates(img,renderType,lmsModulationImgFormat,Disp,bScale,nSquares,options)
+function [RGBimageModulated lmsModuledCalFormat] = isochromaticPlates(img,renderType,LMSImageModulation,Disp,bScale,nSquares,options)
 
 % function create isochromatic plates for testing dichromacy
 %
@@ -29,7 +29,7 @@ function [RGBmodulatedCalFormat lmsModuledCalFormat] = isochromaticPlates(img,re
 arguments
     img
     renderType
-    lmsModulationImgFormat
+    LMSImageModulation
     Disp struct
     bScale
     nSquares
@@ -45,18 +45,18 @@ disp('Callista come back to this - make it so this func takes in LMS image')
 [hyperspectralImage Disp] = loadImage(img);
 % Get LMS values
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
-lmsImageCalFormat = Disp.T_cones*hyperspectralImageCalFormat;
-lmsImage          = CalFormatToImage(lmsImageCalFormat,Disp.m,Disp.n);
+LMSCalFormat = Disp.T_cones*hyperspectralImageCalFormat;
+LMSImage     = CalFormatToImage(LMSCalFormat,Disp.m,Disp.n);
 
 % Get original RGB image
-[RGB_CalFormat rgbLinImageCalFormat]  = LMS2RGBCalFormat(lmsImageCalFormat,Disp,bScale);
-RGB_img                               = CalFormatToImage(RGB_CalFormat,Disp.m,Disp.n);
+[RGBCalFormat rgbLinCalFormat]  = LMS2RGBCalFormat(LMSCalFormat,Disp,bScale);
+RGBimage                        = CalFormatToImage(RGBCalFormat,Disp.m,Disp.n);
 
 % CREATE SQUARE MODULATIONS
-delta_lms = plateSquare(size(lmsImage),lmsModulationImgFormat,nSquares);
+deltaLMS = plateSquare(size(LMSImage),LMSImageModulation,nSquares);
 
 % Add the delta to the L M S values to modulate cones (original LMS + modulation) 
-lmsImage_mod = lmsImage + delta_lms;
+lmsImage_mod = LMSImage + deltaLMS;
 
 % CHECK IF MODULATED LMS IS IN GAMUT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -68,19 +68,19 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % turn lmsImage to cal format so you can convert to RGB
-lmsModuledCalFormat = ImageToCalFormat(lmsImage_mod);
+LMSCalFormat_plate = ImageToCalFormat(lmsImage_mod);
 % convert to RGB
-RGB_modulatedCalFormat = LMS2RGBCalFormat(lmsModuledCalFormat,Disp,bScale);
+RGBCalFormat_plate = LMS2RGBCalFormat(LMSCalFormat_plate,Disp,bScale);
 % convert to image for viewing
-RGBmodulatedCalFormat = CalFormatToImage(RGB_modulatedCalFormat,m,n);
+RGBimageModulated = CalFormatToImage(RGBCalFormat_plate,m,n);
 
 figure('position',[927         886        1245         367]);
 subplot(1,2,1)
-imshow(RGB_img)
+imshow(RGBimage)
 title('original image')
 
 subplot(1,2,2)
-imshow(RGBmodulatedCalFormat)
+imshow(RGBimageModulated)
 title([renderType ' testing plate'])
 
 sgtitle('Isochromatic Plates')

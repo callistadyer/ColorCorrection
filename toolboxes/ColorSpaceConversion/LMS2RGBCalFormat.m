@@ -1,4 +1,4 @@
-function [RGBImageCalFormat,rgbLinImageCalFormat,scaleFactor] = LMS2RGBCalFormat(lmsImageCalFormat,Disp,bScale)
+function [RGBCalFormat,rgbLinCalFormat,scaleFactor] = LMS2RGBCalFormat(lmsImageCalFormat,Disp,bScale)
 
 % Converts LMS cone images to RGB images. Outputs both linear and gamma
 % corrected rgb/RGB values
@@ -49,7 +49,7 @@ rgbImageTruncate = rgbImage;
 
 % Linear rgb values make sure not below 0
 rgbLinImage = rgbImageTruncate; 
-rgbLinImageCalFormat = ImageToCalFormat(rgbLinImage);
+rgbLinCalFormat = ImageToCalFormat(rgbLinImage);
 % rgbImageTruncate(rgbImageTruncate > 1) = 1;
 
 % Values of rgbImageTruncate should be between 0 and 1... if not, there's
@@ -63,6 +63,6 @@ iGtable = displayGet(Disp.d,'inversegamma');
 RGBImage = rgb2dac(rgbImageTruncate,iGtable)/(2^displayGet(Disp.d,'dacsize')-1);
 
 % Transform to cal format
-RGBImageCalFormat = ImageToCalFormat(RGBImage);
+RGBCalFormat = ImageToCalFormat(RGBImage);
 
 end
