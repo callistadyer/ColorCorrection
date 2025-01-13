@@ -60,7 +60,7 @@ if strcmp(method,"linTransform")
 
     % Constraint matrix (A, includes lots of I iterations) and vector (b)
     % triLMSCalFormatTran: trichromat LMS values in [nPix x 3] form
-    triRGBCalFormatTranOpt = triLMSCalFormatTran * M_cones2rgb';
+    triRGBCalFormatTranOpt = triLMSCalFormat' * M_cones2rgb';
     A_upper = blkdiag(triRGBCalFormatTranOpt, triRGBCalFormatTranOpt, triRGBCalFormatTranOpt);      % Upper constraint blocks
     A_lower = -A_upper;              % for -I * X <= 0
     A = [A_upper; A_lower]; 
