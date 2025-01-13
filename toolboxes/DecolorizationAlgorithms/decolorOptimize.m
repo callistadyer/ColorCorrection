@@ -54,7 +54,7 @@ if strcmp(method,"linTransform")
     M_cones2rgb = inv(M_rgb2cones);
 
     % Weight for variance term
-    lambda = 0.5;             
+    lambda = 0.9;             
     % Number of pixels
     nPix   = size(triLMSCalFormat,2);
 
@@ -63,7 +63,7 @@ if strcmp(method,"linTransform")
     triRGBCalFormatTranOpt = triLMSCalFormat' * M_cones2rgb';
     A_upper = blkdiag(triRGBCalFormatTranOpt, triRGBCalFormatTranOpt, triRGBCalFormatTranOpt);      % Upper constraint blocks
     A_lower = -A_upper;              % for -I * X <= 0
-    A = [A_upper; A_lower]; 
+    A = double([A_upper; A_lower]); 
     b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
 
     % Initial guess at transformation matrix - start with identity
@@ -73,8 +73,7 @@ if strcmp(method,"linTransform")
     % OPTIMIZATION SETUP
     options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',30);
     [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda, renderType, Disp), ...
-        T0, A, b, [], [], [], [], ...
-        [], options);
+        T0, A, b, [], [], [], [], [], options);
 
     fValOpt = loss_function(transformRGB_opt, triLMSCalFormatTran, M_cones2rgb', lambda,renderType, Disp)
     bCheck = A*transformRGB_opt(:);
@@ -241,7 +240,7 @@ end
             index = [1 2];
     end
     % Variance term
-    var_term = lambda * (var(RGBCalFormat(index(1), :)) + var(RGBCalFormat(index(2), :)));
+    var_term = lambda * (var(LMSCalFormat(index(1), :)) + var(LMSCalFormat(index(2), :)));
 
     % Similarity term
     dot_term = (1 - lambda) *   (dot(LMSCalFormatTran(:, 1), LMSCalFormatTran(:, 1)) / norm(LMSCalFormatTran(:, 1))) + ...

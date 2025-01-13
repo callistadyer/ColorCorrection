@@ -100,20 +100,22 @@ magnitudes = sqrt(sum(vectors.^2, 2)); % Compute the magnitudes
 modDirection = vectors ./ magnitudes;  % Normalize to unit vectors
 
 % Get modulation for isochromatic plate modulation.
-% This function is taking rgbLinImageCalFormat2 and using MaximizeGamutContrast to determine how much we can move 
+% This function is taking rgbLinImageCalFormat2 and using MaximizeGamutContrast to determine how much we can move
 % in a given cone direction (specifically, the direction of the missing cone) without going out of gamut
-if strcmp(image,'gray')
-    for i = 1:nSquares
-        [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(triRGBLinCalFormat,modDirection(i,:)',bMinMod,Disp,scaleFactor,bScale);
-    end
-else
-    lmsModulationImgFormat = getDichromatConfusionModulation(triRGBLinCalFormat,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
+for i = 1:nSquares
+    [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(triRGBLinCalFormat,modDirection(i,:)',bMinMod,Disp,scaleFactor,bScale);
 end
-% Create isochromatic plates
-[triRGBCalFormat_plate, triLMSCalFormat_plate] = isochromaticPlates(image,renderType,lmsModulationImgFormat,Disp,bScale,nSquares, ...
-    'verbose',true);
-triRGBImgFormat_plate = CalFormatToImage(triRGBCalFormat_plate,Disp.m,Disp.n);
 
+% Create isochromatic plates
+if ~strcmp(image,'74')
+    [triRGBCalFormat_plate, triLMSCalFormat_plate] = isochromaticPlates(image,renderType,lmsModulationImgFormat,Disp,bScale,nSquares, ...
+        'verbose',true);
+    triRGBImgFormat_plate = CalFormatToImage(triRGBCalFormat_plate,Disp.m,Disp.n);
+else
+    % no need for plate when using plate 
+    triLMSCalFormat_plate = triLMScalFormat;
+    triRGBImgFormat_plate = triRGBImgFormat;
+end
 % Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)  
 diLMScalFormat        = tri2dichromatLMSCalFormat(triLMScalFormat,renderType,Disp,bScale); % gray
 diLMScalFormat_plate  = tri2dichromatLMSCalFormat(triLMSCalFormat_plate,renderType,Disp,bScale); % modulated 

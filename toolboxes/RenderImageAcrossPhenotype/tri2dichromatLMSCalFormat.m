@@ -36,6 +36,7 @@ lmsImage = CalFormatToImage(triLMSCalFormat,Disp.m,Disp.n);
 triRGBlinCalFormat = LMS2rgbLinCalFormat(triLMSCalFormat,Disp,0);
 triRGBlinImgFormat = CalFormatToImage(triRGBlinCalFormat,Disp.m,Disp.n);
 
+% Converting into XYZ space for Brettel code
 load T_xyz1931.mat
 T_xyz = SplineCmf(S_xyz1931,T_xyz1931,Disp.wls);
 Disp.T_xyz = T_xyz;
@@ -52,6 +53,10 @@ diXYZCalFormat = ImageToCalFormat(diXYZ);
 
 diRGBCalFormat = M_xyz2rgb * diXYZCalFormat;
 diRGBImgFormat = CalFormatToImage(diRGBCalFormat,Disp.m,Disp.n);
+% Quick snipping if only over by a small amount
+if max(diRGBImgFormat(:)) < 1.01
+    diRGBImgFormat(diRGBImgFormat>1) = .99;
+end
 diLMSImgFormat = rgbLin2LMSimg(diRGBImgFormat,Disp,1,0);
 diLMSCalFormat = ImageToCalFormat(diLMSImgFormat);
 % diLMSCalFormat = RGB2LMSimg(diRGBImgFormat,Disp,1,0);

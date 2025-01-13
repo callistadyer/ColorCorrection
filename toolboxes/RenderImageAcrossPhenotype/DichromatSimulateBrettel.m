@@ -60,13 +60,13 @@ cbTypes = unique(cbTypes(:))';
 
 % Create a regular MATLAB figure
 
-f = figure('Position',[863         899        1289         284]);
-set(f, 'Name', 'Color Blindness Simulations', 'NumberTitle', 'off');
+% f = figure('Position',[863         899        1289         284]);
+% set(f, 'Name', 'Color Blindness Simulations', 'NumberTitle', 'off');
 
 % Display the original RGB image
-subplot(1, length(cbTypes) + 2, 1); % Add the original as the first subplot
-imshow(rgbImage);
-title('Original Image');
+% subplot(1, length(cbTypes) + 2, 1); % Add the original as the first subplot
+% imshow(rgbImage);
+% title('Original Image');
 
 % Wavelength range for display 
 wls = (400:10:700)';

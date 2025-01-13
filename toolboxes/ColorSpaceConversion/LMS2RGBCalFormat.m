@@ -43,24 +43,23 @@ else
     scaleFactor = 1;
 end
 
-% Truncated version for gamma correction
-rgbImageTruncate = rgbImage;
-% rgbImageTruncate(rgbImageTruncate < 0) = 0;
-
 % Linear rgb values make sure not below 0
-rgbLinImage = rgbImageTruncate; 
-rgbLinCalFormat = ImageToCalFormat(rgbLinImage);
-% rgbImageTruncate(rgbImageTruncate > 1) = 1;
+rgbLinImage = rgbImage; 
 
 % Values of rgbImageTruncate should be between 0 and 1... if not, there's
 % gonna be an error in rgb2dac
-if any(rgbImageTruncate(:) > 1 | rgbImageTruncate(:) < 0)
+if any(rgbLinImage(:) > 1 | rgbLinImage(:) < 0)
+    if max(rgbLinImage(:) < 1.01)
+    rgbLinImage(rgbLinImage > 1) = 1;
+    else
     error(['LMS2RGBCalFormat: WARNING! rgb values are out of gamut... rgbImageTruncate values outside of the range [0 1]']);
+    end
 end
+rgbLinCalFormat = ImageToCalFormat(rgbLinImage);
 
 % Gamma correct
 iGtable = displayGet(Disp.d,'inversegamma');
-RGBImage = rgb2dac(rgbImageTruncate,iGtable)/(2^displayGet(Disp.d,'dacsize')-1);
+RGBImage = rgb2dac(rgbLinImage,iGtable)/(2^displayGet(Disp.d,'dacsize')-1);
 
 % Transform to cal format
 RGBCalFormat = ImageToCalFormat(RGBImage);

@@ -57,16 +57,30 @@ elseif strcmp(image,'gray')
     hyperspectralImage     = CalFormatToImage(hyperspecGrayCalFormat,m,n);
 
     % would be nice to create a scene so we have access to this stuff:
-    scene = sceneFromFile(grayImgrgb, 'rgb', [], d, ...
-    wls);
+    scene = sceneFromFile(grayImgrgb, 'rgb', [], d, wls);
 
     imgXYZ = sceneGet(scene,'xyz');
     whiteXYZ = sceneGet(scene,'illuminant xyz');
     Disp.m         = m;
     Disp.n         = n;
-    Disp.imgXYZ       = imgXYZ;
+    Disp.imgXYZ    = imgXYZ;
     Disp.whiteXYZ       = whiteXYZ;
 
+elseif strcmp(image,'74')
+    rgbImage = imread('74.jpg');
+    rgbImage = imresize(rgbImage, [128, 128]);
+    rgbImage = double(rgbImage)/255;
+    rgbImage(rgbImage>1) = .99;
+
+    wls = (400:10:700)';
+    d = displayCreate('LCD-Apple');
+    P_monitor = SplineSrf(displayGet(d, 'wave'), displayGet(d, 'spd'), wls);
+    scene = sceneFromFile(rgbImage, 'rgb', [], d, wls);
+    imgXYZ = sceneGet(scene,'xyz');
+    hyperspectralImage = double(sceneGet(scene,'energy'));
+    Disp.m         = 128;
+    Disp.n         = 128;
+    Disp.imgXYZ       = imgXYZ;
 else
     % This will work if you are in the Brainard Lab and have the
     % HyperspectralSceneTutorial folder on your lab dropbox path.
