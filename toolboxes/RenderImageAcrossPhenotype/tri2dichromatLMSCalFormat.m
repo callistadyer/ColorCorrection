@@ -33,7 +33,30 @@ s_cone = triLMSCalFormat(3,:);
 %%%%%%%%%%%%%%%%%%% CALLISTA WORK ON THIS!!!!
 % disp(['callista work on this! choose how to simulate dichromat']);
 lmsImage = CalFormatToImage(triLMSCalFormat,Disp.m,Disp.n);
-diLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp);
+triRGBlinCalFormat = LMS2rgbLinCalFormat(triLMSCalFormat,Disp,0);
+triRGBlinImgFormat = CalFormatToImage(triRGBlinCalFormat,Disp.m,Disp.n);
+
+load T_xyz1931.mat
+T_xyz = SplineCmf(S_xyz1931,T_xyz1931,Disp.wls);
+Disp.T_xyz = T_xyz;
+
+% Matrix to convert from rgb to xyz
+M_rgb2xyz = Disp.T_xyz*Disp.P_monitor;
+M_xyz2rgb = inv(M_rgb2xyz);
+
+triXYZCalFormat = M_rgb2xyz * triRGBlinCalFormat;
+triXYZImgFormat = CalFormatToImage(triXYZCalFormat,Disp.m,Disp.n);
+[diXYZ] = DichromatSimulateBrettel([], 2, triXYZImgFormat);
+
+diXYZCalFormat = ImageToCalFormat(diXYZ);
+
+diRGBCalFormat = M_xyz2rgb * diXYZCalFormat;
+diRGBImgFormat = CalFormatToImage(diRGBCalFormat,Disp.m,Disp.n);
+diLMSImgFormat = rgbLin2LMSimg(diRGBImgFormat,Disp,1,0);
+diLMSCalFormat = ImageToCalFormat(diLMSImgFormat);
+% diLMSCalFormat = RGB2LMSimg(diRGBImgFormat,Disp,1,0);
+
+% diLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp);
 
 % % Make dichromat manipulation - missing cone
 % switch (renderType)

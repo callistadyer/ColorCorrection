@@ -23,7 +23,6 @@ function diLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp)
 %   None
 %
 
-disp(['Note: Im not sure if simulateDichromatBrettel enforces in gamut RGB vals... enforce this'])
 trynew = 0;
 if trynew == 1
     if strcmp(renderType,'Deuteranopia')
