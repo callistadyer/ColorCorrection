@@ -2,7 +2,7 @@ function [srgb_dichromat, lmsDichromat, lmsTrichromat] = DichromatSimulateBrette
 % Simulates color vision for dichromatic viewers using the Brettel, Vienot, Mollon (1997) method.
 %
 % Syntax:
-%   [srgb_dichromat, lmsDichromat, lmsTrichromat] = Brettel(rgbImage, cbTypes)
+%   [srgb_dichromat, lmsDichromat, lmsTrichromat] = DichromatSimulateBrettel(rgbImage, cbTypes)
 %
 % Inputs:
 %   rgbImage: Input RGB image (optional). If empty, defaults to '74.jpg' on the local path.
