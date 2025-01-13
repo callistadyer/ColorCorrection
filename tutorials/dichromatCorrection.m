@@ -39,7 +39,7 @@ function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,
 %
 % Examples:
 %{
-[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,0,10)
+[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,0,1)
 [RGBImage_dichromat] = dichromatCorrection('scene2.mat','Deuteranopia',1,0,10)
 %}
 

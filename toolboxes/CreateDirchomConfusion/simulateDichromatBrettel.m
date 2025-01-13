@@ -1,5 +1,5 @@
 
-function deuterLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp)
+function diLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp)
 % Using Brettel et al. algorithm to try and simulate dichromat rendering
 %
 % Syntax:
@@ -33,7 +33,7 @@ if trynew == 1
     cbXYZ = imageLinearTransform(lmsDichromat, colorTransformMatrix('lms2xyz'));
     [deuterRGBImage lrgb] = xyz2srgb(cbXYZ);
     % deuterLMSimage = rgbLin2LMSimg(lrgb,Disp,1,0);
-    deuterLMSCalFormat = ImageToCalFormat(lmsDichromat);
+    diLMSCalFormat = ImageToCalFormat(lmsDichromat);
     % deuterLMSCalFormat = lms;
 else
     % check if in image format (if not, reshape it)
@@ -78,7 +78,7 @@ else
 
     % Call projection logic with dynamically calculated E, A1, and A2
     simulatedLMSimg          = project_to_plane(lmsImage, E, A1, A2, missing);
-    deuterLMSCalFormat       = ImageToCalFormat(simulatedLMSimg);
+    diLMSCalFormat       = ImageToCalFormat(simulatedLMSimg);
     % Note: this arbitrary scaling is necessary because nothing inherent to
     % Brettel's algorithm prevents the resulting (projected) RGB values from
     % going out of gamut
