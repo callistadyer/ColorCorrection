@@ -4,7 +4,7 @@ function [triLMScalFormatCorrected, triLMSmeans]  = colorCorrection(triLMSCalFor
 % not see otherwise. Correction is happening via a PCA 
 %
 % Syntax:
-%   [correctedLMS, K_opt, D_mnew, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig,bScale)
+%   [triLMScalFormatCorrected, triLMSmeans]  = colorCorrection(triLMSCalFormat,renderType,Disp,bScale)
 %
 % Description:
 %

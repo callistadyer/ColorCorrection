@@ -48,13 +48,13 @@ close all;
 % Get trichromatic (LMS) image
 [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod,nSquares);    
 
-% Apply pca correction to aid dichromacy
+% Color correction to aid dichromacy
 [triLMScalFormatCorrected       triLMSmeans]                   = colorCorrection(triLMSCalFormat,renderType,Disp,bScale);   % Original image
 [triLMScalFormatCorrected_plate triLMSmeans_plate]             = colorCorrection(triLMSCalFormat_plate,renderType,Disp,bScale); % Image with plate
 % correctedLMS = K_opt_plate * D_mnew + T_mean_plate;
 
-% Create RGB image from LMS  
 
+% Create RGB image from LMS  
 %%%%% ORIGINAL IMAGE AND PLATE %%%%%
 % Dichromat simulation of original image
 [diRGBCalFormatOrig]        = LMS2RGBCalFormat(diLMSCalFormat, Disp,bScale);
