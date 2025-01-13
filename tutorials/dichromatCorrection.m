@@ -53,6 +53,7 @@ close all;
 [correctedLMS_plate T_mean_plate]             = colorCorrectionPCA(img,lmsModuledCalFormatTri,renderType,cone_mean_orig,Disp,bScale); % Image with plate
 % correctedLMS = K_opt_plate * D_mnew + T_mean_plate;
 
+rgbcheck = LMS2rgbLinCalFormat(lmsImageCalFormatTri,Disp,bScale);
 
 % Scale corrected LMS values to be as close to possible to original LMS
 % LMS_new       = correctedLMSadjust(correctedLMS,lmsImageCalFormatTri);

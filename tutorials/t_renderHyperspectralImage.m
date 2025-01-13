@@ -47,30 +47,53 @@ t_renderHyperspectralImage('gray','Deuteranopia',0,0,0,10)
 %}
 
 %% Load hyperspectral image data
-[hyperspectralImage wls d P_monitor] = loadImage(image);
+[hyperspectralImage Disp] = loadImage(image);
+% 
+% % NEW STUFF TO PLAY WITH !!!!!!!
+% % Original LMS image for trichromat
+% lms =  xyz2lms(Disp.imgXYZ, 2, Disp.whiteXYZ);
+% cbXYZ = imageLinearTransform(lms, colorTransformMatrix('lms2xyz'));
+% [deuterRGBImage lrgb] = xyz2srgb(cbXYZ);
+% [trichromRGB lrgbtri] = xyz2srgb(Disp.imgXYZ);
+% deuterLMSimage = rgbLin2LMSimg(lrgb,Disp,1,0);
+% 
+% 
+% if strcmp(image,'gray')
+%     for i = 1:nSquares
+%         [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(ImageToCalFormat(trichromRGB),[0 1 0],0,Disp,1,0);
+%     end
+% else
+%     lmsModulationImgFormat = getDichromatConfusionModulation(rgbLinImageCalFormat2,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
+% end
+% 
+% % Create isochromatic plates
+% [RGBModulated lmsModuledCalFormatTrichromat] = isochromaticPlates(lms,renderType,lmsModulationImgFormat,Disp,bScale,nSquares, ...
+%     'verbose',true);
+% 
 
-% Get cone spectral sensitivities
-load T_cones_ss2;
-T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
+
+
+
+
 
 % Get some monitor primaries
-d = displayCreate('LCD-Apple');
-P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
+% d = displayCreate('LCD-Apple');
+% P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
 
 % Get cone responses for every pixel of the hyperspectral image
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
 
 % Save display parameters for easy calling later
-Disp = struct();
-Disp.T_cones   = T_cones;
-Disp.d         = d;
-Disp.P_monitor = P_monitor;
-Disp.m         = m;
-Disp.n         = n;
-Disp.wls       = wls;
+% Disp = struct();
+% Disp.T_cones   = T_cones;
+% Disp.d         = d;
+% Disp.P_monitor = P_monitor;
+% Disp.m         = m;
+% Disp.n         = n;
+% Disp.wls       = wls;
 
 % Render lms image that a trichromat sees.  Convert from cal format to image as well.
-lmsImageCalFormatTrichromat = T_cones*hyperspectralImageCalFormat;
+lmsImageCalFormatTrichromat = Disp.T_cones*hyperspectralImageCalFormat;
 [RGBImageCalFormat_trichromat,rgbLinImageCalFormat,scaleFactor] = LMS2RGBCalFormat(lmsImageCalFormatTrichromat,Disp,bScale);
 RGBImage_trichromat = CalFormatToImage(RGBImageCalFormat_trichromat,m,n);
 

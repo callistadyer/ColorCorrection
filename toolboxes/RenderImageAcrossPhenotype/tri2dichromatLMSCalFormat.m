@@ -39,11 +39,11 @@ s_cone = lmsImageCalFormat(3,:);
 % tritanSFromLScale = cone_mean_orig/mean(l_cone);
 
 %%%%%%%%%%%%%%%%%%% CALLISTA WORK ON THIS!!!!
-% error(['callista work on this']);
+disp(['callista work on this! choose how to simulate dichromat']);
 lmsImage = CalFormatToImage(lmsImageCalFormat,Disp.m,Disp.n);
 dichromatLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp);
 
-% Make dichromat manipulation - missing cone
+% % Make dichromat manipulation - missing cone
 % switch (renderType)
 %     case 'Deuteranopia' % m cone deficiency
 %         lmsImageCalFormat(2,:)       = l_cone; 

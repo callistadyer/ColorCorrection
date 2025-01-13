@@ -1,4 +1,4 @@
-function [projected_data] = decolorOptimize(data,method, numPCs, bPLOT, lambda_var,Disp,bScale)
+function [projected_dataLMS] = decolorOptimize(triLMSCalFormat,method, numPCs, bPLOT, lambda_var,Disp,bScale)
 % Optimizes PCA projections to balance maximizing variance and similarity to original data.
 %
 % Syntax:
@@ -34,32 +34,34 @@ function [projected_data] = decolorOptimize(data,method, numPCs, bPLOT, lambda_v
 %}
 
 % Sample data to see how code works
-if isempty(data)
+if isempty(triLMSCalFormat)
     % Pretend data to visualize what the function does
     N = 100;                         % Number of points
     x = randn(1, N);                 % Random data for the first dimension
     y = 2 * x + randn(1, N) * 0.2;   % Strong correlation with the first dimension
     z = 0.5 * x + 0.3 * randn(1, N); % Weaker correlation with the first dimension
-    data = [x; y; z];
+    triLMSCalFormat = [x; y; z];
 end
 
 %% Find optimal transformation matrix
 if strcmp(method,"linTransform")
 
     % NOTE: I = LMS values [nPix x 3]
-    I = data'; % data = [3 x nPix]
-    % M = transformation matrix [3x3]
+    triLMSCalFormatTran = triLMSCalFormat'; % data = [3 x nPix]
+    % M = transformation matrix [3x3]'
+    % NOTE: MUST APPLY THIS M MATRIX ON THE LEFT OF CAL FORMAT DATA
     M_rgb2cones = Disp.T_cones*Disp.P_monitor;
     M_cones2rgb = inv(M_rgb2cones);
 
     % Weight for variance term
     lambda = 0.5;             
     % Number of pixels
-    nPix   = size(data,2);
+    nPix   = size(triLMSCalFormat,2);
 
     % Constraint matrix (A, includes lots of I iterations) and vector (b)
-    I_M = I*M_cones2rgb';
-    A_upper = blkdiag(I_M, I_M, I_M);      % Upper constraint blocks
+    % triLMSCalFormatTran: trichromat LMS values in [nPix x 3] form
+    triRGBCalFormatTran = triLMSCalFormatTran * M_cones2rgb';
+    A_upper = blkdiag(triRGBCalFormatTran, triRGBCalFormatTran, triRGBCalFormatTran);      % Upper constraint blocks
     A_lower = -A_upper;              % for -I * X <= 0
     A = [A_upper; A_lower]; 
     b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
@@ -70,43 +72,44 @@ if strcmp(method,"linTransform")
 
     % OPTIMIZATION SETUP
     options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',30);
-    [T_opt, fval] = fmincon(@(T) loss_function(T, I, M_cones2rgb', lambda, Disp), ...
+    [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda, Disp), ...
         T0, A, b, [], [], [], [], ...
         [], options);
 
-    fValOpt = loss_function(T_opt, I, M_cones2rgb', lambda, Disp)
-    bCheck = A*T_opt(:);
+    fValOpt = loss_function(transformRGB_opt, triLMSCalFormatTran, M_cones2rgb', lambda, Disp)
+    bCheck = A*transformRGB_opt(:);
     if (any(bCheck > b))
         fprintf('Failed to satisfy constraint\n');
     end
 
     % RESHAPE THE OPTIMAL SOLUTION INTO MATRIX FORM
-    optimal_T = reshape(T_opt, 3, 3);
+    transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 
     % Calculate optimal output from input * optimal transform
-    outputLinRGB = I * M_cones2rgb' * optimal_T;
+    outputLinRGB = triLMSCalFormatTran * M_cones2rgb' * transformRGBmatrix_opt;
 
     % Check if given O is in gamut
     % Get LMS values
     lmsImageCalFormat = M_rgb2cones * outputLinRGB';
-
+    projected_dataLMS = lmsImageCalFormat;
     % Check if is in gamut
     inGamutAfterTransform = checkGamut(lmsImageCalFormat,Disp,bScale);
     if inGamutAfterTransform == 0
         error(['ERROR: decolorOptimize, constraint is not working, transformation is pushing out of gamut'])
     else
         outputRGB = LMS2RGBCalFormat(lmsImageCalFormat,Disp,0);
-        projected_data = outputRGB';
+        % projected_data = outputRGB';
     end
 end
 
-disp(['Note: "pca the hard way"... problem because variance is 0 at starting point'])
 
 %% PCA the hard way
 if strcmp(method,"hardPCA")
+    disp(['Note: "pca the hard way"... problem because variance is 0 at starting point'])
+
     % Subtract mean
-    mean_data     = mean(data, 2);
-    centered_data = round(data,4) - round(mean_data,4);
+    mean_data     = mean(triLMSCalFormat, 2);
+    centered_data = round(triLMSCalFormat,4) - round(mean_data,4);
 
     % Normalize data for initial variance calculation
     % Why do this? Magnitude of variance might be very different than dot prod
@@ -115,11 +118,11 @@ if strcmp(method,"hardPCA")
         initial_variance = eps; % Small positive value to prevent division by zero
     end
 
-    PCs = zeros(size(data, 1), numPCs); % Matrix to store principal components
+    PCs = zeros(size(triLMSCalFormat, 1), numPCs); % Matrix to store principal components
     options = optimoptions('fmincon', 'Algorithm', 'sqp', 'Display', 'iter');
 
     theRemainingData = centered_data;
-    projected_data = zeros(size(centered_data, 2), numPCs);
+    projected_dataLMS = zeros(size(centered_data, 2), numPCs);
 
     % Loop to get PCs
     for pcIdx = 1:numPCs
@@ -153,7 +156,7 @@ if strcmp(method,"hardPCA")
         % maximum variance when we project this part onto it.
         theRemainingData = (theNullSpace*(theNullSpace'*centered_data));
 
-        projected_data(:,pcIdx)     = centered_data' * PC;                  % Projection onto current PC
+        projected_dataLMS(:,pcIdx)     = centered_data' * PC;                  % Projection onto current PC
     end
 end
 
@@ -196,7 +199,7 @@ end
 %% Functions 
 
 % OBJECTIVE FUNCTION
-function loss = loss_function(t_vec, I, M, lambda,Disp)
+function loss = loss_function(t_vec, triLMSCalFormatTran, M_cones2rgb, lambda,Disp)
     T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
     % X = M_cones2rgb * T 
     % O = I * X
@@ -206,18 +209,22 @@ function loss = loss_function(t_vec, I, M, lambda,Disp)
     % O - linear RGB
     % M - LMS2RGB
     % T - RGB TRANSFORMATION
-    O = I * M * T;
+    % [nPizels x 3]     = [3 x nPixels] x [3 x 3] x [3 x 3]
+    RGBCalFormatTran = triLMSCalFormatTran * M_cones2rgb' * T;
 
     % How to implement constraints?
 
 
     % Check if given O is in gamut
     % Convert to LMS
-    O_Minv = O*inv(M);
-    O_LMSCalFormat = O_Minv';
-    %inGamut = checkGamut(O_LMSCalFormat,Disp,0);
-    minRGB = min(O(:));
-    maxRGB = max(O(:));
+    triLMSCalFormatTran = RGBCalFormatTran*inv(M_cones2rgb');
+
+    % Get into cal format
+    LMSCalFormat = triLMSCalFormatTran';
+    triRGBCalFormat = RGBCalFormatTran';
+
+    minRGB = min(RGBCalFormatTran(:));
+    maxRGB = max(RGBCalFormatTran(:));
 
     % Penalize out of gamut
     if minRGB < 0
@@ -228,22 +235,15 @@ function loss = loss_function(t_vec, I, M, lambda,Disp)
         lossGamutTerm = 0;
     end
 
-    % Gamma correct
-    %iGtable = displayGet(Disp.d,'inversegamma');
-    %O_RGB = rgb2dac(O,iGtable)/(2^displayGet(Disp.d,'dacsize')-1);
-    % Transform to cal format
-    %O_RGBCalFormat = ImageToCalFormat(O_RGB);
-    O_RGBCalFormat = O';
-
     % disp(['NOTE!!! CURRENTLY ASSUMING DEUTERONOPIA... CHANGE BEFORE CODE IS READY TO USE'])
     % Variance term
-    var_term = lambda * (var(O_RGBCalFormat(:, 1)) + var(O_RGBCalFormat(:, 3)));
+    var_term = lambda * (var(triRGBCalFormat(:, 1)) + var(triRGBCalFormat(:, 3)));
 
     % Similarity term
-    dot_term = (1 - lambda) *   (dot(O_Minv(:, 1), I(:, 1)) / norm(I(:, 1))) + ...
-                                (dot(O_Minv(:, 2), I(:, 2)) / norm(I(:, 2))) + ...
-                                (dot(O_Minv(:, 3), I(:, 3)) / norm(I(:, 3)));
-    % TOTAL LOSS
+    dot_term = (1 - lambda) *   (dot(LMSCalFormatTran(:, 1), LMSCalFormatTran(:, 1)) / norm(LMSCalFormatTran(:, 1))) + ...
+                                (dot(LMSCalFormatTran(:, 2), LMSCalFormatTran(:, 2)) / norm(LMSCalFormatTran(:, 2))) + ...
+                                (dot(LMSCalFormatTran(:, 3), LMSCalFormatTran(:, 3)) / norm(LMSCalFormatTran(:, 3)));
+    % Loss
     loss = -(var_term + dot_term) + lossGamutTerm;
     
     end

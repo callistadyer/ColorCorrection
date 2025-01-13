@@ -40,8 +40,9 @@ if (options.verbose)
     fprintf('Starting execution of isochromaticPlates\n');
 end
 
+disp('Callista come back to this - make it so this func takes in LMS image')
 % Load hyperspectral image
-[hyperspectralImage wls d P_monitor] = loadImage(img);
+[hyperspectralImage Disp] = loadImage(img);
 % Get LMS values
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
 lmsImageCalFormat = Disp.T_cones*hyperspectralImageCalFormat;
