@@ -59,14 +59,12 @@ subplot(1, length(cbTypes) + 1, 1); % Add the original as the first subplot
 imshow(rgbImage);
 title('Original Image');
 
-% Wavelength range for display and transformation
+% Wavelength range for display 
 wls = (400:10:700)';
 
-% Create a display object for calibration
 d = displayCreate('LCD-Apple');
 P_monitor = SplineSrf(displayGet(d, 'wave'), displayGet(d, 'spd'), wls);
-% normalizer = max(resizedImage(:));
-% resizedImage = resizedImage/normalizer
+
 %% Load and Process the Image
 % Convert the RGB image into a scene with calibrated display
 scene = sceneFromFile(rgbImage, 'rgb', [], d, wls);
@@ -75,11 +73,10 @@ scene = sceneFromFile(rgbImage, 'rgb', [], d, wls);
 imgXYZ = sceneGet(scene, 'xyz');
 whiteXYZ = sceneGet(scene, 'illuminant xyz');
 
-% Convert the image from XYZ to LMS (normal vision)
+% Convert the image from XYZ to LMS 
 lmsTrichromat = xyz2lms(imgXYZ, [], whiteXYZ);
 
 %% Simulate Color Blindness for Specified Types
-% Initialize outputs
 srgb_dichromat = cell(length(cbTypes), 1);
 lmsDichromat = cell(length(cbTypes), 1);
 
@@ -97,7 +94,6 @@ for idx = 1:length(cbTypes)
     % Convert the color-blind XYZ values to sRGB
     srgb_dichromat{idx} = xyz2srgb(cbXYZ);
     
-    % Create a new subplot and display the simulated image
     subplot(1, length(cbTypes) + 1, idx + 1); % Add each cbType simulation
     imshow(srgb_dichromat{idx});
     title(['Simulated ' cbTypeNames{cbType}]);
