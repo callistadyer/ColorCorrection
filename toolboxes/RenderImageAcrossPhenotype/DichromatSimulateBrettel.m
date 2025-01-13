@@ -36,9 +36,15 @@ function [srgb_dichromat, lmsDichromat, lmsTrichromat] = DichromatSimulateBrette
 %% Input Handling and Setup
 if nargin < 1 || isempty(rgbImage)
     % Default to '74.jpg' if no input is provided
-    rgbImage = imread('74.jpg');
+    rgbImage = imread('macbeth.tif');
     rgbImage = imresize(rgbImage, [128, 128]);
+    rgbImage = double(rgbImage)/255;
+end
 
+% Turn the image we read into gray
+forceGray = false;
+if (forceGray)
+    rgbImage = 0.7*ones(size(rgbImage));
 end
 
 if nargin < 2 || isempty(cbTypes)
@@ -55,7 +61,7 @@ f = figure('Position',[863         899        1289         284]);
 set(f, 'Name', 'Color Blindness Simulations', 'NumberTitle', 'off');
 
 % Display the original RGB image
-subplot(1, length(cbTypes) + 1, 1); % Add the original as the first subplot
+subplot(1, length(cbTypes) + 2, 1); % Add the original as the first subplot
 imshow(rgbImage);
 title('Original Image');
 
@@ -68,18 +74,25 @@ P_monitor = SplineSrf(displayGet(d, 'wave'), displayGet(d, 'spd'), wls);
 %% Load and Process the Image
 % Convert the RGB image into a scene with calibrated display
 scene = sceneFromFile(rgbImage, 'rgb', [], d, wls);
-
-% Extract XYZ values from the scene
 imgXYZ = sceneGet(scene, 'xyz');
-whiteXYZ = sceneGet(scene, 'illuminant xyz');
+imgXYZ = srgb2xyz(rgbImage);
+
+rgbWhite(1,1,:) = [1, 1, 1];
+sceneWhite = sceneFromFile(rgbWhite, 'rgb', [], d, wls);
+whiteXYZ = squeeze(sceneGet(sceneWhite, 'xyz'))';
+whiteXYZ = srgb2xyz(rgbWhite);
 
 % Convert the image from XYZ to LMS 
 lmsTrichromat = xyz2lms(imgXYZ, [], whiteXYZ);
+xyzTrichromat = imageLinearTransform(lmsTrichromat, colorTransformMatrix('lms2xyz'));
+srgbTrichromat = xyz2srgb(xyzTrichromat);
+subplot(1, length(cbTypes) + 2, 2); % Add each cbType simulation
+imshow(srgbTrichromat);
 
 %% Simulate Color Blindness for Specified Types
 srgb_dichromat = cell(length(cbTypes), 1);
 lmsDichromat = cell(length(cbTypes), 1);
-
+    
 % Simulate for each specified type of color blindness
 cbTypeNames = {'Protanopia', 'Deuteranopia', 'Tritanopia'};
 for idx = 1:length(cbTypes)
@@ -94,7 +107,7 @@ for idx = 1:length(cbTypes)
     % Convert the color-blind XYZ values to sRGB
     srgb_dichromat{idx} = xyz2srgb(cbXYZ);
     
-    subplot(1, length(cbTypes) + 1, idx + 1); % Add each cbType simulation
+    subplot(1, length(cbTypes) + 2, idx + 2); % Add each cbType simulation
     imshow(srgb_dichromat{idx});
     title(['Simulated ' cbTypeNames{cbType}]);
 end
