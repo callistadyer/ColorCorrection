@@ -82,8 +82,8 @@ else
     % Note: this arbitrary scaling is necessary because nothing inherent to
     % Brettel's algorithm prevents the resulting (projected) RGB values from
     % going out of gamut
-    [correctedLMS_scaled, k] = scaleInGamut(deuterLMSCalFormat,Disp,0);
-    deuterLMSCalFormat       = correctedLMS_scaled;
+    % [correctedLMS_scaled, k] = scaleInGamut(deuterLMSCalFormat,Disp,0);
+    % deuterLMSCalFormat       = correctedLMS_scaled;
     % Uncomment these to get conversions to RGB images
     % RGBImgCalFormatSimulated = LMS2RGBCal     Format(deuterLMSCalFormat,Disp,0);
     % RGBImgFormatSimulated    = CalFormatToImage(RGBImgCalFormatSimulated,Disp.m,Disp.n);

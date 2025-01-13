@@ -1,10 +1,10 @@
 function [correctedLMS_scaled, k] = scaleInGamut(correctedLMS, Disp, bScale)
 
 % Initialize scaling factor k
-k = 1;                % Start with no scaling
-step_size = 0.1;      % Increment step size for k
-max_iterations = 400; % Prevent infinite loops
-check_point = 200;    % Iteration to check for max value comparison
+k = .01;                % Start with no scaling
+step_size = 0.0001;      % Increment step size for k
+max_iterations = 500; % Prevent infinite loops
+check_point = 500;    % Iteration to check for max value comparison
 
 % Initialize variables
 iteration = 0;
@@ -25,18 +25,18 @@ while true
     % Track the maximum value of scaledLMS
     maxValues(iteration + 1) = max(scaledLMS(:));
 
-    % Check after 100 iterations if max value at 100th iteration > initial max value
-    if iteration == check_point
-        if maxValues(check_point) > maxValues(1)
-            fprintf('Restarting with reversed scaling direction at iteration %d\n', iteration);
-            % Restart scaling process
-            k = 1;                % Reset scaling factor
-            step_size = -step_size; % Reverse scaling direction
-            iteration = 0;        % Reset iteration counter
-            maxValues = zeros(1, max_iterations); % Reset max values
-            continue;
-        end
-    end
+    % % Check after 100 iterations if max value at 100th iteration > initial max value
+    % if iteration == check_point
+    %     if maxValues(check_point) > maxValues(1)
+    %         fprintf('Restarting with reversed scaling direction at iteration %d\n', iteration);
+    %         % Restart scaling process
+    %         k = 1;                % Reset scaling factor
+    %         step_size = -step_size; % Reverse scaling direction
+    %         iteration = 0;        % Reset iteration counter
+    %         maxValues = zeros(1, max_iterations); % Reset max values
+    %         continue;
+    %     end
+    % end
 
     % Update scaling factor k
     k = k - step_size;
