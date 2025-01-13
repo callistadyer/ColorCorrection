@@ -1,4 +1,4 @@
-function [projected_dataLMS] = decolorOptimize(triLMSCalFormat,method, numPCs, bPLOT, lambda_var,Disp,bScale)
+function [triLMSCalFormat] = decolorOptimize(triLMSCalFormat,method, numPCs, bPLOT, lambda_var,Disp,bScale)
 % Optimizes PCA projections to balance maximizing variance and similarity to original data.
 %
 % Syntax:
@@ -86,19 +86,16 @@ if strcmp(method,"linTransform")
     transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 
     % Calculate optimal output from input * optimal transform
-    outputLinRGB = triLMSCalFormatTran * M_cones2rgb' * transformRGBmatrix_opt;
+    triRGBCalFormatTran = triLMSCalFormatTran * M_cones2rgb' * transformRGBmatrix_opt;
+    triRGBCalFormat     = triRGBCalFormatTran';
 
     % Check if given O is in gamut
     % Get LMS values
-    lmsImageCalFormat = M_rgb2cones * outputLinRGB';
-    projected_dataLMS = lmsImageCalFormat;
+    triLMSCalFormat = M_rgb2cones * triRGBCalFormat;
     % Check if is in gamut
     inGamutAfterTransform = checkGamut(lmsImageCalFormat,Disp,bScale);
     if inGamutAfterTransform == 0
         error(['ERROR: decolorOptimize, constraint is not working, transformation is pushing out of gamut'])
-    else
-        outputRGB = LMS2RGBCalFormat(lmsImageCalFormat,Disp,0);
-        % projected_data = outputRGB';
     end
 end
 
@@ -199,7 +196,7 @@ end
 %% Functions 
 
 % OBJECTIVE FUNCTION
-function loss = loss_function(t_vec, triLMSCalFormatTran, M_cones2rgb, lambda,Disp)
+function loss = loss_function(t_vec, LMSCalFormatTran, M_cones2rgb, lambda,Disp)
     T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
     % X = M_cones2rgb * T 
     % O = I * X
@@ -210,18 +207,18 @@ function loss = loss_function(t_vec, triLMSCalFormatTran, M_cones2rgb, lambda,Di
     % M - LMS2RGB
     % T - RGB TRANSFORMATION
     % [nPizels x 3]     = [3 x nPixels] x [3 x 3] x [3 x 3]
-    RGBCalFormatTran = triLMSCalFormatTran * M_cones2rgb' * T;
+    RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
 
     % How to implement constraints?
 
 
     % Check if given O is in gamut
     % Convert to LMS
-    triLMSCalFormatTran = RGBCalFormatTran*inv(M_cones2rgb');
+    LMSCalFormatTran = RGBCalFormatTran*inv(M_cones2rgb');
 
     % Get into cal format
-    LMSCalFormat = triLMSCalFormatTran';
-    triRGBCalFormat = RGBCalFormatTran';
+    LMSCalFormat = LMSCalFormatTran';
+    RGBCalFormat = RGBCalFormatTran';
 
     minRGB = min(RGBCalFormatTran(:));
     maxRGB = max(RGBCalFormatTran(:));
@@ -237,7 +234,7 @@ function loss = loss_function(t_vec, triLMSCalFormatTran, M_cones2rgb, lambda,Di
 
     % disp(['NOTE!!! CURRENTLY ASSUMING DEUTERONOPIA... CHANGE BEFORE CODE IS READY TO USE'])
     % Variance term
-    var_term = lambda * (var(triRGBCalFormat(:, 1)) + var(triRGBCalFormat(:, 3)));
+    var_term = lambda * (var(RGBCalFormat(:, 1)) + var(RGBCalFormat(:, 3)));
 
     % Similarity term
     dot_term = (1 - lambda) *   (dot(LMSCalFormatTran(:, 1), LMSCalFormatTran(:, 1)) / norm(LMSCalFormatTran(:, 1))) + ...

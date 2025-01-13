@@ -49,8 +49,8 @@ close all;
 [lmsImageCalFormatTri,lmsModuledCalFormatTri,lmsDichromImageCalFormat,lmsDichromModuledCalFormat,cone_mean_orig,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod,nSquares);    
 
 % Apply pca correction to aid dichromacy
-[correctedLMS T_mean]                         = colorCorrectionPCA(img,lmsImageCalFormatTri,renderType,cone_mean_orig,Disp,bScale);   % Original image
-[correctedLMS_plate T_mean_plate]             = colorCorrectionPCA(img,lmsModuledCalFormatTri,renderType,cone_mean_orig,Disp,bScale); % Image with plate
+[correctedLMS T_mean]                         = colorCorrection(lmsImageCalFormatTri,renderType,Disp,bScale);   % Original image
+[correctedLMS_plate T_mean_plate]             = colorCorrection(lmsModuledCalFormatTri,renderType,Disp,bScale); % Image with plate
 % correctedLMS = K_opt_plate * D_mnew + T_mean_plate;
 
 rgbcheck = LMS2rgbLinCalFormat(lmsImageCalFormatTri,Disp,bScale);

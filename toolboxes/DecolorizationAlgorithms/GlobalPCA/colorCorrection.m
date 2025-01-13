@@ -1,4 +1,4 @@
-function [correctedLMS, T_mean]  = colorCorrection(img,originalLMS,renderType,cone_mean_orig,Disp,bScale)
+function [correctedLMS, T_mean]  = colorCorrection(triLMSCalFormat,renderType,Disp,bScale)
 
 % Correcting an image so a dichromat can see color contrasts that she could
 % not see otherwise. Correction is happening via a PCA 
@@ -38,44 +38,39 @@ function [correctedLMS, T_mean]  = colorCorrection(img,originalLMS,renderType,co
 method = 'linTransform';
 % PCA (the easy way):
 if strcmp(method,'easyPCA')
-    coeff = pca(originalLMS',"Centered",true); % Centered true subtracts mean
+    coeff = pca(triLMSCalFormat',"Centered",true); % Centered true subtracts mean
     PC2D(:,1) = coeff(:, 1); % First principal component
     PC2D(:,2) = coeff(:, 2); % Second principal component
 
-    % Map PCA onto available cones
-    % LMS image
-    T = originalLMS;
-
     % LMS means
-    T_mean = mean(T,2);
+    triLMSmeans = mean(triLMSCalFormat,2);
 
     % Mean subtracted LMS values
-    % T_ms = T - T_mean; % already subtracted off in "centered true" in PCA
-    T_ms = T;
+    % T_ms = triLMSCalFormat - triLMSmeans; % already subtracted off in "centered true" in PCA
 
     % Map mean subtracted LMS valud onto two principle components (linear regression)
-    D_ms = PC2D\T_ms;
+    diLMSCalFormat = PC2D\triLMSCalFormat;
 
     % Map mean of LMS onto two principle components (linear regression)
     % D_m = PC2D \ T_mean;
-    projected_data(1,:) = D_ms(1,:);
-    projected_data(2,:) = D_ms(1,:);
-    projected_data(3,:) = D_ms(2,:);
+    projected_data(1,:) = diLMSCalFormat(1,:);
+    projected_data(2,:) = diLMSCalFormat(1,:);
+    projected_data(3,:) = diLMSCalFormat(2,:);
 elseif strcmp(method,'hardPCA')
     % PCA (the hard way):
     numPCs = 2;
     lambda_var = 0.5;
-    [projected_data_2D] = decolorOptimize(originalLMS,method,numPCs,0,lambda_var,Disp,bScale);
+    [projected_data_2D] = decolorOptimize(triLMSCalFormat,method,numPCs,0,lambda_var,Disp,bScale);
     projected_data(1,:) = projected_data_2D(:,1);
     projected_data(2,:) = projected_data_2D(:,1);
     projected_data(3,:) = projected_data_2D(:,2);
-    T_mean = mean(originalLMS,2);
+    T_mean = mean(triLMSCalFormat,2);
 elseif strcmp(method,'linTransform')
     % decolorOptimize does mean subtraction, then maximizes variance fmincon 
     % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
     lambda_var = 0.5;
-    T_mean = mean(originalLMS,2);
-    [projected_data] = decolorOptimize(originalLMS,method,0,0,lambda_var,Disp,bScale);
+    T_mean = mean(triLMSCalFormat,2);
+    [projected_data] = decolorOptimize(triLMSCalFormat,method,0,0,lambda_var,Disp,bScale);
 
 end
 
