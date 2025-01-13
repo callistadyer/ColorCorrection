@@ -1,4 +1,4 @@
-function [correctedLMS, T_mean]  = colorCorrectionPCA(img,originalLMS,renderType,cone_mean_orig,Disp,bScale)
+function [correctedLMS, T_mean]  = colorCorrection(img,originalLMS,renderType,cone_mean_orig,Disp,bScale)
 
 % Correcting an image so a dichromat can see color contrasts that she could
 % not see otherwise. Correction is happening via a PCA 
