@@ -4,7 +4,7 @@ function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,
 % create an accessible image for a dichromat
 %
 % Syntax:
-%   [RGBImage_dichromat] = dichromatCorrection(img,renderType,bScale,bMinMod)
+%   [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,bMinMod,nSquares)
 %
 % Description:
 %
@@ -24,9 +24,10 @@ function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,
 %                   maximizing the modulation within the display gamut.  Or
 %                   (1) take the minimum of the modulations that are within
 %                   gamut for all pixels.
+%   nSquares:     - number of squares in isochromatic plate
 %
 % Outputs:
-%   RGBImage_dichromat:  - Transformed RGB image after PCA and scaling. Also replaced missing cone as done in other code 
+%   triRGBImgFormatCorrected:  - Transformed RGB image after PCA and scaling. Also replaced missing cone as done in other code 
 %
 % Optional key/value pairs:
 %   None
@@ -97,7 +98,7 @@ diRGBImgFormatCorrected_plate    = CalFormatToImage(diRGBCalFormatCorrected_plat
 figure('Position',[214         261         501        1076]);
 
 % Create a tiled layout
-t = tiledlayout(4, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
+tiledlayout(4, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 
 % Add images to the tiles
 nexttile
