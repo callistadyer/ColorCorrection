@@ -86,8 +86,8 @@ triRGBImgFormatCorrected         = CalFormatToImage(triRGBcalFormatCorrected,Dis
 triRGBImgFormatCorrected_plate   = CalFormatToImage(triRGBcalFormatCorrected_plate,Disp.m,Disp.n); % modulation
 
 % original dichromat
-diRGBImgFormatOrig          = CalFormatToImage(diRGBCalFormatOrig,Disp.m,Disp.n); % no modulation
-diRGBImgFormatOrig_plate    = CalFormatToImage(diRGBCalFormatOrig_plate,Disp.m,Disp.n); % modulation
+diRGBImgFormatOrig               = CalFormatToImage(diRGBCalFormatOrig,Disp.m,Disp.n); % no modulation
+diRGBImgFormatOrig_plate         = CalFormatToImage(diRGBCalFormatOrig_plate,Disp.m,Disp.n); % modulation
 
 % corrected dichromat
 diRGBImgFormatCorrected          = CalFormatToImage(diRGBCalFormatCorrected,Disp.m,Disp.n); % no modulation

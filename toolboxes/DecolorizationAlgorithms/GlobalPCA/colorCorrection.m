@@ -35,7 +35,7 @@ function [triLMScalFormatCorrected, triLMSmeans]  = colorCorrection(triLMSCalFor
 % Perform PCA
 
 % Perform the easy or hard way? (easy = matlab pca(), hard = fmincon)
-method = 'linTransform';
+method = 'easyPCA';
 % PCA (the easy way):
 if strcmp(method,'easyPCA')
     coeff = pca(triLMSCalFormat',"Centered",true); % Centered true subtracts mean

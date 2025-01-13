@@ -104,13 +104,13 @@ modDirection = vectors ./ magnitudes;  % Normalize to unit vectors
 % in a given cone direction (specifically, the direction of the missing cone) without going out of gamut
 if strcmp(image,'gray')
     for i = 1:nSquares
-        [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(triRGBCalFormat,modDirection(i,:)',bMinMod,Disp,scaleFactor,bScale);
+        [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(triRGBLinCalFormat,modDirection(i,:)',bMinMod,Disp,scaleFactor,bScale);
     end
 else
-    lmsModulationImgFormat = getDichromatConfusionModulation(triRGBCalFormat,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
+    lmsModulationImgFormat = getDichromatConfusionModulation(triRGBLinCalFormat,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
 end
 % Create isochromatic plates
-[triRGBCalFormat_plate triLMSCalFormat_plate] = isochromaticPlates(image,renderType,lmsModulationImgFormat,Disp,bScale,nSquares, ...
+[triRGBCalFormat_plate, triLMSCalFormat_plate] = isochromaticPlates(image,renderType,lmsModulationImgFormat,Disp,bScale,nSquares, ...
     'verbose',true);
 triRGBImgFormat_plate = CalFormatToImage(triRGBCalFormat_plate,Disp.m,Disp.n);
 
