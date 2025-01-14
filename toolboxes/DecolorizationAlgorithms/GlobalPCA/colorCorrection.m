@@ -1,8 +1,7 @@
 function [triLMScalFormatCorrected, triLMSmeans]  = colorCorrection(triLMSCalFormat,renderType,Disp,bScale)
 
-% Correcting an image so a dichromat can see color contrasts that she could
-% not see otherwise. Correction is happening via a PCA 
-%
+error("colorCorrection: outdated function. Now use one of the following to correct image:" + ...
+    "decolorOptimize OR colorCorrectionEasyPCA OR colorCorrectionHardPCA");
 % Syntax:
 %   [triLMScalFormatCorrected, triLMSmeans]  = colorCorrection(triLMSCalFormat,renderType,Disp,bScale)
 %

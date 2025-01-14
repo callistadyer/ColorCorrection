@@ -50,8 +50,21 @@ close all;
 [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,bScale,nSquares);    
 
 % Color correction to aid dichromacy
-[triLMScalFormatCorrected       triLMSmeans]                   = colorCorrection(triLMSCalFormat,renderType,Disp,bScale);   % Original image
-[triLMScalFormatCorrected_plate triLMSmeans_plate]             = colorCorrection(triLMSCalFormat_plate,renderType,Disp,bScale); % Image with plate
+switch (method)
+    case 'linTransform'
+        % decolorOptimize does mean subtraction, then maximizes variance fmincon 
+        % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
+        lambda_var = 0.5;
+        [triLMScalFormatCorrected] = decolorOptimize(triLMSCalFormat,renderType,lambda_var,Disp,bScale);
+    case 'easyPCA'
+        triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,Disp,bScale);
+    case 'hardPCA'
+        numPCs = 2;
+        triLMScalFormatCorrected = colorCorrectionHardPCA(triLMSCalFormat,numPCs);
+end
+%%%% Old colorCorrection function %%%%
+% [triLMScalFormatCorrected       triLMSmeans]                   = colorCorrection(triLMSCalFormat,renderType,Disp,bScale);   % Original image
+% [triLMScalFormatCorrected_plate triLMSmeans_plate]             = colorCorrection(triLMSCalFormat_plate,renderType,Disp,bScale); % Image with plate
 % correctedLMS = K_opt_plate * D_mnew + T_mean_plate;
 
 
