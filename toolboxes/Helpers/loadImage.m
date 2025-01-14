@@ -89,7 +89,7 @@ elseif strcmp(image,'74')
     % Extra parameters
     Disp.m         = 128;
     Disp.n         = 128;
-    Disp.imgXYZ       = imgXYZ;
+    Disp.imgXYZ    = imgXYZ;
 else
     % This will work if you are in the Brainard Lab and have the
     % HyperspectralSceneTutorial folder on your lab dropbox path.

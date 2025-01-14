@@ -1,10 +1,10 @@
 
-function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,bMinMod,nSquares)
+function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares)
 % Uses PCA to move 3D trichromatic image into 2 dimensions in attempt to
 % create an accessible image for a dichromat
 %
 % Syntax:
-%   [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,bMinMod,nSquares)
+%   [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares)
 %
 % Description:
 %
@@ -19,11 +19,10 @@ function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,
 %                       'Tritanopia'
 %   bScale:       - Boolean. Scale the image values into display range (1
 %                   or 0).  A good idea except for 'gray'.
-%   bMinMod:      - Boolean. When modulating the image in L M or S cone
-%                   dimension, do this separately for each pixel (0),
-%                   maximizing the modulation within the display gamut.  Or
-%                   (1) take the minimum of the modulations that are within
-%                   gamut for all pixels.
+%   method:       - Color correction method:
+%                       'linTransform' 
+%                       'easyPCA'
+%                       'hardPCA'
 %   nSquares:     - number of squares in isochromatic plate
 %
 % Outputs:
@@ -39,8 +38,8 @@ function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,
 %
 % Examples:
 %{
-[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,0,1)
-[RGBImage_dichromat] = dichromatCorrection('scene2.mat','Deuteranopia',1,0,10)
+[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1)
+[RGBImage_dichromat] = dichromatCorrection('scene2.mat','Deuteranopia',1,'linTransform',10)
 %}
 
 % Close out any stray figures
@@ -55,7 +54,7 @@ switch (method)
         % decolorOptimize does mean subtraction, then maximizes variance fmincon 
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
         lambda_var = 0.5;
-        [triLMScalFormatCorrected] = decolorOptimize(triLMSCalFormat,renderType,lambda_var,Disp,bScale);
+        [triLMScalFormatCorrected] = colorCorrectionOptimize(triLMSCalFormat,renderType,lambda_var,Disp,bScale);
     case 'easyPCA'
         triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,Disp,bScale);
     case 'hardPCA'

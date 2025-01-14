@@ -46,7 +46,6 @@ if isempty(triLMSCalFormat)
 end
 
 %% Find optimal transformation matrix
-if strcmp(method,"linTransform")
 
     % NOTE: I = LMS values [nPix x 3]
     triLMSCalFormatTran = triLMSCalFormat'; % data = [3 x nPix]
@@ -96,7 +95,6 @@ if strcmp(method,"linTransform")
     if inGamutAfterTransform == 0
         error(['ERROR: decolorOptimize, constraint is not working, transformation is pushing out of gamut'])
     end
-end
 
 
 %% Functions 

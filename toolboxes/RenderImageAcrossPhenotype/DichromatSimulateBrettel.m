@@ -39,7 +39,7 @@ if ~isempty(xyzImage)
     rgbImage = [];
     disp("Note: XYZ values are being used, NOT rgb values")
 end
-if nargin < 1 || isempty(rgbImage)
+if nargin < 1 || (isempty(rgbImage) && isempty(xyzImage))
     % Default to '74.jpg' if no input is provided
     rgbImage = imread('macbeth.tif');
     rgbImage = imresize(rgbImage, [128, 128]);
