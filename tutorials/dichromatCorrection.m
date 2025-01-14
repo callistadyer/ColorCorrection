@@ -55,11 +55,14 @@ switch (method)
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
         lambda_var = 0.5;
         [triLMScalFormatCorrected] = colorCorrectionOptimize(triLMSCalFormat,renderType,lambda_var,Disp,bScale);
+        [triLMScalFormatCorrected_plate] = colorCorrectionOptimize(triLMSCalFormat_plate,renderType,lambda_var,Disp,bScale);
     case 'easyPCA'
         triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,Disp,bScale);
+        triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,Disp,bScale);
     case 'hardPCA'
         numPCs = 2;
         triLMScalFormatCorrected = colorCorrectionHardPCA(triLMSCalFormat,numPCs);
+        triLMScalFormatCorrected_plate = colorCorrectionHardPCA(triLMSCalFormat_plate,numPCs);
 end
 %%%% Old colorCorrection function %%%%
 % [triLMScalFormatCorrected       triLMSmeans]                   = colorCorrection(triLMSCalFormat,renderType,Disp,bScale);   % Original image
