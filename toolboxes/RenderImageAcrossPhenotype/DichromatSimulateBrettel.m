@@ -1,4 +1,4 @@
-function [diXYZ] = DichromatSimulateBrettel(rgbImage, cbTypes, xyzImage)
+function [diXYZ] = DichromatSimulateBrettel(xyzImage, cbTypes,rgbImage)
 % Simulates color vision for dichromatic viewers using the Brettel, Vienot, Mollon (1997) method.
 %
 % Syntax:
@@ -34,8 +34,10 @@ function [diXYZ] = DichromatSimulateBrettel(rgbImage, cbTypes, xyzImage)
 %}
 
 %% Input Handling and Setup
-if nargin > 2
+% Basically, if xyz values are provided, make sure to use that instead of rgb 
+if ~isempty(xyzImage)
     rgbImage = [];
+    disp("Note: XYZ values are being used, NOT rgb values")
 end
 if nargin < 1 || isempty(rgbImage)
     % Default to '74.jpg' if no input is provided
@@ -58,11 +60,10 @@ end
 % Ensure cbTypes is a row vector
 cbTypes = unique(cbTypes(:))';
 
+%%%% Can uncomment this stuff if you wanna do some plotting %%%%
 % Create a regular MATLAB figure
-
 % f = figure('Position',[863         899        1289         284]);
 % set(f, 'Name', 'Color Blindness Simulations', 'NumberTitle', 'off');
-
 % Display the original RGB image
 % subplot(1, length(cbTypes) + 2, 1); % Add the original as the first subplot
 % imshow(rgbImage);
@@ -70,47 +71,56 @@ cbTypes = unique(cbTypes(:))';
 
 % Wavelength range for display 
 wls = (400:10:700)';
-
+% Display parameters
 d = displayCreate('LCD-Apple');
 P_monitor = SplineSrf(displayGet(d, 'wave'), displayGet(d, 'spd'), wls);
 
 %% Load and Process the Image
 % Convert the RGB image into a scene with calibrated display
-scene = sceneFromFile(rgbImage, 'rgb', [], d, wls);
-% imgXYZ = sceneGet(scene, 'xyz');
-% imgXYZ = srgb2xyz(rgbImage);
 
+% Get white point - need to do this manually or matlab does something funky
+% that makes our gray image white-ish
 rgbWhite(1,1,:) = [1, 1, 1];
 sceneWhite = sceneFromFile(rgbWhite, 'rgb', [], d, wls);
 whiteXYZ = squeeze(sceneGet(sceneWhite, 'xyz'))';
-% whiteXYZ = srgb2xyz(rgbWhite);
 
-imgXYZ = xyzImage;
-% Convert the image from XYZ to LMS 
-% lmsTrichromat = xyz2lms(imgXYZ, [], whiteXYZ);
-% xyzTrichromat = imageLinearTransform(lmsTrichromat, colorTransformMatrix('lms2xyz'));
-% srgbTrichromat = xyz2srgb(xyzTrichromat);
-% subplot(1, length(cbTypes) + 2, 2); % Add each cbType simulation
-% imshow(srgbTrichromat);
+% Routine for when rgb values are used instead of XYZ (do NOT want to do
+% this if we are importing image through Callista's decolorization routine... 
+% need to use XYZ values to keep conversions consistent)
+if ~ isempty(rgbImage)
+    scene = sceneFromFile(rgbImage, 'rgb', [], d, wls);
+    xyzImage = sceneGet(scene, 'xyz');
+    xyzImage = srgb2xyz(rgbImage);
+    whiteXYZ = srgb2xyz(rgbWhite);
+
+    % Convert the image from XYZ to LMS
+    lmsTrichromat = xyz2lms(xyzImage, [], whiteXYZ);
+    xyzTrichromat = imageLinearTransform(lmsTrichromat, colorTransformMatrix('lms2xyz'));
+    srgbTrichromat = xyz2srgb(xyzTrichromat);
+    % subplot(1, length(cbTypes) + 2, 2); % Add each cbType simulation
+    % imshow(srgbTrichromat);
+end
+
+
 
 %% Simulate Color Blindness for Specified Types
 % srgb_dichromat = cell(length(cbTypes), 1);
 lmsDichromat = cell(length(cbTypes), 1);
     
 % Simulate for each specified type of color blindness
-% cbTypeNames = {'Protanopia', 'Deuteranopia', 'Tritanopia'};
+cbTypeNames = {'Protanopia', 'Deuteranopia', 'Tritanopia'};
 for idx = 1:length(cbTypes)
     cbType = cbTypes(idx);
     
     % Convert to LMS for the current dichromatic viewer
-    lmsDichromat{idx} = xyz2lms(imgXYZ, cbType, whiteXYZ);
+    lmsDichromat{idx} = xyz2lms(xyzImage, cbType, whiteXYZ);
     
     % Convert the dichromatic LMS values back to XYZ
     diXYZ = imageLinearTransform(lmsDichromat{idx}, colorTransformMatrix('lms2xyz'));
     
+    % % Can uncomment this if you are not using decolorization routine (aka using rgb vals instead of xyz)  
     % Convert the color-blind XYZ values to sRGB
     % srgb_dichromat{idx} = xyz2srgb(cbXYZ);
-    % 
     % subplot(1, length(cbTypes) + 2, idx + 2); % Add each cbType simulation
     % imshow(srgb_dichromat{idx});
     % title(['Simulated ' cbTypeNames{cbType}]);

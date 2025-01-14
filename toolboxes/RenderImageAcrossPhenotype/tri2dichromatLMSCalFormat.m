@@ -43,7 +43,7 @@ triXYZCalFormat = M_rgb2xyz * triRGBlinCalFormat;
 triXYZImgFormat = CalFormatToImage(triXYZCalFormat,Disp.m,Disp.n);
 
 %%%%%%%%% Dichromat Simulation (Brettel) %%%%%%%%%%%%%%%%%%%%%%
-[diXYZ] = DichromatSimulateBrettel([], cbType, triXYZImgFormat);
+[diXYZ] = DichromatSimulateBrettel(triXYZImgFormat, cbType, []);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Image Format --> CalFormat
