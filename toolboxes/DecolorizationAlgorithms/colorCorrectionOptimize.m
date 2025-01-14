@@ -53,7 +53,6 @@ end
     % NOTE: MUST APPLY THIS M MATRIX ON THE LEFT OF CAL FORMAT DATA
     M_rgb2cones = Disp.T_cones*Disp.P_monitor;
     M_cones2rgb = inv(M_rgb2cones);
-
     % Number of pixels
     nPix   = size(triLMSCalFormat,2);
 
@@ -102,21 +101,27 @@ end
 % OBJECTIVE FUNCTION
     function loss = loss_function(t_vec, LMSCalFormatTran, M_cones2rgb, lambda, renderType, Disp)
     T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
-    % X = M_cones2rgb * T 
-    % O = I * X
-    % O = I * X'*inv(M');                     % CALCULATE O = X * I
    
     % I - LMS
     % O - linear RGB
     % M - LMS2RGB
     % T - RGB TRANSFORMATION
     % [nPizels x 3]     = [3 x nPixels] x [3 x 3] x [3 x 3]
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Transformation matrix tips %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % M_rgb2cones = Disp.T_cones*Disp.P_monitor;
+    % M_cones2rgb = inv(M_rgb2cones)
+    % M_rgb2cones -->     [3 x nPixels] x [nPixels x 3]  APPLY ON LEFT OF RGB VALUES WHEN IN CAL FORMAT
+    % M_cones2rgb --> inv([3 x nPixels] x [nPixels x 3]) APPLY ON LEFT OF LMS VALUES WHEN IN CAL FORMAT
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    % Must apply M on RIGHT with a TRANSPOSE when LMS is in cal format TRANSPOSE
+    % LMSCalFormatTran * M_cones2rgb' --> converts LMS to RGB values
+    % T scales the RGB values
+    % altogether, (LMSCalFormatTran * M_cones2rgb' * T) returns scaled RGB values in calFormatTransposed format
+
     RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
 
-    % How to implement constraints?
-
-
-    % Check if given O is in gamut
     % Convert to LMS
     LMSCalFormatTran = RGBCalFormatTran*inv(M_cones2rgb');
 
@@ -124,6 +129,7 @@ end
     LMSCalFormat = LMSCalFormatTran';
     RGBCalFormat = RGBCalFormatTran';
 
+    % Check in gamut?
     minRGB = min(RGBCalFormatTran(:));
     maxRGB = max(RGBCalFormatTran(:));
 
