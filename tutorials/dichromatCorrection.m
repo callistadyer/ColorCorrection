@@ -1,12 +1,12 @@
 
-function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares)
+function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType)
 % Transform trichromatic image so that dichromat can see more color
 % contrast. Also want to try and preserve some naturalness. This is
 % accomplished in colorCorrectionOptimize where we incorporate similarity
 % to original in the loss function
 %
 % Syntax:
-%   [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares)
+%   [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType)
 %
 % Description:
 %
@@ -26,6 +26,12 @@ function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,
 %                       'easyPCA'
 %                       'hardPCA'
 %   nSquares:     - number of squares in isochromatic plate
+% 
+%   modType       - type of isochromatic plate modulation 
+%                       'rand'
+%                       'Deuteranopia'
+%                       'Protanopia'
+%                       'Tritanopia'
 %
 % Outputs:
 %   triRGBImgFormatCorrected:  - Transformed RGB image after PCA and scaling. Also replaced missing cone as done in other code 
@@ -40,15 +46,15 @@ function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,
 %
 % Examples:
 %{
-[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1)
-[RGBImage_dichromat] = dichromatCorrection('scene2.mat','Deuteranopia',1,'linTransform',10)
+[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'rand')
+[RGBImage_dichromat] = dichromatCorrection('scene2.mat','Deuteranopia',1,'linTransform',10,'Deuteranopia')
 %}
 
 % Close out any stray figures
 close all;
 
 % Get trichromatic (LMS) image
-[triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,bScale,nSquares);    
+[triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,bScale,nSquares,modType);    
 
 % Color correction to aid dichromacy
 switch (method)

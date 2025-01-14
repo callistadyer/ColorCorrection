@@ -24,7 +24,7 @@ function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,render
 
 % Examples:
 %{
-    [RGB_modulated lms_ModuledCalFormat] = isochromaticPlates('gray','Deuteranopia',.0005,0);
+    [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,renderType,LMSImageModulation,Disp,bScale,nSquares,options)
 %}
 
 %% Pick up optional arguments

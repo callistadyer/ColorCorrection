@@ -1,8 +1,8 @@
-function [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,nSquares)
+function [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,nSquares,modType)
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
-%   [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,nSquares)
+%   [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,nSquares,modType)
 %
 % Description:
 %
@@ -32,13 +32,13 @@ function [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_pl
 %   08/27/2024  dhb, cmd  It's working, cleaning up.
 % Examples:
 %{
-t_renderHyperspectralImage([],'Deuteranopia'  ,0,0,10)
+t_renderHyperspectralImage([],'Deuteranopia'  ,0,0,10,'rand')
 t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0,0,10)    
-[lmsImageCalFormat,lmsModuledCalFormat] = t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1,0,10);    
-t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,0,10)    
-t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,0,10)  
-t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,0,10)    
-t_renderHyperspectralImage('gray','Deuteranopia',0,0,10)           
+[lmsImageCalFormat,lmsModuledCalFormat] = t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1,0,10,'rand');    
+t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,0,10,'rand')    
+t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,0,10,'rand')  
+t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,0,10,'rand')    
+t_renderHyperspectralImage('gray','Deuteranopia',0,0,10,'rand')           
 %}
 
 %% Load hyperspectral image data
@@ -53,20 +53,12 @@ triLMScalFormat = Disp.T_cones*hyperspectralImageCalFormat;
 triRGBImgFormat                                  = CalFormatToImage(triRGBCalFormat,m,n);
 
 
-% Choose modulation directions. (nSquares different directions)
-modType = "rand";
-
 % Note: if you change modType to be "Deuteranopia" etc, then the following
 % code will be overwritten inside of getDichromatConfusionModulation.m ...
 % the vectors will be changed to the missing cone direction. otherwise,
 % random color directions will be used
 
-vectors = abs(randn(nSquares, 3));
-magnitudes = sqrt(sum(vectors.^2, 2));
-modDirection = (vectors ./ magnitudes);
-% Generate random vectors with all positive components
 vectors = rand(nSquares, 3); % Uniform random values between 0 and 1
-
 magnitudes = sqrt(sum(vectors.^2, 2)); % Compute the magnitudes
 modDirection = vectors ./ magnitudes;  % Normalize to unit vectors
 
