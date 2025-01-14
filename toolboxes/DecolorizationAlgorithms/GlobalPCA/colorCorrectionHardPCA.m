@@ -1,4 +1,47 @@
 function triLMScalFormatCorrected = colorCorrectionHardPCA(triLMSCalFormat,numPCs)
+% Perform color correction using hard PCA on trichromatic LMS data
+%
+% Syntax:
+%   triLMScalFormatCorrected = colorCorrectionHardPCA(triLMSCalFormat, numPCs)
+%
+% Description:
+%   This function applies principal component analysis (PCA) to the input 
+%   trichromatic LMS data using a "hard PCA" method. It iteratively computes 
+%   principal components by maximizing variance while projecting the data 
+%   onto the null space of previously computed components.
+%
+% Inputs:
+%   triLMSCalFormat:   - Matrix (NxM). Input trichromatic LMS data with N dimensions 
+%                        and M samples.
+%   numPCs:            - Integer. Number of principal components to compute.
+%
+% Outputs:
+%   triLMScalFormatCorrected: - Matrix (3xM). Corrected trichromatic LMS data 
+%                               transformed by the computed PCA components.
+%
+% Optional key/value pairs:
+%   None
+%
+% Notes:
+%   - Uses a custom optimization routine (`fmincon`) to compute the PCA 
+%     components.
+%   - Ensures that the computed principal components are unit-norm.
+%   - Removes components explained by previously computed principal components 
+%     through null space projection.
+%   - If the initial variance of the data is zero, a small positive value (`eps`) 
+%     is used to avoid division by zero.
+%
+% Examples:
+%{
+triLMSCalFormat = rand(3, 100); % Example trichromatic LMS data
+numPCs = 2; % Number of principal components
+triLMScalFormatCorrected = colorCorrectionHardPCA(triLMSCalFormat, numPCs);
+%}
+
+% History:
+%   01/14/2025  cmd creates func that was previously embedded in
+%   colorCorrectionPCA
+%
 
 disp(['Note: "pca the hard way"... problem because variance is 0 at starting point'])
 

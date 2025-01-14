@@ -1,13 +1,13 @@
 function [triLMSCalFormatOpt] = colorCorrectionOptimize(triLMSCalFormat, renderType, lambda_var,Disp,bScale)
-% Optimizes PCA projections to balance maximizing variance and similarity to original data.
+% Optimizes linear transformation of the original cone values
 %
 % Syntax:
 %   [triLMSCalFormatOpt] = colorCorrectionOptimize(triLMSCalFormat, renderType, lambda_var,Disp,bScale)
 %
 % Inputs:
-%   data:       Data to be projected (dimensions: variables x samples)
-%   bPLOT:      1 -> Plot the result, 0 -> Don't plot
-%   lambda_var: Weight for maximizing variance (0 <= lambda_var <= 1)
+%   triLMSCalFormat:    original LMS values to be transformed
+%   bPLOT:              1 -> Plot the result, 0 -> Don't plot
+%   lambda_var:         Weight for maximizing variance (0 <= lambda_var <= 1)
 %
 % Outputs:
 %   triLMSCalFormatOpt: Transformed LMS values 

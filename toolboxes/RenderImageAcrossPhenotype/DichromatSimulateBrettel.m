@@ -2,18 +2,17 @@ function [diXYZ] = DichromatSimulateBrettel(xyzImage, cbTypes,rgbImage)
 % Simulates color vision for dichromatic viewers using the Brettel, Vienot, Mollon (1997) method.
 %
 % Syntax:
-%   [srgb_dichromat, lmsDichromat, lmsTrichromat] = DichromatSimulateBrettel(rgbImage, cbTypes)
+%   [diXYZ] = DichromatSimulateBrettel(xyzImage, cbTypes,rgbImage)
 %
 % Inputs:
-%   rgbImage: Input RGB image (optional). If empty, defaults to '74.jpg' on the local path.
+%   xyzImage: Input XYZ image
 %   cbTypes:  Array of integers specifying the types of color blindness to simulate:
 %             1 = Protanopia, 2 = Deuteranopia, 3 = Tritanopia.
 %             Example: [1, 2] will simulate Protanopia and Deuteranopia.
+%   rgbImage: Input RGB image (optional). If empty, defaults to '74.jpg' on the local path.
 %
 % Outputs:
-%   srgb_dichromat: Simulated sRGB images for specified dichromatic viewers (cell array).
-%   lmsDichromat:   LMS values for the specified dichromatic viewers (cell array).
-%   lmsTrichromat:  LMS values for trichromatic viewers (normal vision).
+%   diXYZ:    dichromat XYZ values
 %
 % Description:
 %   This function renders images to simulate their appearance to color-blind viewers,
@@ -22,7 +21,7 @@ function [diXYZ] = DichromatSimulateBrettel(xyzImage, cbTypes,rgbImage)
 %   vision, and converts back to sRGB for visualization.
 %
 % History:
-%   01/10/2025 - Updated to dynamically use subplots for cbTypes by cmd.
+%   01/10/2025 - Updated for all cbTypes by cmd
 %
 % Examples:
 %{

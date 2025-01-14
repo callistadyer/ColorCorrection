@@ -1,4 +1,4 @@
-function [modulationLMS] = getDichromatConfusionModulation(rgbImageCalFormat,modulationDirection_LMS,renderType,Disp,scaleFactor,bScale)
+function [modulationLMS] = getDichromatConfusionModulation(rgbImageCalFormat,modulationDirection_LMS,modType,Disp,scaleFactor,bScale)
 
 % function that calculates the modulation in the L M or S cone based on the
 % input image and the gamut limitations
@@ -24,10 +24,11 @@ function [modulationLMS] = getDichromatConfusionModulation(rgbImageCalFormat,mod
 M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 
-% THIS OVERWRITES MODULATION INPUT TO MAKE ONLY INVISIBLE SQUARES... FOR
-disp('CALLISTA!! Make sure you can toggle this to modulate just one cone or random')
 % Which cone do you want to modulate
-switch (renderType)
+switch (modType)
+    case 'rand'
+        % This code case allows the squares to be random colors
+        modulationDirection_LMS = modulationDirection_LMS;
     case 'Deuteranopia' % m cone deficiency
         modulationDirection_LMS = [0 1 0]';
     case 'Protanopia'   % l cone deficiency
@@ -39,9 +40,6 @@ end
 % Convert modulation direction from LMS space to rgb space
 modulationDirection_rgb = M_cones2rgb*modulationDirection_LMS;
 
-if round(norm(modulationDirection_LMS),4) ~= 1
-    error('modulation direction not a unit vector')
-end
 
 % NOTE: this scaleFactor_rgb is for scaling the modulation direction. This
 % is different from scaleFactor that goes into rgb->LMS conversions (and

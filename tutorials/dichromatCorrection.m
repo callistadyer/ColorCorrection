@@ -1,7 +1,9 @@
 
 function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares)
-% Uses PCA to move 3D trichromatic image into 2 dimensions in attempt to
-% create an accessible image for a dichromat
+% Transform trichromatic image so that dichromat can see more color
+% contrast. Also want to try and preserve some naturalness. This is
+% accomplished in colorCorrectionOptimize where we incorporate similarity
+% to original in the loss function
 %
 % Syntax:
 %   [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares)

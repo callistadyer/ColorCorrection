@@ -2,7 +2,7 @@ function [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_pl
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
-%   t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod)
+%   [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,nSquares)
 %
 % Description:
 %
@@ -32,13 +32,13 @@ function [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_pl
 %   08/27/2024  dhb, cmd  It's working, cleaning up.
 % Examples:
 %{
-t_renderHyperspectralImage([],'Deuteranopia'  ,0,1,0,10)
-t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0,1,0,10)    
+t_renderHyperspectralImage([],'Deuteranopia'  ,0,0,10)
+t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0,0,10)    
 [lmsImageCalFormat,lmsModuledCalFormat] = t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1,0,10);    
-t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1,0,10)    
-t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1,0,10)  
-t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1,0,10)    
-t_renderHyperspectralImage('gray','Deuteranopia',0,0,0,10)           
+t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,0,10)    
+t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,0,10)  
+t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,0,10)    
+t_renderHyperspectralImage('gray','Deuteranopia',0,0,10)           
 %}
 
 %% Load hyperspectral image data
@@ -52,22 +52,20 @@ triLMScalFormat = Disp.T_cones*hyperspectralImageCalFormat;
 [triRGBCalFormat,triRGBLinCalFormat,scaleFactor] = LMS2RGBCalFormat(triLMScalFormat,Disp,bScale);
 triRGBImgFormat                                  = CalFormatToImage(triRGBCalFormat,m,n);
 
-% % Choose modulation directions. (nSquares different directions)
-% vectors = abs(randn(nSquares, 3));
-% magnitudes = sqrt(sum(vectors.^2, 2));
-% modDirection = (vectors ./ magnitudes);
 
+% Choose modulation directions. (nSquares different directions)
+modType = "rand";
+
+% Note: if you change modType to be "Deuteranopia" etc, then the following
+% code will be overwritten inside of getDichromatConfusionModulation.m ...
+% the vectors will be changed to the missing cone direction. otherwise,
+% random color directions will be used
+
+vectors = abs(randn(nSquares, 3));
+magnitudes = sqrt(sum(vectors.^2, 2));
+modDirection = (vectors ./ magnitudes);
 % Generate random vectors with all positive components
 vectors = rand(nSquares, 3); % Uniform random values between 0 and 1
-% % all deuteronope blind
-% vectors(:,1) = zeros(nSquares,1);
-% vectors(:,3) = zeros(nSquares,1);
-
-% if size(vectors,1) >3 1
-% vectors(1,:) = [1 0 0];
-% vectors(2,:) = [0 1 0];
-% vectors(3,:) = [0 0 1];
-% end
 
 magnitudes = sqrt(sum(vectors.^2, 2)); % Compute the magnitudes
 modDirection = vectors ./ magnitudes;  % Normalize to unit vectors
@@ -76,7 +74,7 @@ modDirection = vectors ./ magnitudes;  % Normalize to unit vectors
 % This function is taking rgbLinImageCalFormat2 and using MaximizeGamutContrast to determine how much we can move
 % in a given cone direction (specifically, the direction of the missing cone) without going out of gamut
 for i = 1:nSquares
-    [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(triRGBLinCalFormat,modDirection(i,:)',renderType,Disp,scaleFactor,bScale);
+    [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(triRGBLinCalFormat,modDirection(i,:)',modType,Disp,scaleFactor,bScale);
 end
 
 % Create isochromatic plates
