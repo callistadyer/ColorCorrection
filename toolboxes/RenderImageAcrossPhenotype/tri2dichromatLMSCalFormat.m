@@ -20,49 +20,66 @@ function [diLMSCalFormat] = tri2dichromatLMSCalFormat(triLMSCalFormat,renderType
 % Optional key/value pairs:
 %   None
 
-l_cone = triLMSCalFormat(1,:);
-m_cone = triLMSCalFormat(2,:);
-s_cone = triLMSCalFormat(3,:);
+switch (renderType)
+    case 'Deuteranopia' % m cone deficiency
+        cbType = 2;
+    case 'Protanopia'   % l cone deficiency
+        cbType = 1;
+    case 'Tritanopia'   % s cone deficiency
+        cbType = 3;
+end
 
-% NOTE WELL:
+% LMS --> Linear RGB (so we can go from RGB --> XYZ)
+triRGBlinCalFormat = LMS2rgbLinCalFormat(triLMSCalFormat,Disp,0);
+
+% Matrix to convert from rgb to xyz
+% Note: this matrix must be applied on the LEFT!!
+M_rgb2xyz = Disp.T_xyz*Disp.P_monitor;
+M_xyz2rgb = inv(M_rgb2xyz);
+
+% Linear RGB --> XYZ (Brettel takes in XYZ)
+triXYZCalFormat = M_rgb2xyz * triRGBlinCalFormat;
+% Cal Format --> Image Format
+triXYZImgFormat = CalFormatToImage(triXYZCalFormat,Disp.m,Disp.n);
+
+%%%%%%%%% Dichromat Simulation (Brettel) %%%%%%%%%%%%%%%%%%%%%%
+[diXYZ] = DichromatSimulateBrettel([], cbType, triXYZImgFormat);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Image Format --> CalFormat
+diXYZCalFormat = ImageToCalFormat(diXYZ);
+% XYZ --> Linear RGB
+diRGBLinCalFormat = M_xyz2rgb * diXYZCalFormat;
+diRGBLinImgFormat = CalFormatToImage(diRGBLinCalFormat,Disp.m,Disp.n);
+% Quick snipping if the vals are only over by a small amount
+if max(diRGBLinImgFormat(:)) < 1.01
+    diRGBLinImgFormat(diRGBLinImgFormat>1) = .99;
+end
+% Linear RGB --> LMS 
+diLMSImgFormat = rgbLin2LMSimg(diRGBLinImgFormat,Disp,1,0);
+% Image --> Cal Format
+diLMSCalFormat = ImageToCalFormat(diLMSImgFormat);
+
+% CHECK IF MODULATED LMS IS IN GAMUT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+inGamut = checkGamut(diLMSCalFormat,Disp,bScale);
+if inGamut == 0
+    error(['tri2dichromatLMSCalFormat: WARNING! rgb values are out of gamut... lmsImage_mod values outside of the range [0 1]']);
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% This function doesn't work... my attempt at Brettel simulation (use DichromatSimulateBrettel instead)  
+% diLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp);
+
+%%%% OLD WAY OF SIMULATING DICHROMAT... THIS PUSHES STUFF OUT OF GAMUT, AND IS ALSO KINDA ARBITRARY %%%% 
+% NOTE WELL: (outdated)
 % To get the renderings to look right, we are using the mean value of
 % at the missing cone plane to get the scale of our substitution
 % right.  Presumably this could be done once by analyzing a full ensemble
 % of images, but we are going to worry about that later.
-
-%%%%%%%%%%%%%%%%%%% CALLISTA WORK ON THIS!!!!
-% disp(['callista work on this! choose how to simulate dichromat']);
-lmsImage = CalFormatToImage(triLMSCalFormat,Disp.m,Disp.n);
-triRGBlinCalFormat = LMS2rgbLinCalFormat(triLMSCalFormat,Disp,0);
-triRGBlinImgFormat = CalFormatToImage(triRGBlinCalFormat,Disp.m,Disp.n);
-
-% Converting into XYZ space for Brettel code
-load T_xyz1931.mat
-T_xyz = SplineCmf(S_xyz1931,T_xyz1931,Disp.wls);
-Disp.T_xyz = T_xyz;
-
-% Matrix to convert from rgb to xyz
-M_rgb2xyz = Disp.T_xyz*Disp.P_monitor;
-M_xyz2rgb = inv(M_rgb2xyz);
-
-triXYZCalFormat = M_rgb2xyz * triRGBlinCalFormat;
-triXYZImgFormat = CalFormatToImage(triXYZCalFormat,Disp.m,Disp.n);
-[diXYZ] = DichromatSimulateBrettel([], 2, triXYZImgFormat);
-
-diXYZCalFormat = ImageToCalFormat(diXYZ);
-
-diRGBCalFormat = M_xyz2rgb * diXYZCalFormat;
-diRGBImgFormat = CalFormatToImage(diRGBCalFormat,Disp.m,Disp.n);
-% Quick snipping if only over by a small amount
-if max(diRGBImgFormat(:)) < 1.01
-    diRGBImgFormat(diRGBImgFormat>1) = .99;
-end
-diLMSImgFormat = rgbLin2LMSimg(diRGBImgFormat,Disp,1,0);
-diLMSCalFormat = ImageToCalFormat(diLMSImgFormat);
-% diLMSCalFormat = RGB2LMSimg(diRGBImgFormat,Disp,1,0);
-
-% diLMSCalFormat = simulateDichromatBrettel(lmsImage,renderType,Disp);
-
+% l_cone = triLMSCalFormat(1,:);
+% m_cone = triLMSCalFormat(2,:);
+% s_cone = triLMSCalFormat(3,:);
 % % Make dichromat manipulation - missing cone
 % switch (renderType)
 %     case 'Deuteranopia' % m cone deficiency
@@ -81,13 +98,5 @@ diLMSCalFormat = ImageToCalFormat(diLMSImgFormat);
 % end
 
 %dichromatLMSCalFormat = lmsImageCalFormat;
-
-% CHECK IF MODULATED LMS IS IN GAMUT
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-inGamut = checkGamut(diLMSCalFormat,Disp,bScale);
-if inGamut == 0
-    error(['tri2dichromatLMSCalFormat: WARNING! rgb values are out of gamut... lmsImage_mod values outside of the range [0 1]']);
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 end

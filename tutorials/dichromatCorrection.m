@@ -47,7 +47,7 @@ function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,
 close all;
 
 % Get trichromatic (LMS) image
-[triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,bScale,bMinMod,nSquares);    
+[triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,bScale,nSquares);    
 
 % Color correction to aid dichromacy
 [triLMScalFormatCorrected       triLMSmeans]                   = colorCorrection(triLMSCalFormat,renderType,Disp,bScale);   % Original image

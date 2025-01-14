@@ -1,4 +1,4 @@
-function [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,bMinMod,nSquares)
+function [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,bScale,nSquares)
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
@@ -18,11 +18,6 @@ function [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_pl
 %   bPLOTscatter  - Boolean. Plot scatter plots of lms values (1 or 0)
 %   bScale:       - Boolean. Scale the image values into display range (1
 %                   or 0).  A good idea except for 'gray'.
-%   bMinMod:      - Boolean. When modulating the image in L M or S cone
-%                   dimension, do this separately for each pixel (0),
-%                   maximizing the modulation within the display gamut.  Or
-%                   (1) take the minimum of the modulations that are within
-%                   gamut for all pixels.
 %
 % Outputs:
 %   None
@@ -48,28 +43,6 @@ t_renderHyperspectralImage('gray','Deuteranopia',0,0,0,10)
 
 %% Load hyperspectral image data
 [hyperspectralImage Disp] = loadImage(image);
-% 
-% % NEW STUFF TO PLAY WITH !!!!!!!
-% % Original LMS image for trichromat
-% lms =  xyz2lms(Disp.imgXYZ, 2, Disp.whiteXYZ);
-% cbXYZ = imageLinearTransform(lms, colorTransformMatrix('lms2xyz'));
-% [deuterRGBImage lrgb] = xyz2srgb(cbXYZ);
-% [trichromRGB lrgbtri] = xyz2srgb(Disp.imgXYZ);
-% deuterLMSimage = rgbLin2LMSimg(lrgb,Disp,1,0);
-% 
-% 
-% if strcmp(image,'gray')
-%     for i = 1:nSquares
-%         [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(ImageToCalFormat(trichromRGB),[0 1 0],0,Disp,1,0);
-%     end
-% else
-%     lmsModulationImgFormat = getDichromatConfusionModulation(rgbLinImageCalFormat2,renderType,bMinMod,T_cones,P_monitor,scaleFactor,m,n,bScale);
-% end
-% 
-% % Create isochromatic plates
-% [RGBModulated lmsModuledCalFormatTrichromat] = isochromaticPlates(lms,renderType,lmsModulationImgFormat,Disp,bScale,nSquares, ...
-%     'verbose',true);
-% 
 
 % Get cone responses for every pixel of the hyperspectral image
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
@@ -103,7 +76,7 @@ modDirection = vectors ./ magnitudes;  % Normalize to unit vectors
 % This function is taking rgbLinImageCalFormat2 and using MaximizeGamutContrast to determine how much we can move
 % in a given cone direction (specifically, the direction of the missing cone) without going out of gamut
 for i = 1:nSquares
-    [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(triRGBLinCalFormat,modDirection(i,:)',bMinMod,Disp,scaleFactor,bScale);
+    [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(triRGBLinCalFormat,modDirection(i,:)',renderType,Disp,scaleFactor,bScale);
 end
 
 % Create isochromatic plates

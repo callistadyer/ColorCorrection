@@ -44,7 +44,7 @@ if nargin < 1 || isempty(rgbImage)
     rgbImage = double(rgbImage)/255;
 end
 
-% Turn the image we read into gray
+% Turn the image we read into gray (test! gray should be gray in this algorithm)
 forceGray = false;
 if (forceGray)
     rgbImage = 0.7*ones(size(rgbImage));

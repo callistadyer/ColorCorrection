@@ -1,11 +1,14 @@
-function [modulationLMS] = getDichromatConfusionModulation(rgbImageCalFormat,modulationDirection_LMS,takeMin,Disp,scaleFactor,bScale)
+function [modulationLMS] = getDichromatConfusionModulation(rgbImageCalFormat,modulationDirection_LMS,renderType,Disp,scaleFactor,bScale)
 
 % function that calculates the modulation in the L M or S cone based on the
 % input image and the gamut limitations
 %
 % inputs
 % rgbImageCalFormat: rgb in cal format
-% renderType:        type of dichromacy
+% renderType    - String. Type of dichromat.  Options are:
+%                       'Deuteranopia'
+%                       'Protanopia'
+%                       'Tritanopia'
 % takeMin:           take the minimum modulation of all the pixels?
 %                    0 -> dont take min
 %                    1 -> take min
@@ -22,8 +25,7 @@ M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 
 % THIS OVERWRITES MODULATION INPUT TO MAKE ONLY INVISIBLE SQUARES... FOR
-% TESTING
-renderType = 'Deuteranopia';
+disp('CALLISTA!! Make sure you can toggle this to modulate just one cone or random')
 % Which cone do you want to modulate
 switch (renderType)
     case 'Deuteranopia' % m cone deficiency
@@ -47,11 +49,6 @@ end
 % Background is the value of each pixel: this determines cone contrast separately for each pixel
 for i = 1:size(rgbImageCalFormat,2)
 scaleFactor_rgb(:,i) = MaximizeGamutContrast(modulationDirection_rgb,rgbImageCalFormat(:,i)); % bg is in rgb cal format
-end
-
-if takeMin == 1
-% Use these two lines to use the same modulation for all pixels... will need to take the minimum mod of all 
-scaleFactor_rgb = min(scaleFactor_rgb(:));        % minimum modulation of all pixels
 end
 
 % Stay away from the very edge
