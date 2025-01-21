@@ -54,7 +54,6 @@ triLMSCalFormatEst = K * triLMSCalFormatOpt + triLMSmeans;
 % Get rgb values
 M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
-rgbLinImageCalFormat = M_cones2rgb*triLMSCalFormatEst;
 
 % dichromat rendering
 % LMS --> Linear RGB (so we can go from RGB --> XYZ)
@@ -97,7 +96,7 @@ diLMSCalFormat = ImageToCalFormat(diLMSImgFormat);
 % di_rgbLinImageCalFormat = M_cones2rgb*dichromatLMSCalFormat;
 
 % Ensure rgb is not <0 or >1
-if min(diRGBLinImgFormat(:)) < 0 || max(diRGBLinImgFormat(:)) > 1 ...
+if min(triRGBlinCalFormat(:)) < 0 || max(triRGBlinCalFormat(:)) > 1 ...
         || min(diRGBLinImgFormat(:)) < 0 || max(diRGBLinImgFormat(:)) > 1 
     obj = Inf;
 
