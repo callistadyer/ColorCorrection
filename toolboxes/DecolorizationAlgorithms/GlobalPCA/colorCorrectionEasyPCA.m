@@ -1,4 +1,4 @@
-function triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,Disp,bScale)
+function triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,renderType,Disp,bScale)
 
 % Syntax:
 %   triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,Disp,bScale)
@@ -39,49 +39,52 @@ triLMSCalFormatOpt(2,:) = triLMSCalFormatOpt(1,:);
 triLMSCalFormatOpt(3,:) = triLMSCalFormatOpt(2,:);
 
 %% Find the scaling matrix that maps D_ms onto approximate cone values
+scale = 1;
+if scale == 1
+    % Initial guess for K
+    initialKvec = [0.1, 0.1, 0.1];
 
-% Initial guess for K
-initialKvec = [0.1, 0.1, 0.1];
+    % Define the constraints
+    A = [];
+    b = [];
+    Aeq = [];
+    beq = [];
+    lb = []; % Lower bounds
+    ub = []; % Upper bounds
 
-% Define the constraints
-A = [];
-b = [];
-Aeq = [];
-beq = [];
-lb = []; % Lower bounds
-ub = []; % Upper bounds
+    % Options
+    options = optimset('fmincon');
+    options = optimset(options,'Diagnostics','off','Display','iter','LargeScale','off','Algorithm','active-set');
 
-% Options
-options = optimset('fmincon');
-options = optimset(options,'Diagnostics','off','Display','iter','LargeScale','off','Algorithm','active-set');
+    % Call fmincon
+    [K_optvec, fval] = fmincon(@(kVec) T_EstObjectiveFunction(kVec, triLMSCalFormatOpt, triLMSmeans, renderType, Disp, bScale), initialKvec, A, b, Aeq, beq, lb, ub, [], options);
 
-% Call fmincon
-[K_optvec, fval] = fmincon(@(kVec) T_EstObjectiveFunction(kVec, triLMSCalFormatOpt, triLMSmeans, renderType, Disp, bScale), initialKvec, A, b, Aeq, beq, lb, ub, [], options);
+    K_opt = diag(K_optvec);
+    % Display results
+    disp('Optimal K:');
+    disp(K_optvec);
+    disp('Objective Function Value:');
+    disp(fval);
 
-K_opt = diag(K_optvec);
-% Display results
-disp('Optimal K:');
-disp(K_optvec);
-disp('Objective Function Value:');
-disp(fval);
+    disp(['Note: colorCorrectionPCA scaling in lines 100-120 do NOT work when you dont add mean back in'])
+    % T_opt = K_opt * projected_data;
+    % Add back in mean when you do easy pca
+    T_opt = K_opt * triLMSCalFormatOpt + triLMSmeans;
 
-disp(['Note: colorCorrectionPCA scaling in lines 100-120 do NOT work when you dont add mean back in'])
-% T_opt = K_opt * projected_data;
-% Add back in mean when you do easy pca
-T_opt = K_opt * triLMSCalFormatOpt + triLMSmeans;
-
-triLMScalFormatCorrected = T_opt;
-
-% OK let's try scaling here to stay in gamut... ideally we would do this in
-% optimization but we cannot because we need ALL cone values to tell if it
-% is in gamut, but we are optimizing one at a time
-% [correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
-% correctedLMS = correctedLMS_scaled;
-% inGamutColorCorrectionPCA = checkGamut(correctedLMS,Disp,bScale);
-% if inGamutColorCorrectionPCA == 0
-%     [correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
-%     correctedLMS = correctedLMS_scaled;
-%     % error('PCA pushing out of gamut')
-% end
+    triLMScalFormatCorrected = T_opt;
+else
+    triLMScalFormatCorrected = triLMSCalFormatOpt;
+    % OK let's try scaling here to stay in gamut... ideally we would do this in
+    % optimization but we cannot because we need ALL cone values to tell if it
+    % is in gamut, but we are optimizing one at a time
+    % [correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
+    % correctedLMS = correctedLMS_scaled;
+    % inGamutColorCorrectionPCA = checkGamut(correctedLMS,Disp,bScale);
+    % if inGamutColorCorrectionPCA == 0
+    %     [correctedLMS_scaled, k] = scaleInGamut(correctedLMS,Disp,bScale);
+    %     correctedLMS = correctedLMS_scaled;
+    %     % error('PCA pushing out of gamut')
+    % end
+end
 
 end
