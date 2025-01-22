@@ -73,7 +73,7 @@ end
     [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
         T0, A, b, [], [], [], [], [], options);
 
-    fValOpt = loss_function(transformRGB_opt, triLMSCalFormatTran, M_cones2rgb', lambda_var,renderType, Disp)
+    fValOpt = loss_function(transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp)
     bCheck = A*transformRGB_opt(:);
     if (any(bCheck > b))
         fprintf('Failed to satisfy constraint\n');
