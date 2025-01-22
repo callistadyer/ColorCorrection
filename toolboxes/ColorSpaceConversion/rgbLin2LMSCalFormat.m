@@ -1,14 +1,14 @@
 function lmsCalFormat = rgbLin2LMSCalFormat(rgbLinCalFormat,Disp,scaleFactor,bScale)
 
-% function takes rgb image in image format and outputs LMS image in image format 
+% function takes rgb in cal format and outputs LMS image in cal format 
 %
 % Syntax:
-%   lmsImage = rgbLin2LMSimg(rgbImage,T_cones,P_monitor,scaleFactor,m,n,bScale)
+%   lmsCalFormat = rgbLin2LMSCalFormat(rgbLinCalFormat,Disp,scaleFactor,bScale)
 %
 % Description:
 %
 % Inputs:
-%   rgbImage              - linear rgb image
+%   rgbLinCalFormat       - linear rgb image
 %   Disp includes:
 %       Disp.T_cones               - [3xnWl]. Cone spectral sensitivities
 %       Disp.P_monitor             - [nWlx3]. Display primaries
@@ -18,7 +18,7 @@ function lmsCalFormat = rgbLin2LMSCalFormat(rgbLinCalFormat,Disp,scaleFactor,bSc
 %   bScale                - Boolean. Scale or not 
 %
 % Outputs:
-%   lmsImage              - LMS image
+%   lmsCalFormat          - LMS image
 %
 % Optional key/value pairs:
 %   None
