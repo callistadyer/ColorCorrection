@@ -58,8 +58,8 @@ end
 
     % Constraint matrix (A, includes lots of I iterations) and vector (b)
     % triLMSCalFormatTran: trichromat LMS values in [nPix x 3] form
-    triRGBCalFormatTranOpt = triLMSCalFormat' * M_cones2rgb';
-    A_upper = blkdiag(triRGBCalFormatTranOpt, triRGBCalFormatTranOpt, triRGBCalFormatTranOpt);      % Upper constraint blocks
+    triRGBCalFormatTran = triLMSCalFormat' * M_cones2rgb';
+    A_upper = blkdiag(triRGBCalFormatTran, triRGBCalFormatTran, triRGBCalFormatTran);      % Upper constraint blocks
     A_lower = -A_upper;              % for -I * X <= 0
     A = double([A_upper; A_lower]); 
     b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
@@ -120,18 +120,18 @@ end
     % T scales the RGB values
     % altogether, (LMSCalFormatTran * M_cones2rgb' * T) returns scaled RGB values in calFormatTransposed format
 
-    RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
+    newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
 
     % Convert to LMS
-    LMSCalFormatTran = RGBCalFormatTran*inv(M_cones2rgb');
+    newLMSCalFormatTran = newRGBCalFormatTran*inv(M_cones2rgb)';
 
     % Get into cal format
-    LMSCalFormat = LMSCalFormatTran';
-    RGBCalFormat = RGBCalFormatTran';
+    newLMSCalFormat = newLMSCalFormatTran';
+    % newRGBCalFormat = newRGBCalFormatTran';
 
     % Check in gamut?
-    minRGB = min(RGBCalFormatTran(:));
-    maxRGB = max(RGBCalFormatTran(:));
+    minRGB = min(newRGBCalFormatTran(:));
+    maxRGB = max(newRGBCalFormatTran(:));
 
     % Penalize out of gamut
     if minRGB < 0
@@ -150,15 +150,19 @@ end
         case 'Tritanopia'   % s cone deficiency
             index = [1 2];
     end
+
     % Variance term
-    var_term = lambda * (var(LMSCalFormat(index(1), :)) + var(LMSCalFormat(index(2), :)));
+    var_term = lambda * (var(newLMSCalFormat(index(1), :)) + var(newLMSCalFormat(index(2), :)));
 
     % Similarity term
-    dot_term = (1 - lambda) *   (dot(LMSCalFormatTran(:, 1), LMSCalFormatTran(:, 1)) / norm(LMSCalFormatTran(:, 1))) + ...
-                                (dot(LMSCalFormatTran(:, 2), LMSCalFormatTran(:, 2)) / norm(LMSCalFormatTran(:, 2))) + ...
-                                (dot(LMSCalFormatTran(:, 3), LMSCalFormatTran(:, 3)) / norm(LMSCalFormatTran(:, 3)));
+    dot_term = (1 - lambda) * ( (dot(newLMSCalFormatTran(:, 1), LMSCalFormatTran(:, 1)) / norm(LMSCalFormatTran(:, 1))) + ...
+                                (dot(newLMSCalFormatTran(:, 2), LMSCalFormatTran(:, 2)) / norm(LMSCalFormatTran(:, 2))) + ...
+                                (dot(newLMSCalFormatTran(:, 3), LMSCalFormatTran(:, 3)) / norm(LMSCalFormatTran(:, 3))) );
     % Loss
     loss = -(var_term + dot_term) + lossGamutTerm;
+
+    % Scale loss into a reasonable range
+    loss = 10e11*loss;
     
     end
 
