@@ -82,7 +82,7 @@ if (max(diRGBLinImgFormat(:)) > 1) && (max(diRGBLinImgFormat(:)) < 1.01)
     diRGBLinImgFormat(diRGBLinImgFormat>1) = .99;
 end
 % Linear RGB --> LMS 
-diLMSCalFormat = rgbLin2LMSimg(diRGBLinCalFormat,Disp,1,0);
+diLMSCalFormat = rgbLin2LMSCalFormat(diRGBLinCalFormat,Disp,1,0);
 
 % DichromatSimulateBrettel()
 % dichromatLMSCalFormat = DichromatSimulateBrettel(triLMSCalFormatEst,renderType,Disp);
