@@ -70,8 +70,8 @@ switch (method)
         triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,renderType,Disp,bScale);
     case 'hardPCA'
         numPCs = 2;
-        triLMScalFormatCorrected = colorCorrectionHardPCA(triLMSCalFormat,numPCs);
-        triLMScalFormatCorrected_plate = colorCorrectionHardPCA(triLMSCalFormat_plate,numPCs);
+        triLMScalFormatCorrected = colorCorrectionHardPCA(triLMSCalFormat,numPCs,Disp);
+        triLMScalFormatCorrected_plate = colorCorrectionHardPCA(triLMSCalFormat_plate,numPCs,Disp);
 end
 %%%% Old colorCorrection function %%%%
 % [triLMScalFormatCorrected       triLMSmeans]                   = colorCorrection(triLMSCalFormat,renderType,Disp,bScale);   % Original image

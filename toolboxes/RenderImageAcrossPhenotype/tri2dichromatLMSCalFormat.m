@@ -31,6 +31,9 @@ end
 
 % LMS --> Linear RGB (so we can go from RGB --> XYZ)
 triRGBlinCalFormat = LMS2rgbLinCalFormat(triLMSCalFormat,Disp,0);
+% if (max(triRGBlinCalFormat(:)) > 1) && (max(triRGBlinCalFormat(:)) < 1.01)
+%     triRGBlinCalFormat(triRGBlinCalFormat>1) = .99;
+% end
 
 % Matrix to convert from rgb to xyz
 % Note: this matrix must be applied on the LEFT!!
@@ -52,8 +55,8 @@ diXYZCalFormat = ImageToCalFormat(diXYZ);
 diRGBLinCalFormat = M_xyz2rgb * diXYZCalFormat;
 diRGBLinImgFormat = CalFormatToImage(diRGBLinCalFormat,Disp.m,Disp.n);
 % Quick snipping if the vals are only over by a small amount
-if (max(diRGBLinImgFormat(:)) > 1) && (max(diRGBLinImgFormat(:)) < 1.01)
-    diRGBLinImgFormat(diRGBLinImgFormat>1) = .99;
+if (max(diRGBLinCalFormat(:)) > 1) && (max(diRGBLinCalFormat(:)) < 1.01)
+    diRGBLinCalFormat(diRGBLinCalFormat>1) = .99;
 end
 % Linear RGB --> LMS 
 diLMSCalFormat = rgbLin2LMSCalFormat(diRGBLinCalFormat,Disp,1,0);

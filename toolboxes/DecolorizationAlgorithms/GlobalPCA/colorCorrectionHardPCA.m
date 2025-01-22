@@ -1,4 +1,4 @@
-function triLMScalFormatCorrected = colorCorrectionHardPCA(triLMSCalFormat,numPCs)
+function triLMScalFormatCorrected = colorCorrectionHardPCA(triLMSCalFormat,numPCs,Disp)
 % Perform color correction using hard PCA on trichromatic LMS data
 %
 % Syntax:
