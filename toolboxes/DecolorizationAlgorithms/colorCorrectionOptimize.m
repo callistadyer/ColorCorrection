@@ -73,7 +73,7 @@ end
     [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
         T0, A, b, [], [], [], [], [], options);
 
-    fValOpt = loss_function(transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp)
+    fValOpt = loss_function(transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
     bCheck = A*transformRGB_opt(:);
     if (any(bCheck > b))
         fprintf('Failed to satisfy constraint\n');
@@ -152,17 +152,34 @@ end
     end
 
     % Variance term
-    var_term = lambda * (var(newLMSCalFormat(index(1), :)) + var(newLMSCalFormat(index(2), :)));
+    var_term_raw = (var(newLMSCalFormat(index(1), :)) + var(newLMSCalFormat(index(2), :)));
+    var_term = lambda*var_term_raw;
+    
+    % Set a balance factor that brings the variance term to order 1
+    balanceFactor = 10e4;
+    var_term_balance = balanceFactor * var_term;
 
     % Similarity term
-    dot_term = (1 - lambda) * ( (dot(newLMSCalFormatTran(:, 1), LMSCalFormatTran(:, 1)) / norm(LMSCalFormatTran(:, 1))) + ...
-                                (dot(newLMSCalFormatTran(:, 2), LMSCalFormatTran(:, 2)) / norm(LMSCalFormatTran(:, 2))) + ...
-                                (dot(newLMSCalFormatTran(:, 3), LMSCalFormatTran(:, 3)) / norm(LMSCalFormatTran(:, 3))) );
+    similarityType = 'angle';
+    switch (similarityType)
+        case 'angle'
+            similarity_term_raw = (newLMSCalFormatTran(:)'*LMSCalFormatTran(:))/(norm(newLMSCalFormatTran(:))*norm(LMSCalFormatTran(:)));
+        case 'distance'
+            similarity_term_raw = norm(newLMSCalFormatTran(:)-LMSCalFormatTran(:))/norm(LMSCalFormatTran(:));
+        otherwise
+            error('Unknown similarity type specified');
+    end
+    similarity_term = (1-lambda)*similarity_term_raw;
+    
     % Loss
-    loss = -(var_term + dot_term) + lossGamutTerm;
+    %
+    % Scale loss so that it is small enough to make fmincon happy but not
+    % so small that it is unhappy.
+    fminconFactor = 10^11/balanceFactor;
+    loss = -fminconFactor*(var_term_balance + similarity_term) + lossGamutTerm;
 
     % Scale loss into a reasonable range
-    loss = 10e11*loss;
+    % loss = 10e11*loss;
     
     end
 
