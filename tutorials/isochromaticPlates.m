@@ -76,16 +76,16 @@ RGBCalFormat_plate = LMS2RGBCalFormat(LMSCalFormat_plate,Disp,bScale);
 % convert to image for viewing
 RGBimageModulated = CalFormatToImage(RGBCalFormat_plate,m,n);
 
-figure('position',[927         886        1245         367]);
-subplot(1,2,1)
-imshow(RGBimage)
-title('original image')
-
-subplot(1,2,2)
-imshow(RGBimageModulated)
-title([renderType ' testing plate'])
-
-sgtitle('Isochromatic Plates')
+% figure('position',[927         886        1245         367]);
+% subplot(1,2,1)
+% imshow(RGBimage)
+% title('original image')
+% 
+% subplot(1,2,2)
+% imshow(RGBimageModulated)
+% title([renderType ' testing plate'])
+% 
+% sgtitle('Isochromatic Plates')
 
 
 end
