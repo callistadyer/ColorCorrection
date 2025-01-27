@@ -29,11 +29,11 @@ switch (modType)
     case 'rand'
         % This code case allows the squares to be random colors
         modulationDirection_LMS = modulationDirection_LMS;
-    case 'Deuteranopia' % m cone deficiency
+    case 'M' % m cone deficiency
         modulationDirection_LMS = [0 1 0]';
-    case 'Protanopia'   % l cone deficiency
+    case 'L'   % l cone deficiency
         modulationDirection_LMS = [1 0 0]';
-    case 'Tritanopia'   % s cone deficiency
+    case 'S'   % s cone deficiency
         modulationDirection_LMS = [0 0 1]';
 end
 
