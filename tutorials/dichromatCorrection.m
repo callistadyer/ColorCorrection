@@ -46,9 +46,9 @@ function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,
 %
 % Examples:
 %{
-[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'Deuteranopia')
-[RGBImage_dichromat] = dichromatCorrection('74','Deuteranopia',0,'linTransform',1,'Deuteranopia')
-[RGBImage_dichromat] = dichromatCorrection('scene2.mat','Deuteranopia',1,'linTransform',10,'Deuteranopia')
+[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'Deuteranopia');
+[RGBImage_dichromat] = dichromatCorrection('74','Deuteranopia',0,'linTransform',1,'Deuteranopia');
+[RGBImage_dichromat] = dichromatCorrection('scene2.mat','Deuteranopia',1,'linTransform',10,'Deuteranopia');
 %}
 
 % Close out any stray figures

@@ -55,7 +55,7 @@ diXYZCalFormat = ImageToCalFormat(diXYZ);
 diRGBLinCalFormat = M_xyz2rgb * diXYZCalFormat;
 diRGBLinImgFormat = CalFormatToImage(diRGBLinCalFormat,Disp.m,Disp.n);
 % Quick snipping if the vals are only over by a small amount
-if (max(diRGBLinCalFormat(:)) > 1) && (max(diRGBLinCalFormat(:)) < 1.01)
+if (max(diRGBLinCalFormat(:)) > 1) && (max(diRGBLinCalFormat(:)) < 1.1)
     diRGBLinCalFormat(diRGBLinCalFormat>1) = .99;
 end
 % Linear RGB --> LMS 

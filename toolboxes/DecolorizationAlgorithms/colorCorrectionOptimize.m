@@ -69,7 +69,7 @@ end
     T0 = T0(:);
 
     % OPTIMIZATION SETUP
-    options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',30);
+    options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',50);
     [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
         T0, A, b, [], [], [], [], [], options);
 
