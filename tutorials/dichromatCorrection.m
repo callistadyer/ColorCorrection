@@ -1,5 +1,5 @@
 
-function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType)
+function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType,lambda_var)
 % Transform trichromatic image so that dichromat can see more color
 % contrast. Also want to try and preserve some naturalness. This is
 % accomplished in colorCorrectionOptimize where we incorporate similarity
@@ -46,13 +46,18 @@ function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,
 %
 % Examples:
 %{
-[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M');
-[RGBImage_dichromat] = dichromatCorrection('74','Deuteranopia',0,'linTransform',1,'M');
-[RGBImage_dichromat] = dichromatCorrection('scene2.mat','Deuteranopia',1,'linTransform',10,'M');
+lambdas = linspace(0,.1,10)
+for i = 1:length(lambdas)
+[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',lambdas(i));
+end
+
+[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',0.1);
+[RGBImage_dichromat] = dichromatCorrection('74','Deuteranopia',0,'linTransform',1,'M',0.1);
+[RGBImage_dichromat] = dichromatCorrection('scene2.mat','Deuteranopia',1,'linTransform',10,'M',0.1);
 %}
 
 % Close out any stray figures
-close all;
+% close all;
 
 % Get trichromatic (LMS) image
 [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,bScale,nSquares,modType);    
@@ -62,7 +67,7 @@ switch (method)
     case 'linTransform'
         % decolorOptimize does mean subtraction, then maximizes variance fmincon 
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
-        lambda_var = 0.1;
+        % lambda_var = 0.1;
         [triLMScalFormatCorrected] = colorCorrectionOptimize(triLMSCalFormat,renderType,lambda_var,Disp,bScale);
         [triLMScalFormatCorrected_plate] = colorCorrectionOptimize(triLMSCalFormat_plate,renderType,lambda_var,Disp,bScale);
     case 'easyPCA'

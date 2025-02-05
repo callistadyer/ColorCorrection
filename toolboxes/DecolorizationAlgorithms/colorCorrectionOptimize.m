@@ -66,7 +66,9 @@ end
 
     % Initial guess at transformation matrix - start with identity
     T0 = eye(3, 3);
-    T0 = T0(:);
+    % T0 = T0 * 0.8;
+    % T0(T0==0) = .1;
+    % T0 = T0(:);
 
     % OPTIMIZATION SETUP
     options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',50);

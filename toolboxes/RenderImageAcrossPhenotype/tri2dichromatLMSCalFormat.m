@@ -31,7 +31,7 @@ end
 
 % LMS --> Linear RGB (so we can go from RGB --> XYZ)
 triRGBlinCalFormat = LMS2rgbLinCalFormat(triLMSCalFormat,Disp,0);
-
+triRGBlinCalFormat(triRGBlinCalFormat==1) = 0.98;
 % Matrix to convert from rgb to xyz
 % Note: this matrix must be applied on the LEFT!!
 M_rgb2xyz = Disp.T_xyz*Disp.P_monitor;
@@ -63,6 +63,7 @@ diLMSCalFormat = rgbLin2LMSCalFormat(diRGBLinCalFormat,Disp,1,0);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 inGamut = checkGamut(diLMSCalFormat,Disp,bScale);
 if inGamut == 0
+    % diRGBLinCalFormat(diRGBLinCalFormat>1) = 1;
     error(['tri2dichromatLMSCalFormat: WARNING! rgb values are out of gamut... lmsImage_mod values outside of the range [0 1]']);
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
