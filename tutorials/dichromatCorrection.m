@@ -6,7 +6,7 @@ function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,
 % to original in the loss function
 %
 % Syntax:
-%   [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType)
+%   [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType,lambda_var)
 %
 % Description:
 %
@@ -32,6 +32,7 @@ function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,
 %                       'M'
 %                       'L'
 %                       'S'
+%   lambda_var    - Weight on the variance term in the optimization [0 1]
 %
 % Outputs:
 %   triRGBImgFormatCorrected:  - Transformed RGB image after PCA and scaling. Also replaced missing cone as done in other code 
