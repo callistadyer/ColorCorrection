@@ -198,7 +198,7 @@ end
 
 % Process block by block. Gotta use an extra function because blockproc
 % seems to want only one input at a time
-function [triLMScalFormatCorrected] = processBlock(block, method, renderType, lambda_var, Disp, bScale)
+function [triLMSImgFormatCorrected] = processBlock(block, method, renderType, lambda_var, Disp, bScale)
     
     triLMSCalFormat = ImageToCalFormat(double(block)); % Convert to double and cal format
 
@@ -214,7 +214,5 @@ function [triLMScalFormatCorrected] = processBlock(block, method, renderType, la
     % Get image in image format
     triLMSImgFormatCorrected = CalFormatToImage(triLMSCalFormatCorrected,newSize(1),newSize(2));
 
-    % convert back?
-    triLMScalFormatCorrected = uint8(triLMSImgFormatCorrected); 
 
 end
