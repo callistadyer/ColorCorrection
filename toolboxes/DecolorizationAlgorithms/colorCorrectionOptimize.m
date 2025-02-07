@@ -132,18 +132,31 @@ end
         % T scales the RGB values
         % altogether, (LMSCalFormatTran * M_cones2rgb' * T) returns scaled RGB values in calFormatTransposed format
 
-        newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
+        % Weber contrast image
+        grayRGB = [0.5 0.5 0.5]';
+        grayLMS = inv(M_cones2rgb) * grayRGB;
+
+        LMSContrastCalFormatTran = (LMSCalFormatTran - grayLMS')./grayLMS';
+        % NORMAL... NON CONTRAST RN
+        % LMSContrastCalFormatTran = LMSCalFormatTran;
+
+        newRGBContrastCalFormatTran = LMSContrastCalFormatTran * M_cones2rgb' * T;
+        % newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
 
         % Convert to LMS
-        newLMSCalFormatTran = newRGBCalFormatTran*inv(M_cones2rgb)';
+        newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
+        % newLMSCalFormatTran = newRGBCalFormatTran*inv(M_cones2rgb)';
 
         % Get into cal format
-        newLMSCalFormat = newLMSCalFormatTran';
+        newLMSContrastCalFormat = newLMSContrastCalFormatTran';
+        % newLMSCalFormat = newLMSCalFormatTran';
         % newRGBCalFormat = newRGBCalFormatTran';
 
         % Check in gamut?
-        minRGB = min(newRGBCalFormatTran(:));
-        maxRGB = max(newRGBCalFormatTran(:));
+        minRGB = min(newRGBContrastCalFormatTran(:));
+        maxRGB = max(newRGBContrastCalFormatTran(:));
+        % minRGB = min(newRGBCalFormatTran(:));
+        % maxRGB = max(newRGBCalFormatTran(:));
 
         % Penalize out of gamut
         if minRGB < 0
@@ -164,7 +177,8 @@ end
         end
 
         % Variance term
-        var_term_raw = (var(newLMSCalFormat(index(1), :)) + var(newLMSCalFormat(index(2), :)));
+        % var_term_raw = (var(newLMSCalFormat(index(1), :)) + var(newLMSCalFormat(index(2), :)));
+        var_term_raw = (var(newLMSContrastCalFormat(index(1), :)) + var(newLMSContrastCalFormat(index(2), :)));
         var_term = lambda*var_term_raw;
 
         % Set a balance factor that brings the variance term to order 1
@@ -175,12 +189,20 @@ end
         similarityType = 'angle';
         switch (similarityType)
             case 'angle'
-                similarity_term_raw = (newLMSCalFormatTran(:)'*LMSCalFormatTran(:))/(norm(newLMSCalFormatTran(:))*norm(LMSCalFormatTran(:)));
+                similarity_term_raw = (newLMSContrastCalFormat(:)'*LMSContrastCalFormatTran(:))/(norm(newLMSContrastCalFormat(:))*norm(LMSContrastCalFormatTran(:)));
             case 'distance'
-                similarity_term_raw = norm(newLMSCalFormatTran(:)-LMSCalFormatTran(:))/norm(LMSCalFormatTran(:));
+                similarity_term_raw = norm(newLMSContrastCalFormat(:)-LMSContrastCalFormatTran(:))/norm(LMSContrastCalFormatTran(:));
             otherwise
                 error('Unknown similarity type specified');
         end
+        % switch (similarityType)
+        %     case 'angle'
+        %         similarity_term_raw = (newLMSCalFormatTran(:)'*LMSCalFormatTran(:))/(norm(newLMSCalFormatTran(:))*norm(LMSCalFormatTran(:)));
+        %     case 'distance'
+        %         similarity_term_raw = norm(newLMSCalFormatTran(:)-LMSCalFormatTran(:))/norm(LMSCalFormatTran(:));
+        %     otherwise
+        %         error('Unknown similarity type specified');
+        % end
         similarity_term = (1-lambda)*similarity_term_raw;
 
         % Loss

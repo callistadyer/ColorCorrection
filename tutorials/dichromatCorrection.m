@@ -66,48 +66,47 @@ close all;
 %%% Currently trying block processing - Callista, evenetually come back to
 %%% this to make it a toggle (ie block or not)
 
-% 8x8 = 64
-% 4x4 = 16 blocks
-blockNum  = [4, 4];
-% Block size [m x n] ... currently assumes divisible by blockNum
-blockSize = [Disp.m/blockNum(1) Disp.n/blockNum(2)];
+% % 8x8 = 64
+% % 4x4 = 16 blocks
+% blockNum  = [4, 4];
+% % Block size [m x n] ... currently assumes divisible by blockNum
+% blockSize = [Disp.m/blockNum(1) Disp.n/blockNum(2)];
+% 
+% % Get image into image format for block processing
+% triLMSImgFormat       = CalFormatToImage(triLMSCalFormat,Disp.m,Disp.n);
+% triLMSImgFormat_plate = CalFormatToImage(triLMSCalFormat_plate,Disp.m,Disp.n);
+% 
+% % Function that calls color correction algorithm (this gets inserted into
+% % blockproc)
+% fun = @(blockStruct) processBlock(blockStruct.data, method, renderType, lambda_var, Disp, bScale);
+% 
+% % Apply block processing for both the original image and the one with the
+% % isochromatic plate
+% triLMSImgCorrected = blockproc(triLMSImgFormat, blockSize, fun);
+% triLMSImgFormatCorrected_plate = blockproc(triLMSImgFormat_plate, blockSize, fun);
+% 
+% % Convert back to cal format
+% triLMScalFormatCorrected = ImageToCalFormat(double(triLMSImgCorrected));
+% triLMScalFormatCorrected_plate = ImageToCalFormat(double(triLMSImgFormatCorrected_plate));
 
-% Get image into image format for block processing
-triLMSImgFormat       = CalFormatToImage(triLMSCalFormat,Disp.m,Disp.n);
-triLMSImgFormat_plate = CalFormatToImage(triLMSCalFormat_plate,Disp.m,Disp.n);
 
-% Function that calls color correction algorithm (this gets inserted into
-% blockproc)
-fun = @(blockStruct) processBlock(blockStruct.data, method, renderType, lambda_var, Disp, bScale);
-
-% Apply block processing for both the original image and the one with the
-% isochromatic plate
-triLMSImgCorrected = blockproc(triLMSImgFormat, blockSize, fun);
-triLMSImgFormatCorrected_plate = blockproc(triLMSImgFormat_plate, blockSize, fun);
-
-% Convert back to cal format
-triLMScalFormatCorrected = ImageToCalFormat(double(triLMSImgCorrected));
-triLMScalFormatCorrected_plate = ImageToCalFormat(double(triLMSImgFormatCorrected_plate));
-
-
-
-% % This is also happening in colorCorrect, which is called by the block
-% % processing function
-% switch (method)
-%     case 'linTransform'
-%         % decolorOptimize does mean subtraction, then maximizes variance fmincon 
-%         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
-%         % lambda_var = 0.1;
-%         [triLMScalFormatCorrected] = colorCorrectionOptimize(triLMSCalFormat,renderType,lambda_var,Disp,bScale);
-%         [triLMScalFormatCorrected_plate] = colorCorrectionOptimize(triLMSCalFormat_plate,renderType,lambda_var,Disp,bScale);
-%     case 'easyPCA'
-%         triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,renderType,Disp,bScale);
-%         triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,renderType,Disp,bScale);
-%     case 'hardPCA'
-%         numPCs = 2;
-%         triLMScalFormatCorrected = colorCorrectionHardPCA(triLMSCalFormat,numPCs,Disp);
-%         triLMScalFormatCorrected_plate = colorCorrectionHardPCA(triLMSCalFormat_plate,numPCs,Disp);
-% end
+% This is also happening in colorCorrect, which is called by the block
+% processing function
+switch (method)
+    case 'linTransform'
+        % decolorOptimize does mean subtraction, then maximizes variance fmincon 
+        % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
+        % lambda_var = 0.1;
+        [triLMScalFormatCorrected] = colorCorrectionOptimize(triLMSCalFormat,renderType,lambda_var,Disp,bScale);
+        [triLMScalFormatCorrected_plate] = colorCorrectionOptimize(triLMSCalFormat_plate,renderType,lambda_var,Disp,bScale);
+    case 'easyPCA'
+        triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,renderType,Disp,bScale);
+        triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,renderType,Disp,bScale);
+    case 'hardPCA'
+        numPCs = 2;
+        triLMScalFormatCorrected = colorCorrectionHardPCA(triLMSCalFormat,numPCs,Disp);
+        triLMScalFormatCorrected_plate = colorCorrectionHardPCA(triLMSCalFormat_plate,numPCs,Disp);
+end
 
 
 %%%% Old colorCorrection function %%%%
