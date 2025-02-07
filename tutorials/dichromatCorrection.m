@@ -66,7 +66,9 @@ close all;
 %%% Currently trying block processing - Callista, evenetually come back to
 %%% this to make it a toggle (ie block or not)
 
-blockNum  = [8, 8];
+% 8x8 = 64
+% 4x4 = 16 blocks
+blockNum  = [4, 4];
 % Block size [m x n] ... currently assumes divisible by blockNum
 blockSize = [Disp.m/blockNum(1) Disp.n/blockNum(2)];
 
