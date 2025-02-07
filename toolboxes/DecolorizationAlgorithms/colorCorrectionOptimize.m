@@ -47,6 +47,15 @@ end
 
 %% Find optimal transformation matrix
 
+switch (renderType)
+    case 'Deuteranopia' % m cone deficiency
+        cbType = 2;
+    case 'Protanopia'   % l cone deficiency
+        cbType = 1;
+    case 'Tritanopia'   % s cone deficiency
+        cbType = 3;
+end
+
 % NOTE: I = LMS values [nPix x 3]
 triLMSCalFormatTran = triLMSCalFormat'; % data = [3 x nPix]
 % M = transformation matrix [3x3]'
@@ -74,7 +83,7 @@ T0 = eye(3, 3);
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',50);
 [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
     T0, A, b, [], [], [], [], ...,
-    @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, Disp), options);
+    @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
 
 fValOpt = loss_function(transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
 bCheck = A*transformRGB_opt(:);
@@ -188,7 +197,7 @@ end
 
 
 % OBJECTIVE FUNCTION
-    function [c, ceq] = nonlin_con(t_vec, LMSCalFormatTran, M_cones2rgb, Disp)
+    function [c, ceq] = nonlin_con(t_vec, LMSCalFormatTran, M_cones2rgb, cbType, Disp)
 
         ceq = [];
 
@@ -214,11 +223,28 @@ end
 
         newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
 
+        newRGBCalFormat = newRGBCalFormatTran';
+        % Matrix to convert from rgb to xyz
+        % Note: this matrix must be applied on the LEFT!!
+        M_rgb2xyz = Disp.T_xyz*Disp.P_monitor;
+        M_xyz2rgb = inv(M_rgb2xyz);
+
+        % Linear RGB --> XYZ (Brettel takes in XYZ)
+        triXYZCalFormat = M_rgb2xyz * newRGBCalFormat;
+        % Cal Format --> Image Format
+        triXYZImgFormat = CalFormatToImage(triXYZCalFormat,Disp.m,Disp.n);
+
         % Convert with Brettel
+        [diXYZ] = DichromatSimulateBrettel(triXYZImgFormat, cbType, []);
+
+        % Image Format --> CalFormat
+        diXYZCalFormat = ImageToCalFormat(diXYZ);
+        % XYZ --> Linear RGB
+        diRGBLinCalFormat = M_xyz2rgb * diXYZCalFormat;
 
         % Get c(1) and c(2) from min and max
-        c(1) = -1*min(newRGBCalFormatTran(:));
-        c(2) = max(newRGBCalFormatTran(:))-1;
+        c(1) = -1*min(diRGBLinCalFormat(:));
+        c(2) = max(diRGBLinCalFormat(:))-1;
 
     end
 
