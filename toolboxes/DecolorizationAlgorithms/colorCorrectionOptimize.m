@@ -136,9 +136,9 @@ end
         grayRGB = [0.5 0.5 0.5]';
         grayLMS = inv(M_cones2rgb) * grayRGB;
 
-        LMSContrastCalFormatTran = (LMSCalFormatTran - grayLMS')./grayLMS';
+        % LMSContrastCalFormatTran = (LMSCalFormatTran - grayLMS')./grayLMS';
         % NORMAL... NON CONTRAST RN
-        % LMSContrastCalFormatTran = LMSCalFormatTran;
+        LMSContrastCalFormatTran = LMSCalFormatTran;
 
         newRGBContrastCalFormatTran = LMSContrastCalFormatTran * M_cones2rgb' * T;
         % newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
@@ -179,6 +179,10 @@ end
         % Variance term
         % var_term_raw = (var(newLMSCalFormat(index(1), :)) + var(newLMSCalFormat(index(2), :)));
         var_term_raw = (var(newLMSContrastCalFormat(index(1), :)) + var(newLMSContrastCalFormat(index(2), :)));
+
+        % var_vector = 1.0e-04 .* [0.0012    0.0416    0.0820    0.1224    0.1628    0.2032    0.2436    0.2840 ...
+        % 0.3244    0.3648    0.4052    0.4456    0.4860    0.5264    0.5668    0.6071    0.6475    0.6879    0.7283    0.7687];
+
         var_term = lambda*var_term_raw;
 
         % Set a balance factor that brings the variance term to order 1

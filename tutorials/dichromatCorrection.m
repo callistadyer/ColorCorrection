@@ -199,21 +199,21 @@ end
 
 % Process block by block. Gotta use an extra function because blockproc
 % seems to want only one input at a time
-function [triLMSImgFormatCorrected] = processBlock(block, method, renderType, lambda_var, Disp, bScale)
-    
-    triLMSCalFormat = ImageToCalFormat(double(block)); % Convert to double and cal format
-
-    % Size of current block
-    newSize = size(block);
-    blockDisp = Disp;
-    blockDisp.m = newSize(1);
-    blockDisp.n = newSize(2);
-
-    % Call appropriate color correction function
-    [triLMSCalFormatCorrected] = colorCorrect(method, triLMSCalFormat, renderType, lambda_var, blockDisp, bScale);
-
-    % Get image in image format
-    triLMSImgFormatCorrected = CalFormatToImage(triLMSCalFormatCorrected,newSize(1),newSize(2));
-
-
-end
+% function [triLMSImgFormatCorrected] = processBlock(block, method, renderType, lambda_var, Disp, bScale)
+% 
+%     triLMSCalFormat = ImageToCalFormat(double(block)); % Convert to double and cal format
+% 
+%     % Size of current block
+%     newSize = size(block);
+%     blockDisp = Disp;
+%     blockDisp.m = newSize(1);
+%     blockDisp.n = newSize(2);
+% 
+%     % Call appropriate color correction function
+%     [triLMSCalFormatCorrected] = colorCorrect(method, triLMSCalFormat, renderType, lambda_var, blockDisp, bScale);
+% 
+%     % Get image in image format
+%     triLMSImgFormatCorrected = CalFormatToImage(triLMSCalFormatCorrected,newSize(1),newSize(2));
+% 
+% 
+% end
