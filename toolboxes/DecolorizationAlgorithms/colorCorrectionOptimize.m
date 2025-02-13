@@ -80,7 +80,7 @@ T0 = eye(3, 3);
 % T0 = T0(:);
 
 % OPTIMIZATION SETUP
-options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',50);
+options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',75);
 [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
     T0, A, b, [], [], [], [], ...,
     @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
@@ -136,9 +136,9 @@ end
         grayRGB = [0.5 0.5 0.5]';
         grayLMS = inv(M_cones2rgb) * grayRGB;
 
-        % LMSContrastCalFormatTran = (LMSCalFormatTran - grayLMS')./grayLMS';
+        LMSContrastCalFormatTran = (LMSCalFormatTran - grayLMS')./grayLMS';
         % NORMAL... NON CONTRAST RN
-        LMSContrastCalFormatTran = LMSCalFormatTran;
+        % LMSContrastCalFormatTran = LMSCalFormatTran;
 
         newRGBContrastCalFormatTran = LMSContrastCalFormatTran * M_cones2rgb' * T;
         % newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;

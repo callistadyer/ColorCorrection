@@ -67,11 +67,11 @@ diLMSCalFormat = rgbLin2LMSCalFormat(diRGBLinCalFormat,Disp,1,0);
 
 % CHECK IF MODULATED LMS IS IN GAMUT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-inGamut = checkGamut(diLMSCalFormat,Disp,bScale);
-if inGamut == 0
-    % diRGBLinCalFormat(diRGBLinCalFormat>1) = 1;
-    error(['tri2dichromatLMSCalFormat: WARNING! rgb values are out of gamut... lmsImage_mod values outside of the range [0 1]']);
-end
+% inGamut = checkGamut(diLMSCalFormat,Disp,bScale);
+% if inGamut == 0
+%     % diRGBLinCalFormat(diRGBLinCalFormat>1) = 1;
+%     error(['tri2dichromatLMSCalFormat: WARNING! rgb values are out of gamut... lmsImage_mod values outside of the range [0 1]']);
+% end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
