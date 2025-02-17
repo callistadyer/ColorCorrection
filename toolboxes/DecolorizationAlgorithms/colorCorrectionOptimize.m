@@ -136,15 +136,28 @@ end
         grayRGB = [0.5 0.5 0.5]';
         grayLMS = inv(M_cones2rgb) * grayRGB;
 
+        % Round these numbers to ensure you are actually subtracting off
+        % exactly the correct number
+        grayLMS = round(grayLMS,4);
+        LMSCalFormatTran = round(LMSCalFormatTran,4);
+
+        % Create LMS contrast image by subtracting out gray background
         LMSContrastCalFormatTran = (LMSCalFormatTran - grayLMS')./grayLMS';
+
+        % LMSContrastCalFormatTran(LMSContrastCalFormatTran<1.0e-8) = 0;
         % NORMAL... NON CONTRAST RN
         % LMSContrastCalFormatTran = LMSCalFormatTran;
 
         newRGBContrastCalFormatTran = LMSContrastCalFormatTran * M_cones2rgb' * T;
-        % newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
+        % newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;      
 
         % Convert to LMS
         newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
+                
+        % Now that transformation is done, add back in the background to
+        % do the rest of optimization
+        newLMSContrastCalFormatTran = ((newLMSContrastCalFormatTran).*grayLMS')+grayLMS';
+
         % newLMSCalFormatTran = newRGBCalFormatTran*inv(M_cones2rgb)';
 
         % Get into cal format
@@ -193,9 +206,13 @@ end
         similarityType = 'angle';
         switch (similarityType)
             case 'angle'
-                similarity_term_raw = (newLMSContrastCalFormat(:)'*LMSContrastCalFormatTran(:))/(norm(newLMSContrastCalFormat(:))*norm(LMSContrastCalFormatTran(:)));
+                similarity_term_raw = (newLMSContrastCalFormat(:)'*LMSCalFormatTran(:))/(norm(newLMSContrastCalFormat(:))*norm(LMSCalFormatTran(:)));
+                % if (norm(newLMSContrastCalFormat(:))*norm(LMSContrastCalFormatTran(:))) = 0;
+                %     similarity_term_raw = 0
+                % end
+                    
             case 'distance'
-                similarity_term_raw = norm(newLMSContrastCalFormat(:)-LMSContrastCalFormatTran(:))/norm(LMSContrastCalFormatTran(:));
+                similarity_term_raw = norm(newLMSContrastCalFormat(:)-LMSCalFormatTran(:))/norm(LMSCalFormatTran(:));
             otherwise
                 error('Unknown similarity type specified');
         end
