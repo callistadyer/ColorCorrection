@@ -80,7 +80,7 @@ T0 = eye(3, 3);
 % T0 = T0(:);
 
 % OPTIMIZATION SETUP
-options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',75);
+options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',40);
 [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
     T0, A, b, [], [], [], [], ...,
     @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
@@ -95,24 +95,25 @@ end
 transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 
 % Contrast manipulation
-grayRGB = [0.5 0.5 0.5]';
+grayRGB = [0.5 0.5 0.5];
 % grayRGB = round(grayRGB,4);
 
 % Transform into RGB space so you can subtract out gray in RGB (doesn't
 % work exactly right when you subtract in LMS... some odd rounding errors)
 newRGBCalFormatTran_out = triLMSCalFormatTran * M_cones2rgb';
+newRGBCalFormatTran_out = round(newRGBCalFormatTran_out,4);
 
 % Round RGB so that gray subtracts out exactly 
 % newRGBCalFormatTran_out = round(newRGBCalFormatTran_out,4);
 
 % Get contrast image by subtracting out gray
-newRGBContrastCalFormatTranContrast_out = (newRGBCalFormatTran_out - grayRGB')./grayRGB';
+newRGBContrastCalFormatTranContrast_out = (newRGBCalFormatTran_out - grayRGB)./grayRGB;
 
 % Transform contrast image
 newRGBContrastCalFormatTranContrast_out = newRGBContrastCalFormatTranContrast_out * transformRGBmatrix_opt;
 
 % Add back in gray before outputting the image
-triRGBCalFormatTranOpt = (newRGBContrastCalFormatTranContrast_out.*grayRGB') + grayRGB';
+triRGBCalFormatTranOpt = (newRGBContrastCalFormatTranContrast_out.*grayRGB) + grayRGB;
 triRGBCalFormatOpt     = triRGBCalFormatTranOpt';
 
 if (min(triRGBCalFormatTranOpt(:)) < 0) && (min(triRGBCalFormatTranOpt(:)) > -.01)
@@ -175,14 +176,17 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 
         % Convert into RGB where gray is removed
         RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb'; %*****
+        RGBCalFormatTran = round(RGBCalFormatTran,4);
         % Create contrast image
-        RGBContrastCalFormatTranContrast = (RGBCalFormatTran - grayRGB')./grayRGB';
+        RGBContrastCalFormatTran = (RGBCalFormatTran - grayRGB')./grayRGB';
+
         % Transformation
-        newRGBContrastCalFormatTranContrast = RGBContrastCalFormatTranContrast * T;
+        newRGBContrastCalFormatTran_noGray = RGBContrastCalFormatTran * T;
+
         % Add gray back in
-        newRGBContrastCalFormatTran_new = (newRGBContrastCalFormatTranContrast.*grayRGB') + grayRGB';
+        newRGBContrastCalFormatTran = (newRGBContrastCalFormatTran_noGray.*grayRGB') + grayRGB';
         % Convert into LMS
-        newLMSContrastCalFormatTran = newRGBContrastCalFormatTran_new*inv(M_cones2rgb)';
+        newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
 
         % newRGBContrastCalFormatTran = LMSContrastCalFormatTran * M_cones2rgb' * T;
         % newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;      
@@ -197,8 +201,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % newRGBCalFormat = newRGBCalFormatTran';
 
         % Check in gamut?
-        minRGB = min(newRGBContrastCalFormatTran_new(:));
-        maxRGB = max(newRGBContrastCalFormatTran_new(:));
+        minRGB = min(newLMSContrastCalFormatTran(:));
+        maxRGB = max(newLMSContrastCalFormatTran(:));
         % minRGB = min(newRGBCalFormatTran(:));
         % maxRGB = max(newRGBCalFormatTran(:));
 
@@ -237,7 +241,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         similarityType = 'angle';
         switch (similarityType)
             case 'angle'
-                similarity_term_raw = (newLMSContrastCalFormat(:)'*LMSCalFormatTran(:))/(norm(newLMSContrastCalFormat(:))*norm(LMSCalFormatTran(:)));
+                similarity_term_raw = (newLMSContrastCalFormatTran(:)'*LMSCalFormatTran(:))/(norm(newLMSContrastCalFormatTran(:))*norm(LMSCalFormatTran(:)));
+
                 % if (norm(newLMSContrastCalFormat(:))*norm(LMSContrastCalFormatTran(:))) = 0;
                 %     similarity_term_raw = 0
                 % end
@@ -331,5 +336,46 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         c(2) = max(diRGBLinCalFormat(:))-1;
 
     end
+function [c, ceq] = nonlin_var_constraint(t_vec, LMSCalFormatTran, M_cones2rgb, Disp, v0, v1)
+    % NONLIN_VAR_CONSTRAINT ensures that the variance of the transformed data
+    % falls within a predefined range of values.
+    %
+    % Inputs:
+    %   t_vec - Flattened 3x3 transformation matrix
+    %   LMSCalFormatTran - Original LMS values in calibration format (transposed)
+    %   M_cones2rgb - Transformation matrix from LMS to RGB
+    %   Disp - Display structure containing transformation matrices
+    %   v0, v1 - Lower and upper bounds for variance range
+    %
+    % Outputs:
+    %   c - Inequality constraint (not used)
+    %   ceq - Equality constraint enforcing variance within specified range
+
+    % Reshape transformation vector into a 3x3 matrix
+    T = reshape(t_vec, 3, 3);
+    
+    % Convert LMS to RGB using the transformation matrix
+    newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
+
+    % Convert RGB back to LMS
+    newLMSCalFormatTran = newRGBCalFormatTran * inv(M_cones2rgb)';
+
+    % Compute variance for each LMS channel
+    var_lms = var(newLMSCalFormatTran, 0, 1); % Variance along the pixels dimension
+    total_variance = sum(var_lms); % Aggregate variance across channels
+
+    % Define the acceptable variance values
+    variance_range = linspace(v0, v1, 10); % Generate 10 evenly spaced variance values
+
+    % Find the closest variance value within the range
+    [~, closest_index] = min(abs(variance_range - total_variance));
+    closest_variance = variance_range(closest_index);
+
+    % Nonlinear equality constraint: variance must match a predefined value
+    ceq = total_variance - closest_variance;
+
+    % No inequality constraint
+    c = [];
+end
 
 end
