@@ -331,6 +331,9 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         c(2) = max(diRGBLinCalFormat(:))-1;
 
     end
+
+% Eventually try and implement something like this to capture better lambda
+% value differences
 function [c, ceq] = nonlin_var_constraint(t_vec, LMSCalFormatTran, M_cones2rgb, Disp, v0, v1)
     % NONLIN_VAR_CONSTRAINT ensures that the variance of the transformed data
     % falls within a predefined range of values.
@@ -360,7 +363,7 @@ function [c, ceq] = nonlin_var_constraint(t_vec, LMSCalFormatTran, M_cones2rgb, 
     total_variance = sum(var_lms); % Aggregate variance across channels
 
     % Define the acceptable variance values
-    variance_range = linspace(v0, v1, 10); % Generate 10 evenly spaced variance values
+    variance_range = linspace(v0, v1, 10); 
 
     % Find the closest variance value within the range
     [~, closest_index] = min(abs(variance_range - total_variance));
@@ -369,7 +372,6 @@ function [c, ceq] = nonlin_var_constraint(t_vec, LMSCalFormatTran, M_cones2rgb, 
     % Nonlinear equality constraint: variance must match a predefined value
     ceq = total_variance - closest_variance;
 
-    % No inequality constraint
     c = [];
 end
 
