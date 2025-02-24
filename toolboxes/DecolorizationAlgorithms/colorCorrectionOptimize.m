@@ -94,18 +94,42 @@ end
 % RESHAPE THE OPTIMAL SOLUTION INTO MATRIX FORM
 transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 
-% Calculate optimal output from input * optimal transform
-triRGBCalFormatTranOpt = triLMSCalFormatTran * M_cones2rgb' * transformRGBmatrix_opt;
+% Contrast manipulation
+grayRGB = [0.5 0.5 0.5]';
+% grayRGB = round(grayRGB,4);
+
+% Transform into RGB space so you can subtract out gray in RGB (doesn't
+% work exactly right when you subtract in LMS... some odd rounding errors)
+newRGBCalFormatTran_out = triLMSCalFormatTran * M_cones2rgb';
+
+% Round RGB so that gray subtracts out exactly 
+% newRGBCalFormatTran_out = round(newRGBCalFormatTran_out,4);
+
+% Get contrast image by subtracting out gray
+newRGBContrastCalFormatTranContrast_out = (newRGBCalFormatTran_out - grayRGB')./grayRGB';
+
+% Transform contrast image
+newRGBContrastCalFormatTranContrast_out = newRGBContrastCalFormatTranContrast_out * transformRGBmatrix_opt;
+
+% Add back in gray before outputting the image
+triRGBCalFormatTranOpt = (newRGBContrastCalFormatTranContrast_out.*grayRGB') + grayRGB';
 triRGBCalFormatOpt     = triRGBCalFormatTranOpt';
 
-% Check if given O is in gamut
-% Get LMS values
-triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
-% Check if is in gamut
-inGamutAfterTransform = checkGamut(triLMSCalFormatOpt,Disp,bScale);
-if inGamutAfterTransform == 0
-    error(['ERROR: decolorOptimize, constraint is not working, transformation is pushing out of gamut'])
+if (min(triRGBCalFormatTranOpt(:)) < 0) && (min(triRGBCalFormatTranOpt(:)) > -.01)
+    triRGBCalFormatTranOpt(triRGBCalFormatTranOpt<0) = 0;
 end
+
+% Calculate optimal output from input * optimal transform
+% triRGBCalFormatTranOpt = triLMSCalFormatTran * M_cones2rgb' * transformRGBmatrix_opt;
+
+% Get LMS values to output
+triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
+
+% Check if is in gamut
+% inGamutAfterTransform = checkGamut(triLMSCalFormatOpt,Disp,bScale);
+% if inGamutAfterTransform == 0
+%     error(['ERROR: decolorOptimize, constraint is not working, transformation is pushing out of gamut'])
+% end
 
 
 %% Functions
@@ -134,40 +158,47 @@ end
 
         % Weber contrast image
         grayRGB = [0.5 0.5 0.5]';
-        grayLMS = inv(M_cones2rgb) * grayRGB;
 
+        % Did this when subtracting out LMS values instead of RGB:
         % Round these numbers to ensure you are actually subtracting off
         % exactly the correct number
-        grayLMS = round(grayLMS,4);
-        LMSCalFormatTran = round(LMSCalFormatTran,4);
+        % grayLMS = inv(M_cones2rgb) * grayRGB;
+        % grayLMS = round(grayLMS,4);
+        % LMSCalFormatTran = round(LMSCalFormatTran,4);
 
         % Create LMS contrast image by subtracting out gray background
-        LMSContrastCalFormatTran = (LMSCalFormatTran - grayLMS')./grayLMS';
+        % LMSContrastCalFormatTran = (LMSCalFormatTran - grayLMS')./grayLMS';
 
         % LMSContrastCalFormatTran(LMSContrastCalFormatTran<1.0e-8) = 0;
         % NORMAL... NON CONTRAST RN
         % LMSContrastCalFormatTran = LMSCalFormatTran;
 
-        newRGBContrastCalFormatTran = LMSContrastCalFormatTran * M_cones2rgb' * T;
+        % Convert into RGB where gray is removed
+        RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb'; %*****
+        % Create contrast image
+        RGBContrastCalFormatTranContrast = (RGBCalFormatTran - grayRGB')./grayRGB';
+        % Transformation
+        newRGBContrastCalFormatTranContrast = RGBContrastCalFormatTranContrast * T;
+        % Add gray back in
+        newRGBContrastCalFormatTran_new = (newRGBContrastCalFormatTranContrast.*grayRGB') + grayRGB';
+        % Convert into LMS
+        newLMSContrastCalFormatTran = newRGBContrastCalFormatTran_new*inv(M_cones2rgb)';
+
+        % newRGBContrastCalFormatTran = LMSContrastCalFormatTran * M_cones2rgb' * T;
         % newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;      
 
-        % Convert to LMS
-        newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
-                
-        % Now that transformation is done, add back in the background to
-        % do the rest of optimization
-        newLMSContrastCalFormatTran = ((newLMSContrastCalFormatTran).*grayLMS')+grayLMS';
-
+        % % Convert to LMS
+        % newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
         % newLMSCalFormatTran = newRGBCalFormatTran*inv(M_cones2rgb)';
-
+                
         % Get into cal format
-        newLMSContrastCalFormat = newLMSContrastCalFormatTran';
+        newLMSContrastCalFormat = newLMSContrastCalFormatTran'; %*****
         % newLMSCalFormat = newLMSCalFormatTran';
         % newRGBCalFormat = newRGBCalFormatTran';
 
         % Check in gamut?
-        minRGB = min(newRGBContrastCalFormatTran(:));
-        maxRGB = max(newRGBContrastCalFormatTran(:));
+        minRGB = min(newRGBContrastCalFormatTran_new(:));
+        maxRGB = max(newRGBContrastCalFormatTran_new(:));
         % minRGB = min(newRGBCalFormatTran(:));
         % maxRGB = max(newRGBCalFormatTran(:));
 
@@ -263,10 +294,20 @@ end
         % LMSCalFormatTran * M_cones2rgb' --> converts LMS to RGB values
         % T scales the RGB values
         % altogether, (LMSCalFormatTran * M_cones2rgb' * T) returns scaled RGB values in calFormatTransposed format
+       
+        % Weber contrast image
+        grayRGB = [0.5 0.5 0.5]';
 
-        newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
-
+        % Convert to RGB to subtract gray in RGB space
+        RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb';
+        % Get contrast image
+        RGBContrastCalFormatTran = (RGBCalFormatTran - grayRGB')./grayRGB';
+        % Transformation
+        newRGBContrastCalFormatTran = RGBContrastCalFormatTran * T;
+        % Add back in the gray 
+        newRGBCalFormatTran = (newRGBContrastCalFormatTran.*grayRGB') + grayRGB';
         newRGBCalFormat = newRGBCalFormatTran';
+
         % Matrix to convert from rgb to xyz
         % Note: this matrix must be applied on the LEFT!!
         M_rgb2xyz = Disp.T_xyz*Disp.P_monitor;
