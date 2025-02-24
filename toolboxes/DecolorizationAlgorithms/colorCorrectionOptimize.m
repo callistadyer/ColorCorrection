@@ -80,7 +80,7 @@ T0 = eye(3, 3);
 % T0 = T0(:);
 
 % OPTIMIZATION SETUP
-options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',40);
+options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',70);
 [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
     T0, A, b, [], [], [], [], ...,
     @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
@@ -95,25 +95,21 @@ end
 transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 
 % Contrast manipulation
-grayRGB = [0.5 0.5 0.5];
+grayRGB = [0.5 0.5 0.5]';
 % grayRGB = round(grayRGB,4);
 
 % Transform into RGB space so you can subtract out gray in RGB (doesn't
 % work exactly right when you subtract in LMS... some odd rounding errors)
 newRGBCalFormatTran_out = triLMSCalFormatTran * M_cones2rgb';
-newRGBCalFormatTran_out = round(newRGBCalFormatTran_out,4);
-
-% Round RGB so that gray subtracts out exactly 
-% newRGBCalFormatTran_out = round(newRGBCalFormatTran_out,4);
 
 % Get contrast image by subtracting out gray
-newRGBContrastCalFormatTranContrast_out = (newRGBCalFormatTran_out - grayRGB)./grayRGB;
+newRGBContrastCalFormatTranContrast_out = (newRGBCalFormatTran_out - grayRGB')./grayRGB';
 
 % Transform contrast image
 newRGBContrastCalFormatTranContrast_out = newRGBContrastCalFormatTranContrast_out * transformRGBmatrix_opt;
 
 % Add back in gray before outputting the image
-triRGBCalFormatTranOpt = (newRGBContrastCalFormatTranContrast_out.*grayRGB) + grayRGB;
+triRGBCalFormatTranOpt = (newRGBContrastCalFormatTranContrast_out.*grayRGB') + grayRGB';
 triRGBCalFormatOpt     = triRGBCalFormatTranOpt';
 
 if (min(triRGBCalFormatTranOpt(:)) < 0) && (min(triRGBCalFormatTranOpt(:)) > -.01)
@@ -176,7 +172,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 
         % Convert into RGB where gray is removed
         RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb'; %*****
-        RGBCalFormatTran = round(RGBCalFormatTran,4);
+        % RGBCalFormatTran = round(RGBCalFormatTran,4);
         % Create contrast image
         RGBContrastCalFormatTran = (RGBCalFormatTran - grayRGB')./grayRGB';
 
@@ -190,7 +186,6 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 
         % newRGBContrastCalFormatTran = LMSContrastCalFormatTran * M_cones2rgb' * T;
         % newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;      
-
         % % Convert to LMS
         % newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
         % newLMSCalFormatTran = newRGBCalFormatTran*inv(M_cones2rgb)';
@@ -234,7 +229,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         var_term = lambda*var_term_raw;
 
         % Set a balance factor that brings the variance term to order 1
-        balanceFactor = 10e4;
+        balanceFactor = 10e10; %%%%% CALLISTA -- NEED TO DECIDE THIS MORE CAREFULLY %%%%%
         var_term_balance = balanceFactor * var_term;
 
         % Similarity term
