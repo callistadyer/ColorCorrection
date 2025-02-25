@@ -334,7 +334,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 
 % Eventually try and implement something like this to capture better lambda
 % value differences
-function [c, ceq] = nonlin_var_constraint(t_vec, LMSCalFormatTran, M_cones2rgb, Disp, v0, v1)
+function [c, ceq] = nonlin_var_constraint(t_vec, LMSCalFormatTran, M_cones2rgb, renderType, v0, v1)
     % NONLIN_VAR_CONSTRAINT ensures that the variance of the transformed data
     % falls within a predefined range of values.
     %
@@ -354,22 +354,36 @@ function [c, ceq] = nonlin_var_constraint(t_vec, LMSCalFormatTran, M_cones2rgb, 
     
     % Convert LMS to RGB using the transformation matrix
     newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
-
+    
     % Convert RGB back to LMS
     newLMSCalFormatTran = newRGBCalFormatTran * inv(M_cones2rgb)';
 
+    newLMSCalFormat = newLMSCalFormatTran';
     % Compute variance for each LMS channel
-    var_lms = var(newLMSCalFormatTran, 0, 1); % Variance along the pixels dimension
-    total_variance = sum(var_lms); % Aggregate variance across channels
+    switch (renderType)
+        case 'Deuteranopia' % m cone deficiency
+            index = [1 3];
+        case 'Protanopia'   % l cone deficiency
+            index = [2 3];
+        case 'Tritanopia'   % s cone deficiency
+            index = [1 2];
+    end
 
-    % Define the acceptable variance values
+    % Variance term
+    total_variance = (var(newLMSCalFormat(index(1), :)) + var(newLMSCalFormat(index(2), :)));
+
+    % var_lms = var(newLMSCalFormatTran, 0, 1);
+    % total_variance = sum(var_lms);
+
+    % Range of variance vals based on present v0 v1
     variance_range = linspace(v0, v1, 10); 
 
     % Find the closest variance value within the range
     [~, closest_index] = min(abs(variance_range - total_variance));
     closest_variance = variance_range(closest_index);
 
-    % Nonlinear equality constraint: variance must match a predefined value
+    % Nonlinear equality constraint: variance must match one in my chosen
+    % range
     ceq = total_variance - closest_variance;
 
     c = [];
