@@ -222,15 +222,15 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Variance term
         % var_term_raw = (var(newLMSCalFormat(index(1), :)) + var(newLMSCalFormat(index(2), :)));
         var_term_raw = (var(newLMSContrastCalFormat(index(1), :)) + var(newLMSContrastCalFormat(index(2), :)));
-
-        % var_vector = 1.0e-04 .* [0.0012    0.0416    0.0820    0.1224    0.1628    0.2032    0.2436    0.2840 ...
-        % 0.3244    0.3648    0.4052    0.4456    0.4860    0.5264    0.5668    0.6071    0.6475    0.6879    0.7283    0.7687];
-
         var_term = lambda*var_term_raw;
 
+        totalVariance = whiteNoiseVariance(Disp);
+
         % Set a balance factor that brings the variance term to order 1
-        balanceFactor = 10e10; %%%%% CALLISTA -- NEED TO DECIDE THIS MORE CAREFULLY %%%%%
-        var_term_balance = balanceFactor * var_term;
+        balanceFactor = 10e5; %%%%% CALLISTA -- NEED TO DECIDE THIS MORE CAREFULLY %%%%%
+        % var_term_balance = balanceFactor * var_term;
+        % Normalize via total variance in white noise image
+        var_term_balance = var_term/totalVariance;
 
         % Similarity term
         similarityType = 'angle';
@@ -270,7 +270,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
     end
 
 
-% OBJECTIVE FUNCTION
+% This ensures that dichromat rendering does not go out of gamut. Calls
+% DichromatSimulateBrettel and checks RGB values
     function [c, ceq] = nonlin_con(t_vec, LMSCalFormatTran, M_cones2rgb, cbType, Disp)
 
         ceq = [];
