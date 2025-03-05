@@ -3,6 +3,8 @@ function totalVariance = whiteNoiseVariance(Disp)
 
 % Create a white noise image of size mxn
 % m = 256; n = 256;
+% rng(2);
+s = rng
 whiteNoiseImage = rand(Disp.m, Disp.n, 3);
 whiteNoiseCalFormat = ImageToCalFormat(whiteNoiseImage);
 

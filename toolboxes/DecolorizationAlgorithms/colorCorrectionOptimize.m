@@ -156,23 +156,12 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Weber contrast image
         grayRGB = [0.5 0.5 0.5]';
 
-        % Did this when subtracting out LMS values instead of RGB:
-        % Round these numbers to ensure you are actually subtracting off
-        % exactly the correct number
-        % grayLMS = inv(M_cones2rgb) * grayRGB;
-        % grayLMS = round(grayLMS,4);
-        % LMSCalFormatTran = round(LMSCalFormatTran,4);
-
-        % Create LMS contrast image by subtracting out gray background
-        % LMSContrastCalFormatTran = (LMSCalFormatTran - grayLMS')./grayLMS';
-
-        % LMSContrastCalFormatTran(LMSContrastCalFormatTran<1.0e-8) = 0;
         % NORMAL... NON CONTRAST RN
         % LMSContrastCalFormatTran = LMSCalFormatTran;
 
         % Convert into RGB where gray is removed
         RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb'; %*****
-        % RGBCalFormatTran = round(RGBCalFormatTran,4);
+
         % Create contrast image
         RGBContrastCalFormatTran = (RGBCalFormatTran - grayRGB')./grayRGB';
 
@@ -184,22 +173,25 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Convert into LMS
         newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
 
+        % % Old code, before contrast manipulation:
         % newRGBContrastCalFormatTran = LMSContrastCalFormatTran * M_cones2rgb' * T;
         % newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;      
         % % Convert to LMS
         % newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
         % newLMSCalFormatTran = newRGBCalFormatTran*inv(M_cones2rgb)';
-                
         % Get into cal format
-        newLMSContrastCalFormat = newLMSContrastCalFormatTran'; %*****
         % newLMSCalFormat = newLMSCalFormatTran';
         % newRGBCalFormat = newRGBCalFormatTran';
+        % Check in gamut?
+        % minRGB = min(newRGBCalFormatTran(:));
+        % maxRGB = max(newRGBCalFormatTran(:));
+
+        % Get into cal format
+        newLMSContrastCalFormat = newLMSContrastCalFormatTran';
 
         % Check in gamut?
         minRGB = min(newLMSContrastCalFormatTran(:));
         maxRGB = max(newLMSContrastCalFormatTran(:));
-        % minRGB = min(newRGBCalFormatTran(:));
-        % maxRGB = max(newRGBCalFormatTran(:));
 
         % Penalize out of gamut
         if minRGB < 0
@@ -220,7 +212,6 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         end
 
         % Variance term
-        % var_term_raw = (var(newLMSCalFormat(index(1), :)) + var(newLMSCalFormat(index(2), :)));
         var_term_raw = (var(newLMSContrastCalFormat(index(1), :)) + var(newLMSContrastCalFormat(index(2), :)));
         var_term = lambda*var_term_raw;
 
@@ -237,24 +228,11 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         switch (similarityType)
             case 'angle'
                 similarity_term_raw = (newLMSContrastCalFormatTran(:)'*LMSCalFormatTran(:))/(norm(newLMSContrastCalFormatTran(:))*norm(LMSCalFormatTran(:)));
-
-                % if (norm(newLMSContrastCalFormat(:))*norm(LMSContrastCalFormatTran(:))) = 0;
-                %     similarity_term_raw = 0
-                % end
-                    
             case 'distance'
                 similarity_term_raw = norm(newLMSContrastCalFormat(:)-LMSCalFormatTran(:))/norm(LMSCalFormatTran(:));
             otherwise
                 error('Unknown similarity type specified');
         end
-        % switch (similarityType)
-        %     case 'angle'
-        %         similarity_term_raw = (newLMSCalFormatTran(:)'*LMSCalFormatTran(:))/(norm(newLMSCalFormatTran(:))*norm(LMSCalFormatTran(:)));
-        %     case 'distance'
-        %         similarity_term_raw = norm(newLMSCalFormatTran(:)-LMSCalFormatTran(:))/norm(LMSCalFormatTran(:));
-        %     otherwise
-        %         error('Unknown similarity type specified');
-        % end
         similarity_term = (1-lambda)*similarity_term_raw;
 
         % Loss
@@ -262,10 +240,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Scale loss so that it is small enough to make fmincon happy but not
         % so small that it is unhappy.
         fminconFactor = 10^11/balanceFactor;
+        % fminconFactor = 1;
         loss = -fminconFactor*(var_term_balance + similarity_term) + lossGamutTerm;
-
-        % Scale loss into a reasonable range
-        % loss = 10e11*loss;
 
     end
 
