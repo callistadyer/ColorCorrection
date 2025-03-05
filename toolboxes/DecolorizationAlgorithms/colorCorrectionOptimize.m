@@ -75,6 +75,7 @@ b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
 
 % Initial guess at transformation matrix - start with identity
 T0 = eye(3, 3);
+% See if trying a different starting point would be helpful? 
 % T0 = T0 * 0.8;
 % T0(T0==0) = .1;
 % T0 = T0(:);
@@ -96,7 +97,6 @@ transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 
 % Contrast manipulation
 grayRGB = [0.5 0.5 0.5]';
-% grayRGB = round(grayRGB,4);
 
 % Transform into RGB space so you can subtract out gray in RGB (doesn't
 % work exactly right when you subtract in LMS... some odd rounding errors)
