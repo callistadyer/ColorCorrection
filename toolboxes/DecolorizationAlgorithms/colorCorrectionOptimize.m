@@ -190,26 +190,13 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Get into cal format
         newLMSContrastCalFormat = newLMSContrastCalFormatTran';
 
-        % Check in gamut?
-        minRGB = min(newLMSContrastCalFormatTran(:));
-        maxRGB = max(newLMSContrastCalFormatTran(:));
-
-        % Penalize out of gamut
-        if minRGB < 0
-            lossGamutTerm = 100000000*(minRGB.^2);
-        elseif (maxRGB > 1)
-            lossGamutTerm = 100000000*((maxRGB-1).^2);
-        else
-            lossGamutTerm = 0;
-        end
-
         % Variance term
         var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormat);
         % Weight by lambda
         var_term = lambda*var_term_raw;
 
         % Normalize via total variance in white noise image
-        totalVariance = whiteNoiseVariance(Disp);
+        totalVariance = whiteNoiseVariance("newConeVar",renderType,Disp);
         var_term_balance = var_term/totalVariance;
 
         % Similarity term
@@ -224,7 +211,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % balanceFactor = 10e5;
         % fminconFactor = 10^11/balanceFactor;
         fminconFactor = 1e6;
-        loss = -fminconFactor*(var_term_balance + similarity_term) + lossGamutTerm;
+        loss = -fminconFactor*(var_term_balance + similarity_term);
 
     end
 

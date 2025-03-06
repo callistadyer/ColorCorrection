@@ -1,11 +1,13 @@
 
-function totalVariance = whiteNoiseVariance(Disp)
+function totalVariance = whiteNoiseVariance(varianceType,renderType,Disp)
 % Calculates total variance to normalize variance of given image size 
 %
 % Syntax:
 %   totalVariance = whiteNoiseVariance(Disp)
 %
 % Inputs:
+%   varianceType:  Type of variance computation
+%                  "newConeVar"
 %   Disp:          Display parameters
 % Outputs:
 %   totalVariance: Variance normalizer term 
@@ -26,8 +28,14 @@ whiteNoiseCalFormat = ImageToCalFormat(whiteNoiseImage);
 hyperspectralNoiseCalFormat = Disp.P_monitor * whiteNoiseCalFormat;
 
 % LMS image (1)
-triLMSNoiseCalFormat1       = Disp.T_cones*hyperspectralNoiseCalFormat;
+triLMSNoiseCalFormat       = Disp.T_cones*hyperspectralNoiseCalFormat;
 
+% Compute total variance 
+totalVariance = varianceLMS(varianceType,renderType,[],triLMSNoiseCalFormat);
+
+end
+
+% ALTERNATE IMAGE CREATION
 % 2... CREATE SCENE VERSION
 % Image format
 %hyperspectralNoiseImage     = CalFormatToImage(hyperspectralNoiseCalFormat,Disp.m,Disp.n);
@@ -43,9 +51,3 @@ triLMSNoiseCalFormat1       = Disp.T_cones*hyperspectralNoiseCalFormat;
 % 
 % % LMS image (2)
 % triLMSNoiseCalFormat2   = Disp.T_cones*hyperspectralCalFormat2;
-
-% Compute total variance 
-totalVariance = varianceLMS("newConeVar",'Deuteranopia',[],triLMSNoiseCalFormat1);
-% totalVariance = var(triLMSNoiseCalFormat1(:));
-
-end
