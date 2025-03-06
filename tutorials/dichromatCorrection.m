@@ -97,8 +97,8 @@ switch (method)
         % decolorOptimize does mean subtraction, then maximizes variance fmincon 
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
         % lambda_var = 0.1;
-        [triLMScalFormatCorrected] = colorCorrectionOptimize(triLMSCalFormat,renderType,lambda_var,Disp,bScale);
-        [triLMScalFormatCorrected_plate] = colorCorrectionOptimize(triLMSCalFormat_plate,renderType,lambda_var,Disp,bScale);
+        [triLMScalFormatCorrected] = colorCorrectionOptimize(triLMSCalFormat,renderType,lambda_var,Disp);
+        [triLMScalFormatCorrected_plate] = colorCorrectionOptimize(triLMSCalFormat_plate,renderType,lambda_var,Disp);
     case 'easyPCA'
         triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,renderType,Disp,bScale);
         triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,renderType,Disp,bScale);

@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt] = colorCorrectionOptimize(triLMSCalFormat, renderType, lambda_var,Disp,bScale)
+function [triLMSCalFormatOpt] = colorCorrectionOptimize(triLMSCalFormat, renderType, lambda_var,Disp)
 % Optimizes linear transformation of the original cone values
 %
 % Syntax:
