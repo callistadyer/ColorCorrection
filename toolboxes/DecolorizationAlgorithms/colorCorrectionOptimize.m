@@ -233,8 +233,6 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 % DichromatSimulateBrettel and checks RGB values
     function [c, ceq] = nonlin_con(t_vec, LMSCalFormatTran, M_cones2rgb, cbType, Disp)
 
-        ceq = [];
-
         T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
 
         % I - LMS
@@ -268,6 +266,28 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         newRGBCalFormatTran = (newRGBContrastCalFormatTran.*grayRGB') + grayRGB';
         newRGBCalFormat = newRGBCalFormatTran';
 
+        %%% Add section about only producing values in our desired lambda
+        %%% range
+        % Convert into LMS
+        newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
+
+        % For dichromat plate image
+        v0 = 6.3297e-15;
+        v1 = 1.7937e-05;
+        variance_range = linspace(v0, v1, 10);
+        var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormatTran');
+        % Find the closest variance value within the range
+        [~, closest_index] = min(abs(variance_range - var_term_raw));
+        closest_variance = variance_range(closest_index);
+        % Nonlinear equality constraint: variance must match one in my chosen
+        % range
+        ceq = var_term_raw - closest_variance;
+        tol = 1e-8; % Small tolerance for numerical precision
+
+        if abs(ceq) < tol
+            ceq = 0; % Treat it as zero within tolerance
+        end
+
         % Matrix to convert from rgb to xyz
         % Note: this matrix must be applied on the LEFT!!
         M_rgb2xyz = Disp.T_xyz*Disp.P_monitor;
@@ -290,63 +310,6 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         c(1) = -1*min(diRGBLinCalFormat(:));
         c(2) = max(diRGBLinCalFormat(:))-1;
 
-    end
-
-% Eventually try and implement something like this to capture better lambda
-% value differences
-    function [c, ceq] = nonlin_var_constraint(t_vec, LMSCalFormatTran, M_cones2rgb, renderType, v0, v1)
-        % NONLIN_VAR_CONSTRAINT ensures that the variance of the transformed data
-        % falls within a predefined range of values.
-        %
-        % Inputs:
-        %   t_vec - Flattened 3x3 transformation matrix
-        %   LMSCalFormatTran - Original LMS values in calibration format (transposed)
-        %   M_cones2rgb - Transformation matrix from LMS to RGB
-        %   Disp - Display structure containing transformation matrices
-        %   v0, v1 - Lower and upper bounds for variance range
-        %
-        % Outputs:
-        %   c - Inequality constraint (not used)
-        %   ceq - Equality constraint enforcing variance within specified range
-
-        % Reshape transformation vector into a 3x3 matrix
-        T = reshape(t_vec, 3, 3);
-
-        % Convert LMS to RGB using the transformation matrix
-        newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
-
-        % Convert RGB back to LMS
-        newLMSCalFormatTran = newRGBCalFormatTran * inv(M_cones2rgb)';
-
-        newLMSCalFormat = newLMSCalFormatTran';
-        % Compute variance for each LMS channel
-        switch (renderType)
-            case 'Deuteranopia' % m cone deficiency
-                index = [1 3];
-            case 'Protanopia'   % l cone deficiency
-                index = [2 3];
-            case 'Tritanopia'   % s cone deficiency
-                index = [1 2];
-        end
-
-        % Variance term
-        total_variance = (var(newLMSCalFormat(index(1), :)) + var(newLMSCalFormat(index(2), :)));
-
-        % var_lms = var(newLMSCalFormatTran, 0, 1);
-        % total_variance = sum(var_lms);
-
-        % Range of variance vals based on present v0 v1
-        variance_range = linspace(v0, v1, 10);
-
-        % Find the closest variance value within the range
-        [~, closest_index] = min(abs(variance_range - total_variance));
-        closest_variance = variance_range(closest_index);
-
-        % Nonlinear equality constraint: variance must match one in my chosen
-        % range
-        ceq = total_variance - closest_variance;
-
-        c = [];
     end
 
 end
