@@ -112,8 +112,8 @@ newRGBContrastCalFormatTranContrast_out = newRGBContrastCalFormatTranContrast_ou
 triRGBCalFormatTranOpt = (newRGBContrastCalFormatTranContrast_out.*grayRGB') + grayRGB';
 triRGBCalFormatOpt     = triRGBCalFormatTranOpt';
 
-if (min(triRGBCalFormatTranOpt(:)) < 0) && (min(triRGBCalFormatTranOpt(:)) > -.01)
-    triRGBCalFormatTranOpt(triRGBCalFormatTranOpt<0) = 0;
+if (min(triRGBCalFormatOpt(:)) < 0) && (min(triRGBCalFormatOpt(:)) > -.01)
+    triRGBCalFormatOpt(triRGBCalFormatOpt<0) = 0;
 end
 
 % Calculate optimal output from input * optimal transform
@@ -123,7 +123,7 @@ end
 triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 
 % Check if is in gamut
-% inGamutAfterTransform = checkGamut(triLMSCalFormatOpt,Disp,bScale);
+% inGamutAfterTransform = checkGamut(triLMSCalFormatOpt,Disp,0);
 % if inGamutAfterTransform == 0
 %     error(['ERROR: decolorOptimize, constraint is not working, transformation is pushing out of gamut'])
 % end
