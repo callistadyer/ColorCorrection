@@ -33,17 +33,17 @@ triLMSNoiseCalFormat1       = Disp.T_cones*hyperspectralNoiseCalFormat;
 
 
 % 2... CREATE SCENE VERSION
-scene = sceneFromFile(whiteNoiseImage, 'rgb', [], Disp.d, Disp.wls);
-% Get XYZ values (needed for dichromat simulation algorithm from Brettel)
-imgXYZ = sceneGet(scene,'xyz');
-% Hyperspectral image (needed for calculating cone responses)
-hyperspectralImage2     = double(sceneGet(scene,'energy'));
-hyperspectralCalFormat2 = ImageToCalFormat(hyperspectralImage2);
-
-% LMS image (2)
-triLMSNoiseCalFormat2   = Disp.T_cones*hyperspectralCalFormat2;
+% scene = sceneFromFile(whiteNoiseImage, 'rgb', [], Disp.d, Disp.wls);
+% % Get XYZ values (needed for dichromat simulation algorithm from Brettel)
+% imgXYZ = sceneGet(scene,'xyz');
+% % Hyperspectral image (needed for calculating cone responses)
+% hyperspectralImage2     = double(sceneGet(scene,'energy'));
+% hyperspectralCalFormat2 = ImageToCalFormat(hyperspectralImage2);
+% 
+% % LMS image (2)
+% triLMSNoiseCalFormat2   = Disp.T_cones*hyperspectralCalFormat2;
 
 % Compute total variance 
-totalVariance = var(triLMSNoiseCalFormat2(:));
+totalVariance = var(triLMSNoiseCalFormat1(:));
 
 end
