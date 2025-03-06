@@ -205,13 +205,16 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 
         % Variance term
         var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormat);
+        % Weight by lambda
         var_term = lambda*var_term_raw;
-        totalVariance = whiteNoiseVariance(Disp);
+        
         % Normalize via total variance in white noise image
+        totalVariance = whiteNoiseVariance(Disp);
         var_term_balance = var_term/totalVariance;
 
         % Similarity term
         similarity_term_raw = similarityLMS('angle',LMSCalFormatTran,newLMSContrastCalFormatTran);
+        % Weight by lambda
         similarity_term = (1-lambda)*similarity_term_raw;
 
         % Loss
