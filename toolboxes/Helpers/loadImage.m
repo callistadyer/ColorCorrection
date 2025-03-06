@@ -41,7 +41,7 @@ elseif strcmp(image,'gray')
     % Create gray hyperspectral image
     % 256 x 256 gray image
     % [grayImgCalFormat,m,n] = ImageToCalFormat(ones(256,256));
-    [grayImgCalFormat,m,n] = ImageToCalFormat(ones(128,128));
+    [grayImgCalFormat,m,n] = ImageToCalFormat(ones(32,32));
 
     % Gray 0.5 rgb at each pixel in image 
     grayImgCalFormat       = (0.5.*(repmat(grayImgCalFormat,3,1)));

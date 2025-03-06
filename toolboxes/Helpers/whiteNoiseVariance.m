@@ -37,7 +37,7 @@ imgXYZ = sceneGet(scene,'xyz');
 % Hyperspectral image (needed for calculating cone responses)
 hyperspectralImage2     = double(sceneGet(scene,'energy'));
 hyperspectralCalFormat2 = ImageToCalFormat(hyperspectralImage2);
-triLMSNoiseCalFormat2    = Disp.T_cones*hyperspectralCalFormat2;
+triLMSNoiseCalFormat2   = Disp.T_cones*hyperspectralCalFormat2;
 
 % Compute total variance 
 totalVariance = var(triLMSNoiseCalFormat2(:));

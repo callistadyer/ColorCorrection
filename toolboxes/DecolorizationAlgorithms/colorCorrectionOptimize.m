@@ -219,8 +219,6 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % so small that it is unhappy.
         balanceFactor = 10e5;
         fminconFactor = 10^11/balanceFactor;
-        % fminconFactor = 1;
-        % fminconFactor = 1;
         loss = -fminconFactor*(var_term_balance + similarity_term) + lossGamutTerm;
 
     end
