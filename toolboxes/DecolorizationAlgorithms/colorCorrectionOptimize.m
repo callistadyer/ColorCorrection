@@ -112,6 +112,8 @@ newRGBContrastCalFormatTranContrast_out = newRGBContrastCalFormatTranContrast_ou
 triRGBCalFormatTranOpt = (newRGBContrastCalFormatTranContrast_out.*grayRGB') + grayRGB';
 triRGBCalFormatOpt     = triRGBCalFormatTranOpt';
 
+% Check for small perterburbations around 0 and 1 in gamut...
+% transformations might have pushed it slightly out 
 if (min(triRGBCalFormatOpt(:)) < 0) && (min(triRGBCalFormatOpt(:)) > -.01)
     triRGBCalFormatOpt(triRGBCalFormatOpt<0) = 0;
 end
@@ -127,7 +129,6 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 % if inGamutAfterTransform == 0
 %     error(['ERROR: decolorOptimize, constraint is not working, transformation is pushing out of gamut'])
 % end
-
 
 %% Functions
 
@@ -160,12 +161,12 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % LMSContrastCalFormatTran = LMSCalFormatTran;
 
         % Convert into RGB where gray is removed
-        RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb'; %*****
+        RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb'; 
 
         % Create contrast image
         RGBContrastCalFormatTran = (RGBCalFormatTran - grayRGB')./grayRGB';
 
-        % Transformation
+        % Transformation on gray subtracted image
         newRGBContrastCalFormatTran_noGray = RGBContrastCalFormatTran * T;
 
         % Add gray back in
@@ -202,44 +203,23 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
             lossGamutTerm = 0;
         end
 
-        switch (renderType)
-            case 'Deuteranopia' % m cone deficiency
-                index = [1 3];
-            case 'Protanopia'   % l cone deficiency
-                index = [2 3];
-            case 'Tritanopia'   % s cone deficiency
-                index = [1 2];
-        end
-
         % Variance term
-        var_term_raw = (var(newLMSContrastCalFormat(index(1), :)) + var(newLMSContrastCalFormat(index(2), :)));
+        var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormat);
         var_term = lambda*var_term_raw;
-
         totalVariance = whiteNoiseVariance(Disp);
-
-        % Set a balance factor that brings the variance term to order 1
-        balanceFactor = 10e5; %%%%% CALLISTA -- NEED TO DECIDE THIS MORE CAREFULLY %%%%%
-        % var_term_balance = balanceFactor * var_term;
         % Normalize via total variance in white noise image
         var_term_balance = var_term/totalVariance;
 
         % Similarity term
-        similarityType = 'angle';
-        switch (similarityType)
-            case 'angle'
-                similarity_term_raw = (newLMSContrastCalFormatTran(:)'*LMSCalFormatTran(:))/(norm(newLMSContrastCalFormatTran(:))*norm(LMSCalFormatTran(:)));
-            case 'distance'
-                similarity_term_raw = norm(newLMSContrastCalFormat(:)-LMSCalFormatTran(:))/norm(LMSCalFormatTran(:));
-            otherwise
-                error('Unknown similarity type specified');
-        end
+        similarity_term_raw = similarityLMS('angle',LMSCalFormatTran,newLMSContrastCalFormatTran);
         similarity_term = (1-lambda)*similarity_term_raw;
 
         % Loss
-        %
         % Scale loss so that it is small enough to make fmincon happy but not
         % so small that it is unhappy.
+        balanceFactor = 10e5;
         fminconFactor = 10^11/balanceFactor;
+        % fminconFactor = 1;
         % fminconFactor = 1;
         loss = -fminconFactor*(var_term_balance + similarity_term) + lossGamutTerm;
 

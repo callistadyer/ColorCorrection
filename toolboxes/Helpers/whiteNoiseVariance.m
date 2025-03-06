@@ -27,7 +27,7 @@ hyperspectralNoiseCalFormat = Disp.P_monitor * whiteNoiseCalFormat;
 % Image format
 hyperspectralNoiseImage     = CalFormatToImage(hyperspectralNoiseCalFormat,Disp.m,Disp.n);
 hyperspectralNoiseCalFormat = ImageToCalFormat(hyperspectralNoiseImage);
-triLMSNoiseCalFormat1        = Disp.T_cones*hyperspectralNoiseCalFormat;
+triLMSNoiseCalFormat1       = Disp.T_cones*hyperspectralNoiseCalFormat;
 
 
 % 2... CREATE SCENE VERSION
@@ -40,6 +40,6 @@ hyperspectralCalFormat2 = ImageToCalFormat(hyperspectralImage2);
 triLMSNoiseCalFormat2    = Disp.T_cones*hyperspectralCalFormat2;
 
 % Compute total variance 
-totalVariance = var(triLMSNoiseCalFormat1(:));
+totalVariance = var(triLMSNoiseCalFormat2(:));
 
 end

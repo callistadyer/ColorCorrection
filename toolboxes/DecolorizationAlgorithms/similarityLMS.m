@@ -1,13 +1,15 @@
-function similarityLMS()
+function similarity = similarityLMS(similarityType,LMS_old,LMS_new)
 % Computes similarity metric between original and transformed LMS image
 %
 % Syntax:
 %   
 %
 % Inputs:
-%   triLMSCalFormat:    original LMS values to be transformed
-%   bPLOT:              1 -> Plot the result, 0 -> Don't plot
-%   lambda_var:         Weight for maximizing variance (0 <= lambda_var <= 1)
+%   similarityType:    type of similarity metric
+%                           "angle" -> cosine similarity
+%                           "distance" -> normalized euclidean distance
+%   LMS_old:           original LMS values
+%   LMS_new:           transformed LMS values
 %
 % Outputs:
 %   triLMSCalFormatOpt: Transformed LMS values
@@ -22,9 +24,9 @@ function similarityLMS()
 
 switch (similarityType)
     case 'angle'
-        similarity_term_raw = (newLMSContrastCalFormatTran(:)'*LMSCalFormatTran(:))/(norm(newLMSContrastCalFormatTran(:))*norm(LMSCalFormatTran(:)));
+        similarity = (LMS_new(:)'*LMS_old(:))/(norm(LMS_new(:))*norm(LMS_old(:)));
     case 'distance'
-        similarity_term_raw = norm(newLMSContrastCalFormat(:)-LMSCalFormatTran(:))/norm(LMSCalFormatTran(:));
+        similarity = norm(LMS_new(:)-LMS_old(:))/norm(LMS_old(:));
     otherwise
         error('Unknown similarity type specified');
 end

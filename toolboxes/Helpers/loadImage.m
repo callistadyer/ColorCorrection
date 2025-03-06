@@ -50,6 +50,7 @@ elseif strcmp(image,'gray')
     d = displayCreate('LCD-Apple');
     P_monitor = SplineSrf(displayGet(d,'wave'),displayGet(d,'spd'),wls);
     % Make hyperspectral img by multiplying primaries * rgb values at each pixel 
+    % This is a weighted sum of primaries 
     hyperspecGrayCalFormat = P_monitor * grayImgCalFormat;
 
     % Image format
