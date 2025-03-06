@@ -75,7 +75,7 @@ b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
 
 % Initial guess at transformation matrix - start with identity
 T0 = eye(3, 3);
-% See if trying a different starting point would be helpful? 
+% See if trying a different starting point would be helpful?
 % T0 = T0 * 0.8;
 % T0(T0==0) = .1;
 % T0 = T0(:);
@@ -113,7 +113,7 @@ triRGBCalFormatTranOpt = (newRGBContrastCalFormatTranContrast_out.*grayRGB') + g
 triRGBCalFormatOpt     = triRGBCalFormatTranOpt';
 
 % Check for small perterburbations around 0 and 1 in gamut...
-% transformations might have pushed it slightly out 
+% transformations might have pushed it slightly out
 if (min(triRGBCalFormatOpt(:)) < 0) && (min(triRGBCalFormatOpt(:)) > -.01)
     triRGBCalFormatOpt(triRGBCalFormatOpt<0) = 0;
 end
@@ -161,7 +161,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % LMSContrastCalFormatTran = LMSCalFormatTran;
 
         % Convert into RGB where gray is removed
-        RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb'; 
+        RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb';
 
         % Create contrast image
         RGBContrastCalFormatTran = (RGBCalFormatTran - grayRGB')./grayRGB';
@@ -176,7 +176,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 
         % % Old code, before contrast manipulation:
         % newRGBContrastCalFormatTran = LMSContrastCalFormatTran * M_cones2rgb' * T;
-        % newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;      
+        % newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
         % % Convert to LMS
         % newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
         % newLMSCalFormatTran = newRGBCalFormatTran*inv(M_cones2rgb)';
@@ -249,7 +249,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % LMSCalFormatTran * M_cones2rgb' --> converts LMS to RGB values
         % T scales the RGB values
         % altogether, (LMSCalFormatTran * M_cones2rgb' * T) returns scaled RGB values in calFormatTransposed format
-       
+
         % Weber contrast image
         grayRGB = [0.5 0.5 0.5]';
 
@@ -259,7 +259,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         RGBContrastCalFormatTran = (RGBCalFormatTran - grayRGB')./grayRGB';
         % Transformation
         newRGBContrastCalFormatTran = RGBContrastCalFormatTran * T;
-        % Add back in the gray 
+        % Add back in the gray
         newRGBCalFormatTran = (newRGBContrastCalFormatTran.*grayRGB') + grayRGB';
         newRGBCalFormat = newRGBCalFormatTran';
 
@@ -289,59 +289,59 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 
 % Eventually try and implement something like this to capture better lambda
 % value differences
-function [c, ceq] = nonlin_var_constraint(t_vec, LMSCalFormatTran, M_cones2rgb, renderType, v0, v1)
-    % NONLIN_VAR_CONSTRAINT ensures that the variance of the transformed data
-    % falls within a predefined range of values.
-    %
-    % Inputs:
-    %   t_vec - Flattened 3x3 transformation matrix
-    %   LMSCalFormatTran - Original LMS values in calibration format (transposed)
-    %   M_cones2rgb - Transformation matrix from LMS to RGB
-    %   Disp - Display structure containing transformation matrices
-    %   v0, v1 - Lower and upper bounds for variance range
-    %
-    % Outputs:
-    %   c - Inequality constraint (not used)
-    %   ceq - Equality constraint enforcing variance within specified range
+    function [c, ceq] = nonlin_var_constraint(t_vec, LMSCalFormatTran, M_cones2rgb, renderType, v0, v1)
+        % NONLIN_VAR_CONSTRAINT ensures that the variance of the transformed data
+        % falls within a predefined range of values.
+        %
+        % Inputs:
+        %   t_vec - Flattened 3x3 transformation matrix
+        %   LMSCalFormatTran - Original LMS values in calibration format (transposed)
+        %   M_cones2rgb - Transformation matrix from LMS to RGB
+        %   Disp - Display structure containing transformation matrices
+        %   v0, v1 - Lower and upper bounds for variance range
+        %
+        % Outputs:
+        %   c - Inequality constraint (not used)
+        %   ceq - Equality constraint enforcing variance within specified range
 
-    % Reshape transformation vector into a 3x3 matrix
-    T = reshape(t_vec, 3, 3);
-    
-    % Convert LMS to RGB using the transformation matrix
-    newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
-    
-    % Convert RGB back to LMS
-    newLMSCalFormatTran = newRGBCalFormatTran * inv(M_cones2rgb)';
+        % Reshape transformation vector into a 3x3 matrix
+        T = reshape(t_vec, 3, 3);
 
-    newLMSCalFormat = newLMSCalFormatTran';
-    % Compute variance for each LMS channel
-    switch (renderType)
-        case 'Deuteranopia' % m cone deficiency
-            index = [1 3];
-        case 'Protanopia'   % l cone deficiency
-            index = [2 3];
-        case 'Tritanopia'   % s cone deficiency
-            index = [1 2];
+        % Convert LMS to RGB using the transformation matrix
+        newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
+
+        % Convert RGB back to LMS
+        newLMSCalFormatTran = newRGBCalFormatTran * inv(M_cones2rgb)';
+
+        newLMSCalFormat = newLMSCalFormatTran';
+        % Compute variance for each LMS channel
+        switch (renderType)
+            case 'Deuteranopia' % m cone deficiency
+                index = [1 3];
+            case 'Protanopia'   % l cone deficiency
+                index = [2 3];
+            case 'Tritanopia'   % s cone deficiency
+                index = [1 2];
+        end
+
+        % Variance term
+        total_variance = (var(newLMSCalFormat(index(1), :)) + var(newLMSCalFormat(index(2), :)));
+
+        % var_lms = var(newLMSCalFormatTran, 0, 1);
+        % total_variance = sum(var_lms);
+
+        % Range of variance vals based on present v0 v1
+        variance_range = linspace(v0, v1, 10);
+
+        % Find the closest variance value within the range
+        [~, closest_index] = min(abs(variance_range - total_variance));
+        closest_variance = variance_range(closest_index);
+
+        % Nonlinear equality constraint: variance must match one in my chosen
+        % range
+        ceq = total_variance - closest_variance;
+
+        c = [];
     end
-
-    % Variance term
-    total_variance = (var(newLMSCalFormat(index(1), :)) + var(newLMSCalFormat(index(2), :)));
-
-    % var_lms = var(newLMSCalFormatTran, 0, 1);
-    % total_variance = sum(var_lms);
-
-    % Range of variance vals based on present v0 v1
-    variance_range = linspace(v0, v1, 10); 
-
-    % Find the closest variance value within the range
-    [~, closest_index] = min(abs(variance_range - total_variance));
-    closest_variance = variance_range(closest_index);
-
-    % Nonlinear equality constraint: variance must match one in my chosen
-    % range
-    ceq = total_variance - closest_variance;
-
-    c = [];
-end
 
 end
