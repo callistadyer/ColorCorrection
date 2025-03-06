@@ -207,7 +207,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormat);
         % Weight by lambda
         var_term = lambda*var_term_raw;
-        
+
         % Normalize via total variance in white noise image
         totalVariance = whiteNoiseVariance(Disp);
         var_term_balance = var_term/totalVariance;
@@ -220,6 +220,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Loss
         % Scale loss so that it is small enough to make fmincon happy but not
         % so small that it is unhappy.
+        %%%%%%%%%%%%% how to determine this? %%%%%%%%%%%%%
         balanceFactor = 10e5;
         fminconFactor = 10^11/balanceFactor;
         loss = -fminconFactor*(var_term_balance + similarity_term) + lossGamutTerm;

@@ -27,6 +27,8 @@ hyperspectralNoiseCalFormat = Disp.P_monitor * whiteNoiseCalFormat;
 % Image format
 hyperspectralNoiseImage     = CalFormatToImage(hyperspectralNoiseCalFormat,Disp.m,Disp.n);
 hyperspectralNoiseCalFormat = ImageToCalFormat(hyperspectralNoiseImage);
+
+% LMS image (1)
 triLMSNoiseCalFormat1       = Disp.T_cones*hyperspectralNoiseCalFormat;
 
 
@@ -37,6 +39,8 @@ imgXYZ = sceneGet(scene,'xyz');
 % Hyperspectral image (needed for calculating cone responses)
 hyperspectralImage2     = double(sceneGet(scene,'energy'));
 hyperspectralCalFormat2 = ImageToCalFormat(hyperspectralImage2);
+
+% LMS image (2)
 triLMSNoiseCalFormat2   = Disp.T_cones*hyperspectralCalFormat2;
 
 % Compute total variance 
