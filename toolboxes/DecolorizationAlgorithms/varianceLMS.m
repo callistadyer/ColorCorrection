@@ -1,5 +1,5 @@
 function variance = varianceLMS(varianceType,renderType,LMS_old,LMS_new)
-% Computes similarity metric between original and transformed LMS image
+% Computes variance metric between original and transformed LMS image
 %
 % Syntax:
 %   
