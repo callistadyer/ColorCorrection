@@ -68,10 +68,19 @@ nPix   = size(triLMSCalFormat,2);
 % Constraint matrix (A, includes lots of I iterations) and vector (b)
 % triLMSCalFormatTran: trichromat LMS values in [nPix x 3] form
 triRGBCalFormatTran = triLMSCalFormat' * M_cones2rgb';
-A_upper = blkdiag(triRGBCalFormatTran, triRGBCalFormatTran, triRGBCalFormatTran);      % Upper constraint blocks
-A_lower = -A_upper;              % for -I * X <= 0
-A = double([A_upper; A_lower]);
-b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
+
+% Create contrast image
+% grayRGB = [0.5 0.5 0.5]';
+% triRGBContrastCalFormatTran = (triRGBCalFormatTran - grayRGB')./grayRGB';
+
+% contrastRGBMatrix = (triRGBCalFormatTran - grayRGB') ./ grayRGB';
+% A_upper = blkdiag(triRGBContrastCalFormatTran, triRGBContrastCalFormatTran, triRGBContrastCalFormatTran);      % Upper constraint blocks
+% A_upper = blkdiag(triRGBCalFormatTran, triRGBCalFormatTran, triRGBCalFormatTran);      % Upper constraint blocks
+% A_lower = -A_upper;              % for -I * X <= 0
+% A = double([A_upper; A_lower]);
+% b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
+% % Update b to deal with contrast image
+% b = (b - grayRGB(1))./grayRGB(1);
 
 % Initial guess at transformation matrix - start with identity
 T0 = eye(3, 3);
@@ -82,15 +91,18 @@ T0 = eye(3, 3);
 
 % OPTIMIZATION SETUP
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',70);
+% [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
+%     T0, A, b, [], [], [], [], ...,
+%     @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
 [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
-    T0, A, b, [], [], [], [], ...,
+    T0, [], [], [], [], [], [], ...,
     @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
 
 fValOpt = loss_function(transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
-bCheck = A*transformRGB_opt(:);
-if (any(bCheck > b))
-    fprintf('Failed to satisfy constraint\n');
-end
+% bCheck = A*transformRGB_opt(:);
+% if (any(bCheck > b))
+%     fprintf('Failed to satisfy constraint\n');
+% end
 
 % RESHAPE THE OPTIMAL SOLUTION INTO MATRIX FORM
 transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
@@ -193,7 +205,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Variance term
         var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormat);
         % Weight by lambda
-        var_term = lambda*var_term_raw;
+        % var_term = lambda*var_term_raw;
+        var_term = var_term_raw;
 
         % Normalize via total variance in white noise image
         totalVariance = whiteNoiseVariance("newConeVar",renderType,Disp);
@@ -202,14 +215,13 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Similarity term
         similarity_term_raw = similarityLMS('angle',LMSCalFormatTran,newLMSContrastCalFormatTran);
         % Weight by lambda
-        similarity_term = (1-lambda)*similarity_term_raw;
+        % similarity_term = (1-lambda)*similarity_term_raw;
+        similarity_term = similarity_term_raw; % Getting rid of lambda for now
 
         % Loss
         % Scale loss so that it is small enough to make fmincon happy but not
         % so small that it is unhappy.
         %%%%%%%%%%%%% how to determine this? %%%%%%%%%%%%%
-        % balanceFactor = 10e5;
-        % fminconFactor = 10^11/balanceFactor;
         fminconFactor = 1e6;
         loss = -fminconFactor*(var_term_balance + similarity_term);
 
@@ -259,21 +271,20 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
 
         % For dichromat plate image
-        v0 = 6.3297e-15;
-        v1 = 1.7937e-05;
+        v0 = 1.4856e-13;
+        v1 = 5.3329e-06;
         variance_range = linspace(v0, v1, 10);
         var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormatTran');
-        % Find the closest variance value within the range
-        [~, closest_index] = min(abs(variance_range - var_term_raw));
-        closest_variance = variance_range(closest_index);
+
         % Nonlinear equality constraint: variance must match one in my chosen
         % range
-        ceq = var_term_raw - closest_variance;
+        ceq = var_term_raw - variance_range(1);
         tol = 1e-8; % Small tolerance for numerical precision
 
         if abs(ceq) < tol
             ceq = 0; % Treat it as zero within tolerance
         end
+        % ceq = [];
 
         % Matrix to convert from rgb to xyz
         % Note: this matrix must be applied on the LEFT!!
@@ -293,9 +304,12 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % XYZ --> Linear RGB
         diRGBLinCalFormat = M_xyz2rgb * diXYZCalFormat;
 
+        % nonlin constraints must be <= 0
         % Get c(1) and c(2) from min and max
         c(1) = -1*min(diRGBLinCalFormat(:));
         c(2) = max(diRGBLinCalFormat(:))-1;
+        c(3) = -1*min(newRGBCalFormatTran(:));
+        c(4) = max(newRGBCalFormatTran(:))-1;
 
     end
 
