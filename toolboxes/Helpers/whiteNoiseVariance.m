@@ -44,6 +44,7 @@ triLMSNoiseCalFormat1       = Disp.T_cones*hyperspectralNoiseCalFormat;
 % triLMSNoiseCalFormat2   = Disp.T_cones*hyperspectralCalFormat2;
 
 % Compute total variance 
-totalVariance = var(triLMSNoiseCalFormat1(:));
+totalVariance = varianceLMS("newConeVar",'Deuteranopia',[],triLMSNoiseCalFormat1);
+% totalVariance = var(triLMSNoiseCalFormat1(:));
 
 end
