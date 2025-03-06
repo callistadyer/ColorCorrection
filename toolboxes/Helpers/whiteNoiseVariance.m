@@ -24,15 +24,16 @@ whiteNoiseCalFormat = ImageToCalFormat(whiteNoiseImage);
 % 1... MANUAL
 % Make hyperspectral img by multiplying primaries * rgb values at each pixel
 hyperspectralNoiseCalFormat = Disp.P_monitor * whiteNoiseCalFormat;
-% Image format
-hyperspectralNoiseImage     = CalFormatToImage(hyperspectralNoiseCalFormat,Disp.m,Disp.n);
-hyperspectralNoiseCalFormat = ImageToCalFormat(hyperspectralNoiseImage);
 
 % LMS image (1)
 triLMSNoiseCalFormat1       = Disp.T_cones*hyperspectralNoiseCalFormat;
 
-
 % 2... CREATE SCENE VERSION
+% Image format
+%hyperspectralNoiseImage     = CalFormatToImage(hyperspectralNoiseCalFormat,Disp.m,Disp.n);
+%
+% NOTE: whiteNoiseImage needs to be ungammacorrected before sceneToFile will do
+% what you want. For example, whiteNoiseImage.^2.
 % scene = sceneFromFile(whiteNoiseImage, 'rgb', [], Disp.d, Disp.wls);
 % % Get XYZ values (needed for dichromat simulation algorithm from Brettel)
 % imgXYZ = sceneGet(scene,'xyz');

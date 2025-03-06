@@ -221,8 +221,9 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Scale loss so that it is small enough to make fmincon happy but not
         % so small that it is unhappy.
         %%%%%%%%%%%%% how to determine this? %%%%%%%%%%%%%
-        balanceFactor = 10e5;
-        fminconFactor = 10^11/balanceFactor;
+        % balanceFactor = 10e5;
+        % fminconFactor = 10^11/balanceFactor;
+        fminconFactor = 1e6;
         loss = -fminconFactor*(var_term_balance + similarity_term) + lossGamutTerm;
 
     end
