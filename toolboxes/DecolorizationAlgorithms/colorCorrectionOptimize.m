@@ -72,14 +72,19 @@ triRGBCalFormatTran = triLMSCalFormat' * M_cones2rgb';
 % Create contrast image
 % grayRGB = [0.5 0.5 0.5]';
 % triRGBContrastCalFormatTran = (triRGBCalFormatTran - grayRGB')./grayRGB';
-
 % contrastRGBMatrix = (triRGBCalFormatTran - grayRGB') ./ grayRGB';
+
+% % Linear Constraint for staying in gamut. Can't use this when using
+% % algorithm on contrast image
 % A_upper = blkdiag(triRGBContrastCalFormatTran, triRGBContrastCalFormatTran, triRGBContrastCalFormatTran);      % Upper constraint blocks
 % A_upper = blkdiag(triRGBCalFormatTran, triRGBCalFormatTran, triRGBCalFormatTran);      % Upper constraint blocks
 % A_lower = -A_upper;              % for -I * X <= 0
 % A = double([A_upper; A_lower]);
 % b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
-% % Update b to deal with contrast image
+
+% % Update b to deal with contrast image 
+% % (contrast * T) * grayRGB + grayRGB <= b 
+% % (contrast * T)                     <= (b - grayRGB)/grayRGB
 % b = (b - grayRGB(1))./grayRGB(1);
 
 % Initial guess at transformation matrix - start with identity
@@ -90,10 +95,13 @@ T0 = eye(3, 3);
 % T0 = T0(:);
 
 % OPTIMIZATION SETUP
-options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',70);
+% Optimization with linear constraints A,b:
 % [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
 %     T0, A, b, [], [], [], [], ...,
 %     @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
+
+% Optimization without linear constraints:
+options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',100);
 [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
     T0, [], [], [], [], [], [], ...,
     @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
@@ -205,7 +213,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Variance term
         var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormat);
         % Weight by lambda
-        % var_term = lambda*var_term_raw;
+        var_term = lambda*var_term_raw;
+        % Eventually, try to avoid lambda and choose variance wisely
         var_term = var_term_raw;
 
         % Normalize via total variance in white noise image
@@ -215,7 +224,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Similarity term
         similarity_term_raw = similarityLMS('angle',LMSCalFormatTran,newLMSContrastCalFormatTran);
         % Weight by lambda
-        % similarity_term = (1-lambda)*similarity_term_raw;
+        similarity_term = (1-lambda)*similarity_term_raw;
+        % Eventually, try to avoid lambda and choose variance wisely
         similarity_term = similarity_term_raw; % Getting rid of lambda for now
 
         % Loss
@@ -271,15 +281,19 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
 
         % For dichromat plate image
+        % Obtain v0 and v1 by running the code with lambda still included.
+        % Make lambda = 0 and 1 and collect values for var_term_raw in loss function
         v0 = 1.4856e-13;
         v1 = 5.3329e-06;
         variance_range = linspace(v0, v1, 10);
         var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormatTran');
 
+        % Once you have v0 and v1, now you can tell the function to search
+        % only for the solution with these values 
         % Nonlinear equality constraint: variance must match one in my chosen
         % range
-        ceq = var_term_raw - variance_range(1);
-        tol = 1e-8; % Small tolerance for numerical precision
+        ceq = var_term_raw - variance_range(10);
+        tol = 1e-5;
 
         if abs(ceq) < tol
             ceq = 0; % Treat it as zero within tolerance
@@ -304,10 +318,14 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % XYZ --> Linear RGB
         diRGBLinCalFormat = M_xyz2rgb * diXYZCalFormat;
 
-        % nonlin constraints must be <= 0
+        % Nonlin constraints must be <= 0
         % Get c(1) and c(2) from min and max
+
+        % Nonlinear constraints for dichromat
         c(1) = -1*min(diRGBLinCalFormat(:));
         c(2) = max(diRGBLinCalFormat(:))-1;
+
+        % Nonlinear constraints for trichromat
         c(3) = -1*min(newRGBCalFormatTran(:));
         c(4) = max(newRGBCalFormatTran(:))-1;
 
