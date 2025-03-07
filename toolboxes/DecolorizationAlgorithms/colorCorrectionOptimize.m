@@ -68,25 +68,34 @@ nPix   = size(triLMSCalFormat,2);
 % Constraint matrix (A, includes lots of I iterations) and vector (b)
 % triLMSCalFormatTran: trichromat LMS values in [nPix x 3] form
 triRGBCalFormatTran = triLMSCalFormat' * M_cones2rgb';
-
+% Perhaps round to get rid of small discrepancies during gray subtraction
+triRGBCalFormatTran = round(triRGBCalFormatTran,4);
 % Create contrast image
-% grayRGB = [0.5 0.5 0.5]';
-% triRGBContrastCalFormatTran = (triRGBCalFormatTran - grayRGB')./grayRGB';
-% contrastRGBMatrix = (triRGBCalFormatTran - grayRGB') ./ grayRGB';
+grayRGB = [0.5 0.5 0.5]';
+% Contrast RGB
+triRGBContrastCalFormatTran = (triRGBCalFormatTran - grayRGB')./grayRGB';
 
-% % Linear Constraint for staying in gamut. Can't use this when using
-% % algorithm on contrast image
-% A_upper = blkdiag(triRGBContrastCalFormatTran, triRGBContrastCalFormatTran, triRGBContrastCalFormatTran);      % Upper constraint blocks
-% A_upper = blkdiag(triRGBCalFormatTran, triRGBCalFormatTran, triRGBCalFormatTran);      % Upper constraint blocks
-% A_lower = -A_upper;              % for -I * X <= 0
-% A = double([A_upper; A_lower]);
-% b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
+linearGamutConstraint = 0;
+if linearGamutConstraint == 1
+    % Linear Constraint for staying in gamut
+    % Contrast version: the contrast image A
+    A_upper = blkdiag(triRGBContrastCalFormatTran, triRGBContrastCalFormatTran, triRGBContrastCalFormatTran);      % Upper constraint blocks
 
-% % Update b to deal with contrast image 
-% % (contrast * T) * grayRGB + grayRGB <= b 
-% % (contrast * T)                     <= (b - grayRGB)/grayRGB
-% b = (b - grayRGB(1))./grayRGB(1);
+    % % Non contrast version: regular RGB for A
+    % A_upper = blkdiag(triRGBCalFormatTran, triRGBCalFormatTran, triRGBCalFormatTran);      % Upper constraint blocks
+    % Lower is always negative of upper
+    A_lower = -A_upper;              % for -I * X <= 0
+    % Create A from upper and lower
+    A = double([A_upper; A_lower]);
+    % b defines the gamut. In regular RGB, it must stay between 0 and 1
+    b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
 
+    % % Update b to deal with contrast image
+    % % (contrastA * T) * grayRGB + grayRGB <= b
+    % % (contrastA * T)                     <= (b - grayRGB)/grayRGB
+    b = (b - grayRGB(1))./grayRGB(1);
+else
+end
 % Initial guess at transformation matrix - start with identity
 T0 = eye(3, 3);
 % See if trying a different starting point would be helpful?
@@ -95,16 +104,19 @@ T0 = eye(3, 3);
 % T0 = T0(:);
 
 % OPTIMIZATION SETUP
-% Optimization with linear constraints A,b:
-% [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
-%     T0, A, b, [], [], [], [], ...,
-%     @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
+options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',200);
 
-% Optimization without linear constraints:
-options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',100);
-[transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
-    T0, [], [], [], [], [], [], ...,
-    @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
+if linearGamutConstraint == 1
+    % Optimization with linear constraints A,b:
+    [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
+        T0, A, b, [], [], [], [], ...,
+        @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
+else
+    % Optimization without linear constraints:
+    [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
+        T0, [], [], [], [], [], [], ...,
+        @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
+end
 
 fValOpt = loss_function(transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
 % bCheck = A*transformRGB_opt(:);
@@ -118,15 +130,9 @@ transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 % Contrast manipulation
 grayRGB = [0.5 0.5 0.5]';
 
-% Transform into RGB space so you can subtract out gray in RGB (doesn't
-% work exactly right when you subtract in LMS... some odd rounding errors)
-newRGBCalFormatTran_out = triLMSCalFormatTran * M_cones2rgb';
-
-% Get contrast image by subtracting out gray
-newRGBContrastCalFormatTranContrast_out = (newRGBCalFormatTran_out - grayRGB')./grayRGB';
-
 % Transform contrast image
-newRGBContrastCalFormatTranContrast_out = newRGBContrastCalFormatTranContrast_out * transformRGBmatrix_opt;
+% newRGBContrastCalFormatTranContrast_out = newRGBContrastCalFormatTranContrast_out * transformRGBmatrix_opt;
+newRGBContrastCalFormatTranContrast_out = triRGBContrastCalFormatTran * transformRGBmatrix_opt;
 
 % Add back in gray before outputting the image
 triRGBCalFormatTranOpt = (newRGBContrastCalFormatTranContrast_out.*grayRGB') + grayRGB';
@@ -278,26 +284,30 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Convert into LMS
         newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
 
-        % For dichromat plate image
-        % Obtain v0 and v1 by running the code with lambda still included.
-        % Make lambda = 0 and 1 and collect values for var_term_raw in loss function
-        v0 = 1.4856e-13;
-        v1 = 5.3329e-06;
-        variance_range = linspace(v0, v1, 10);
-        var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormatTran');
-
         % Once you have v0 and v1, now you can tell the function to search
-        % only for the solution with these values 
+        % only for the solution with these values
         % Nonlinear equality constraint: variance must match one in my chosen
         % range
-        ceq = var_term_raw - variance_range(10);
-        tol = 1e-5;
+        varSpecific = 1;
+        if varSpecific == 1
+            % For dichromat plate image
+            % Obtain v0 and v1 by running the code with lambda still included.
+            % Make lambda = 0 and 1 and collect values for var_term_raw in loss function
+            v0 = 1.4856e-13;
+            v1 = 5.3329e-06;
+            variance_range = linspace(v0, v1, 10);
+            var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormatTran');
 
-        if abs(ceq) < tol
-            ceq = 0; % Treat it as zero within tolerance
+            ceq = var_term_raw - variance_range(10);
+            tol = 1e-8;
+
+            if abs(ceq) < tol
+                ceq = 0; % Treat it as zero within tolerance
+            end
+        else
+            ceq = [];
         end
-        % ceq = [];
-
+      
         % Matrix to convert from rgb to xyz
         % Note: this matrix must be applied on the LEFT!!
         M_rgb2xyz = Disp.T_xyz*Disp.P_monitor;
