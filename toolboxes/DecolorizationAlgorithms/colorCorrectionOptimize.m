@@ -75,27 +75,24 @@ grayRGB = [0.5 0.5 0.5]';
 % Contrast RGB
 triRGBContrastCalFormatTran = (triRGBCalFormatTran - grayRGB')./grayRGB';
 
-linearGamutConstraint = 0;
-if linearGamutConstraint == 1
-    % Linear Constraint for staying in gamut
-    % Contrast version: the contrast image A
-    A_upper = blkdiag(triRGBContrastCalFormatTran, triRGBContrastCalFormatTran, triRGBContrastCalFormatTran);      % Upper constraint blocks
+% Linear Constraint for staying in gamut
+% Contrast version: the contrast image A
+A_upper = blkdiag(triRGBContrastCalFormatTran, triRGBContrastCalFormatTran, triRGBContrastCalFormatTran);      % Upper constraint blocks
+% % Non contrast version: regular RGB for A
+% A_upper = blkdiag(triRGBCalFormatTran, triRGBCalFormatTran, triRGBCalFormatTran);      % Upper constraint blocks
+% Lower is always negative of upper
+A_lower = -(A_upper);              % for -I * X <= 0
+% Create A from upper and lower
+A = double([A_upper; A_lower]);
+% b defines the gamut. In regular RGB, it must stay between 0 and 1
+% b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
 
-    % % Non contrast version: regular RGB for A
-    % A_upper = blkdiag(triRGBCalFormatTran, triRGBCalFormatTran, triRGBCalFormatTran);      % Upper constraint blocks
-    % Lower is always negative of upper
-    A_lower = -A_upper;              % for -I * X <= 0
-    % Create A from upper and lower
-    A = double([A_upper; A_lower]);
-    % b defines the gamut. In regular RGB, it must stay between 0 and 1
-    b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
+% % Update b to deal with contrast image
+% % (contrastA * T) * grayRGB + grayRGB <= b
+% % (contrastA * T)                     <= (b - grayRGB)/grayRGB
+% b = (b - grayRGB(1))./grayRGB(1);
+b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is background
 
-    % % Update b to deal with contrast image
-    % % (contrastA * T) * grayRGB + grayRGB <= b
-    % % (contrastA * T)                     <= (b - grayRGB)/grayRGB
-    b = (b - grayRGB(1))./grayRGB(1);
-else
-end
 % Initial guess at transformation matrix - start with identity
 T0 = eye(3, 3);
 % See if trying a different starting point would be helpful?
@@ -105,24 +102,21 @@ T0 = eye(3, 3);
 
 % OPTIMIZATION SETUP
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',200);
-
-if linearGamutConstraint == 1
-    % Optimization with linear constraints A,b:
-    [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
-        T0, A, b, [], [], [], [], ...,
-        @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
-else
-    % Optimization without linear constraints:
-    [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
-        T0, [], [], [], [], [], [], ...,
-        @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
+bCheck = A*T0(:);
+if (any(bCheck > b))
+    fprintf('Failed to satisfy constraint\n');
 end
 
+% Optimization with linear constraints A,b:
+[transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
+    T0, A, b, [], [], [], [], ...,
+    @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
+
 fValOpt = loss_function(transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
-% bCheck = A*transformRGB_opt(:);
-% if (any(bCheck > b))
-%     fprintf('Failed to satisfy constraint\n');
-% end
+bCheck = A*transformRGB_opt(:);
+if (any(bCheck > b))
+    fprintf('Failed to satisfy constraint\n');
+end
 
 % RESHAPE THE OPTIMAL SOLUTION INTO MATRIX FORM
 transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
@@ -221,7 +215,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Weight by lambda
         var_term = lambda*var_term_raw;
         % Eventually, try to avoid lambda and choose variance wisely
-        var_term = var_term_raw;
+        % var_term = var_term_raw;
 
         % Normalize via total variance in white noise image
         totalVariance = whiteNoiseVariance("newConeVar",renderType,Disp);
@@ -232,7 +226,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Weight by lambda
         similarity_term = (1-lambda)*similarity_term_raw;
         % Eventually, try to avoid lambda and choose variance wisely
-        similarity_term = similarity_term_raw; % Getting rid of lambda for now
+        % similarity_term = similarity_term_raw; % Getting rid of lambda for now
 
         % Loss
         % Scale loss so that it is small enough to make fmincon happy but not
@@ -288,7 +282,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % only for the solution with these values
         % Nonlinear equality constraint: variance must match one in my chosen
         % range
-        varSpecific = 1;
+        varSpecific = 0;
         if varSpecific == 1
             % For dichromat plate image
             % Obtain v0 and v1 by running the code with lambda still included.
@@ -328,14 +322,9 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 
         % Nonlin constraints must be <= 0
         % Get c(1) and c(2) from min and max
-
         % Nonlinear constraints for dichromat
         c(1) = -1*min(diRGBLinCalFormat(:));
         c(2) = max(diRGBLinCalFormat(:))-1;
-
-        % Nonlinear constraints for trichromat
-        c(3) = -1*min(newRGBCalFormatTran(:));
-        c(4) = max(newRGBCalFormatTran(:))-1;
 
     end
 
