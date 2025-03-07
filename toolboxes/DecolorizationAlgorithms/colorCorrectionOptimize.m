@@ -275,8 +275,6 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         newRGBCalFormatTran = (newRGBContrastCalFormatTran.*grayRGB') + grayRGB';
         newRGBCalFormat = newRGBCalFormatTran';
 
-        %%% Add section about only producing values in our desired lambda
-        %%% range
         % Convert into LMS
         newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
 
