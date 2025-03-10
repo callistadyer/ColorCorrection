@@ -1,5 +1,5 @@
 
-function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType,lambda_var)
+function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType,lambda_var,var)
 % Transform trichromatic image so that dichromat can see more color
 % contrast. Also want to try and preserve some naturalness. This is
 % accomplished in colorCorrectionOptimize where we incorporate similarity
@@ -58,7 +58,7 @@ end
 %}
 
 % Close out any stray figures
-close all;
+% close all;
 
 % Get trichromatic (LMS) image
 [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,bScale,nSquares,modType);    
@@ -96,8 +96,8 @@ switch (method)
     case 'linTransform'
         % decolorOptimize does mean subtraction, then maximizes variance fmincon 
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
-        [triLMScalFormatCorrected] = colorCorrectionOptimize(triLMSCalFormat,renderType,lambda_var,Disp);
-        [triLMScalFormatCorrected_plate] = colorCorrectionOptimize(triLMSCalFormat_plate,renderType,lambda_var,Disp);
+        [triLMScalFormatCorrected] = colorCorrectionOptimize(var, triLMSCalFormat,renderType,lambda_var,Disp);
+        [triLMScalFormatCorrected_plate] = colorCorrectionOptimize(var, triLMSCalFormat_plate,renderType,lambda_var,Disp);
     case 'easyPCA'
         triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,renderType,Disp,bScale);
         triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,renderType,Disp,bScale);
@@ -192,7 +192,7 @@ nexttile
 imshow(diRGBImgFormatCorrected_plate);
 title('dichromat corrected - plate');
 
-sgtitle('Left: Trichromat, Right: Dichromat')
+sgtitle(['variance = ' num2str(var)])
 end
 
 

@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt] = colorCorrectionOptimize(triLMSCalFormat, renderType, lambda_var,Disp)
+function [triLMSCalFormatOpt] = colorCorrectionOptimize(var, triLMSCalFormat, renderType, lambda_var,Disp)
 % Optimizes linear transformation of the original cone values
 %
 % Syntax:
@@ -110,7 +110,7 @@ end
 % Optimization with linear constraints A,b:
 [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
     T0, A, b, [], [], [], [], ...,
-    @(transformRGB) nonlin_con(transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
+    @(transformRGB) nonlin_con(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
 
 fValOpt = loss_function(transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
 bCheck = A*transformRGB_opt(:);
@@ -213,9 +213,9 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Variance term
         var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormat);
         % Weight by lambda
-        var_term = lambda*var_term_raw;
+        % var_term = lambda*var_term_raw;
         % Eventually, try to avoid lambda and choose variance wisely
-        % var_term = var_term_raw;
+        var_term = var_term_raw;
 
         % Normalize via total variance in white noise image
         totalVariance = whiteNoiseVariance("newConeVar",renderType,Disp);
@@ -224,9 +224,9 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Similarity term
         similarity_term_raw = similarityLMS('angle',LMSCalFormatTran,newLMSContrastCalFormatTran);
         % Weight by lambda
-        similarity_term = (1-lambda)*similarity_term_raw;
+        % similarity_term = (1-lambda)*similarity_term_raw;
         % Eventually, try to avoid lambda and choose variance wisely
-        % similarity_term = similarity_term_raw; % Getting rid of lambda for now
+        similarity_term = similarity_term_raw; % Getting rid of lambda for now
 
         % Loss
         % Scale loss so that it is small enough to make fmincon happy but not
@@ -240,7 +240,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 
 % This ensures that dichromat rendering does not go out of gamut. Calls
 % DichromatSimulateBrettel and checks RGB values
-    function [c, ceq] = nonlin_con(t_vec, LMSCalFormatTran, M_cones2rgb, cbType, Disp)
+    function [c, ceq] = nonlin_con(var, t_vec, LMSCalFormatTran, M_cones2rgb, cbType, Disp)
 
         T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
 
@@ -282,17 +282,17 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % only for the solution with these values
         % Nonlinear equality constraint: variance must match one in my chosen
         % range
-        varSpecific = 0;
+        varSpecific = 1;
         if varSpecific == 1
             % For dichromat plate image
             % Obtain v0 and v1 by running the code with lambda still included.
             % Make lambda = 0 and 1 and collect values for var_term_raw in loss function
-            v0 = 1.4856e-13;
-            v1 = 5.3329e-06;
+            v0 = 5.0686e-14;
+            v1 = 5.4905e-06;
             variance_range = linspace(v0, v1, 10);
             var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormatTran');
 
-            ceq = var_term_raw - variance_range(10);
+            ceq = var_term_raw - variance_range(var);
             tol = 1e-8;
 
             if abs(ceq) < tol

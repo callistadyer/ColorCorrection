@@ -93,22 +93,22 @@ diRGBImgFormat_plate    = CalFormatToImage(diRGBCalFormat_plate,m,n); % isochrom
 
 % Plotting
 % Show the trichromatic image, dichromatic image, and trichromatic plate, dichromatic plate
-figure('position',[ 896         364        1231         883]); 
-subplot(2,2,1);
-imshow(triRGBImgFormat);    % TRICHROMAT  
-title('Trichromat rendering - no modulation','FontSize',20);
-
-subplot(2,2,3);
-imshow(triRGBImgFormat_plate);          % TRICHROMAT PLATE
-title('Trichromat rendering - plate','FontSize',20);
-
-subplot(2,2,2);
-imshow(diRGBImgFormat);     % DICHROMAT
-title([renderType ' rendering - no modulation'],'FontSize',20);
-
-subplot(2,2,4);
-imshow(diRGBImgFormat_plate);     % DICHROMAT PLATE 
-title([renderType ' rendering - plate'],'FontSize',20);
+% figure('position',[ 896         364        1231         883]); 
+% subplot(2,2,1);
+% imshow(triRGBImgFormat);    % TRICHROMAT  
+% title('Trichromat rendering - no modulation','FontSize',20);
+% 
+% subplot(2,2,3);
+% imshow(triRGBImgFormat_plate);          % TRICHROMAT PLATE
+% title('Trichromat rendering - plate','FontSize',20);
+% 
+% subplot(2,2,2);
+% imshow(diRGBImgFormat);     % DICHROMAT
+% title([renderType ' rendering - no modulation'],'FontSize',20);
+% 
+% subplot(2,2,4);
+% imshow(diRGBImgFormat_plate);     % DICHROMAT PLATE 
+% title([renderType ' rendering - plate'],'FontSize',20);
 
 
 if bPLOTscatter == 1
