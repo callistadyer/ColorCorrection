@@ -157,24 +157,24 @@ diRGBImgFormatCorrected_plate    = CalFormatToImage(diRGBCalFormatCorrected_plat
 figure('Position',[214         261         501        1076]);
 
 % Create a tiled layout
-tiledlayout(4, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
+tiledlayout(2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 
 % Add images to the tiles
-nexttile
-imshow(triRGBImgFormatOrig);
-title('trichromat');
-
-nexttile
-imshow(diRGBImgFormatOrig);
-title('dichromat');
-
-nexttile
-imshow(triRGBImgFormatCorrected);
-title('trichromat corrected');
-
-nexttile
-imshow(diRGBImgFormatCorrected);
-title('dichromat corrected');
+% nexttile
+% imshow(triRGBImgFormatOrig);
+% title('trichromat');
+% 
+% nexttile
+% imshow(diRGBImgFormatOrig);
+% title('dichromat');
+% 
+% nexttile
+% imshow(triRGBImgFormatCorrected);
+% title('trichromat corrected');
+% 
+% nexttile
+% imshow(diRGBImgFormatCorrected);
+% title('dichromat corrected');
 
 nexttile
 imshow(triRGBImgFormatOrig_plate);

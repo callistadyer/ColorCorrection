@@ -108,11 +108,11 @@ if (any(bCheck > b))
 end
 
 % Optimization with linear constraints A,b:
-[transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
+[transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
     T0, A, b, [], [], [], [], ...,
     @(transformRGB) nonlin_con(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
 
-fValOpt = loss_function(transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
+fValOpt = loss_function(var,transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
 bCheck = A*transformRGB_opt(:);
 if (any(bCheck > b))
     fprintf('Failed to satisfy constraint\n');
@@ -153,7 +153,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 %% Functions
 
 % OBJECTIVE FUNCTION
-    function loss = loss_function(t_vec, LMSCalFormatTran, M_cones2rgb, lambda, renderType, Disp)
+    function loss = loss_function(var, t_vec, LMSCalFormatTran, M_cones2rgb, lambda, renderType, Disp)
         T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
 
         % I - LMS
@@ -233,8 +233,20 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % so small that it is unhappy.
         %%%%%%%%%%%%% how to determine this? %%%%%%%%%%%%%
         fminconFactor = 1e6;
-        loss = -fminconFactor*(var_term_balance + similarity_term);
 
+        % Variance range
+        v0 = 5.0686e-14;
+        v1 = 5.4905e-06;
+        variance_range = linspace(v0, v1, 10);
+
+        var_diff = var_term_raw - variance_range(var);
+        var_scalar = 1e6;
+        var_specific = 1;
+        if var_specific == 0
+            loss = -fminconFactor*((var_scalar*(var_diff.^2)) + similarity_term);
+        else
+            loss = -fminconFactor*(var_term_balance + similarity_term);
+        end
     end
 
 
@@ -282,7 +294,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % only for the solution with these values
         % Nonlinear equality constraint: variance must match one in my chosen
         % range
-        varSpecific = 1;
+        varSpecific = 0;
         if varSpecific == 1
             % For dichromat plate image
             % Obtain v0 and v1 by running the code with lambda still included.
@@ -293,7 +305,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
             var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormatTran');
 
             ceq = var_term_raw - variance_range(var);
-            tol = 1e-8;
+            tol = 1e-25;
 
             if abs(ceq) < tol
                 ceq = 0; % Treat it as zero within tolerance
