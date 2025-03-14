@@ -257,12 +257,12 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         sim_diff = similarity_term_raw - similarity_range(var);
 
         % Scale the difference by some amount so that fmincon prioritizes it  
-        var_scalar = 1e12;
+        var_scalar = 1e6;
         
         % To enforce a certain variance value, put it into the loss function
-        varSpecificLoss = 0;
+        varSpecificLoss = 1;
         if varSpecificLoss == 1
-            loss = -fminconFactor*((var_scalar*(sim_diff.^2)) + var_term_balance);
+            loss = -fminconFactor*((var_scalar*(var_diff.^2)) + var_term_balance);
             % loss = -fminconFactor*((var_scalar*(var_diff.^2)) + similarity_term);
         % Otherwise, just minimize this loss
         else
@@ -315,7 +315,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % only for the solution with these values
         % Nonlinear equality constraint: variance must match one in my chosen
         % range
-        varSpecificNonlinear = 1;
+        varSpecificNonlinear = 0;
         if varSpecificNonlinear == 1
             % For dichromat plate image
             % Obtain v0 and v1 by running the code with lambda still included.
