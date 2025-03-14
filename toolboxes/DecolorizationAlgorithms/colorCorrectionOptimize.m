@@ -241,8 +241,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 
         var_diff = var_term_raw - variance_range(var);
         var_scalar = 1e6;
-        var_specific = 1;
-        if var_specific == 0
+        var_specific = 0;
+        if var_specific == 1
             loss = -fminconFactor*((var_scalar*(var_diff.^2)) + similarity_term);
         else
             loss = -fminconFactor*(var_term_balance + similarity_term);
@@ -294,7 +294,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % only for the solution with these values
         % Nonlinear equality constraint: variance must match one in my chosen
         % range
-        varSpecific = 0;
+        varSpecific = 1;
         if varSpecific == 1
             % For dichromat plate image
             % Obtain v0 and v1 by running the code with lambda still included.

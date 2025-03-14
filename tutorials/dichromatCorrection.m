@@ -154,7 +154,7 @@ diRGBImgFormatCorrected          = CalFormatToImage(diRGBCalFormatCorrected,Disp
 diRGBImgFormatCorrected_plate    = CalFormatToImage(diRGBCalFormatCorrected_plate,Disp.m,Disp.n); % plate
 
 
-figure('Position',[214         261         501        1076]);
+figure('Position',[161   302   562   552]);
 
 % Create a tiled layout
 tiledlayout(2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
