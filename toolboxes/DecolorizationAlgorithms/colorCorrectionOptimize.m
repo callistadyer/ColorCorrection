@@ -107,6 +107,11 @@ if (any(bCheck > b))
     fprintf('Failed to satisfy constraint\n');
 end
 
+% T0 = [1.3220   -1.2685   -0.6358;
+%       3.1295   -3.4495   -1.5253;
+%      -7.6800   -2.6694    3.1589];
+% T0 = T0*1.0e+03;
+
 % Optimization with linear constraints A,b:
 [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
     T0, A, b, [], [], [], [], ...,
@@ -177,14 +182,13 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Weber contrast image
         grayRGB = [0.5 0.5 0.5]';
 
-        % NORMAL... NON CONTRAST RN
-        % LMSContrastCalFormatTran = LMSCalFormatTran;
-
         % Convert into RGB where gray is removed
         RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb';
 
         % Create contrast image
         RGBContrastCalFormatTran = (RGBCalFormatTran - grayRGB')./grayRGB';
+        % Want to use non contrast version? Uncomment below:
+        % RGBContrastCalFormatTran = RGBCalFormatTran;
 
         % Transformation on gray subtracted image
         newRGBContrastCalFormatTran_noGray = RGBContrastCalFormatTran * T;
@@ -210,10 +214,12 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Get into cal format
         newLMSContrastCalFormat = newLMSContrastCalFormatTran';
 
-        % Variance term
+        %%%%%%%% Variance term %%%%%%%%
         var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormat);
-        % Weight by lambda
+
+        % Weight by lambda (use this when trying to find range of variances)
         % var_term = lambda*var_term_raw;
+
         % Eventually, try to avoid lambda and choose variance wisely
         var_term = var_term_raw;
 
@@ -221,29 +227,44 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         totalVariance = whiteNoiseVariance("newConeVar",renderType,Disp);
         var_term_balance = var_term/totalVariance;
 
-        % Similarity term
+        %%%%%%%% Similarity term %%%%%%%%
         similarity_term_raw = similarityLMS('angle',LMSCalFormatTran,newLMSContrastCalFormatTran);
+
         % Weight by lambda
         % similarity_term = (1-lambda)*similarity_term_raw;
+
         % Eventually, try to avoid lambda and choose variance wisely
         similarity_term = similarity_term_raw; % Getting rid of lambda for now
 
         % Loss
         % Scale loss so that it is small enough to make fmincon happy but not
         % so small that it is unhappy.
-        %%%%%%%%%%%%% how to determine this? %%%%%%%%%%%%%
+        % How to determine this? 
         fminconFactor = 1e6;
 
-        % Variance range
+        % Variance range: use this to sample in between extreme variances
         v0 = 5.0686e-14;
         v1 = 5.4905e-06;
-        variance_range = linspace(v0, v1, 10);
 
+        s0 = 1;
+        s1 = 0.9798;
+
+        similarity_range  = linspace(s1, s0, 10);
+        variance_range    = linspace(v0, v1, 10);
+
+        % Difference between the current variance (var_term_raw) and desired variance (variance_range)  
         var_diff = var_term_raw - variance_range(var);
-        var_scalar = 1e6;
-        var_specific = 0;
-        if var_specific == 1
-            loss = -fminconFactor*((var_scalar*(var_diff.^2)) + similarity_term);
+        sim_diff = similarity_term_raw - similarity_range(var);
+
+        % Scale the difference by some amount so that fmincon prioritizes it  
+        var_scalar = 1e12;
+        
+        % To enforce a certain variance value, put it into the loss function
+        varSpecificLoss = 0;
+        if varSpecificLoss == 1
+            loss = -fminconFactor*((var_scalar*(sim_diff.^2)) + var_term_balance);
+            % loss = -fminconFactor*((var_scalar*(var_diff.^2)) + similarity_term);
+        % Otherwise, just minimize this loss
         else
             loss = -fminconFactor*(var_term_balance + similarity_term);
         end
@@ -294,18 +315,26 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % only for the solution with these values
         % Nonlinear equality constraint: variance must match one in my chosen
         % range
-        varSpecific = 1;
-        if varSpecific == 1
+        varSpecificNonlinear = 1;
+        if varSpecificNonlinear == 1
             % For dichromat plate image
             % Obtain v0 and v1 by running the code with lambda still included.
             % Make lambda = 0 and 1 and collect values for var_term_raw in loss function
             v0 = 5.0686e-14;
             v1 = 5.4905e-06;
-            variance_range = linspace(v0, v1, 10);
-            var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormatTran');
 
-            ceq = var_term_raw - variance_range(var);
-            tol = 1e-25;
+            s0 = 1;
+            s1 = 0.9798;
+            similarity_range    = linspace(s1, s0, 10);
+            similarity_term_raw = similarityLMS('angle',LMSCalFormatTran,newLMSContrastCalFormatTran);
+ 
+            variance_range = linspace(v0, v1, 10);
+            var_term_raw   = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormatTran');
+
+            % ceq = var_term_raw - variance_range(var);
+            ceq = similarity_term_raw - similarity_range(var);
+
+            tol = 1e-2;
 
             if abs(ceq) < tol
                 ceq = 0; % Treat it as zero within tolerance
