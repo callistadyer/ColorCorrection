@@ -218,23 +218,23 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormat);
 
         % Weight by lambda (use this when trying to find range of variances)
-        % var_term = lambda*var_term_raw;
+        var_term = lambda*var_term_raw;
 
         % Eventually, try to avoid lambda and choose variance wisely
-        var_term = var_term_raw;
+        % var_term = var_term_raw;
 
         % Normalize via total variance in white noise image
         totalVariance = whiteNoiseVariance("newConeVar",renderType,Disp);
         var_term_balance = var_term/totalVariance;
 
         %%%%%%%% Similarity term %%%%%%%%
-        similarity_term_raw = similarityLMS('angle',LMSCalFormatTran,newLMSContrastCalFormatTran);
+        similarity_term_raw = similarityLMS('squared',LMSCalFormatTran,newLMSContrastCalFormatTran);
 
         % Weight by lambda
-        % similarity_term = (1-lambda)*similarity_term_raw;
+        similarity_term = (1-lambda)*similarity_term_raw;
 
         % Eventually, try to avoid lambda and choose variance wisely
-        similarity_term = similarity_term_raw; % Getting rid of lambda for now
+        % similarity_term = similarity_term_raw; % Getting rid of lambda for now
 
         % Loss
         % Scale loss so that it is small enough to make fmincon happy but not
@@ -260,7 +260,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         var_scalar = 1e6;
         
         % To enforce a certain variance value, put it into the loss function
-        varSpecificLoss = 1;
+        varSpecificLoss = 0;
         if varSpecificLoss == 1
             loss = -fminconFactor*((var_scalar*(var_diff.^2)) + var_term_balance);
             % loss = -fminconFactor*((var_scalar*(var_diff.^2)) + similarity_term);
