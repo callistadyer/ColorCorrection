@@ -139,9 +139,9 @@ triRGBCalFormatOpt     = triRGBCalFormatTranOpt';
 
 % Check for small perterburbations around 0 and 1 in gamut...
 % transformations might have pushed it slightly out
-if (min(triRGBCalFormatOpt(:)) < 0) && (min(triRGBCalFormatOpt(:)) > -.01)
-    triRGBCalFormatOpt(triRGBCalFormatOpt<0) = 0;
-end
+% if (min(triRGBCalFormatOpt(:)) < 0) && (min(triRGBCalFormatOpt(:)) > -.01)
+%     triRGBCalFormatOpt(triRGBCalFormatOpt<0) = 0;
+% end
 
 % Calculate optimal output from input * optimal transform
 % triRGBCalFormatTranOpt = triLMSCalFormatTran * M_cones2rgb' * transformRGBmatrix_opt;
@@ -232,40 +232,39 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Weight by lambda
         similarity_term = (1-lambda)*similarity_term_raw;
         similarity_term_balance = similarity_term/totalSimilarity;
-        % Eventually, try to avoid lambda and choose variance wisely
+        % Eventually, try to avoid lambda and choose similarity wisely
         % similarity_term = similarity_term_raw; % Getting rid of lambda for now
 
-        
+
         % Loss
         % Scale loss so that it is small enough to make fmincon happy but not
         % so small that it is unhappy.
-        % How to determine this? 
+        % How to determine this?
         fminconFactor = 1e6;
+        % fminconFactor = 1e20;
 
         % Variance range: use this to sample in between extreme variances
         % v0 = 5.0686e-14;
         % v1 = 5.4905e-06;
-        % 
+        %
         % s0 = 1;
         % s1 = 0.9798;
-        % 
+        %
         % similarity_range  = linspace(s1, s0, 10);
         % variance_range    = linspace(v0, v1, 10);
 
-        % Difference between the current variance (var_term_raw) and desired variance (variance_range)  
+        % Difference between the current variance (var_term_raw) and desired variance (variance_range)
         % var_diff = var_term_raw - variance_range(var);
         % sim_diff = similarity_term_raw - similarity_range(var);
-
-        % Scale the difference by some amount so that fmincon prioritizes it  
-        var_scalar = 1e6;
-        var_scalar = 1e2;
 
         % To enforce a certain variance value, put it into the loss function
         varSpecificLoss = 0;
         if varSpecificLoss == 1
+            % Scale the difference by some amount so that fmincon prioritizes it
+            var_scalar = 1e6;
             loss = -fminconFactor*((var_scalar*(var_diff.^2)) + var_term_balance);
             % loss = -fminconFactor*((var_scalar*(var_diff.^2)) + similarity_term);
-        % Otherwise, just minimize this loss
+            % Otherwise, just minimize this loss
         else
             loss = -fminconFactor*(var_term_balance + similarity_term);
         end
@@ -332,7 +331,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
             s1 = 0.9798;
             similarity_range    = linspace(s1, s0, 10);
             similarity_term_raw = similarityLMS('angle',LMSCalFormatTran,newLMSContrastCalFormatTran);
- 
+
             variance_range = linspace(v0, v1, 10);
             var_term_raw   = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormatTran');
 
@@ -347,7 +346,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         else
             ceq = [];
         end
-        
+
         triLMSCalFormatTran_new = newRGBCalFormat'*inv(M_cones2rgb)';
 
         [diLMSCalFormat] = tri2dichromatLMSCalFormat(triLMSCalFormatTran_new',renderType,Disp,0);
@@ -358,15 +357,15 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Note: this matrix must be applied on the LEFT!!
         % M_rgb2xyz = Disp.T_xyz*Disp.P_monitor;
         % M_xyz2rgb = inv(M_rgb2xyz);
-        % 
+        %
         % % Linear RGB --> XYZ (Brettel takes in XYZ)
         % triXYZCalFormat = M_rgb2xyz * newRGBCalFormat;
         % % Cal Format --> Image Format
         % triXYZImgFormat = CalFormatToImage(triXYZCalFormat,Disp.m,Disp.n);
-        % 
+        %
         % % Convert with Brettel
         % [diXYZ] = DichromatSimulateBrettel(triXYZImgFormat, cbType, []);
-        % 
+        %
         % % Image Format --> CalFormat
         % diXYZCalFormat = ImageToCalFormat(diXYZ);
         % % XYZ --> Linear RGB
