@@ -52,18 +52,21 @@ diXYZCalFormat = ImageToCalFormat(diXYZ);
 diRGBLinCalFormat = M_xyz2rgb * diXYZCalFormat;
 
 % Quick snipping if the vals are only over by a small amount
-cutoffUnder = 1.1;
-cutoffOver = -0.1;
+% cutoffUnder = 1.1;
+% cutoffOver = -0.1;
 
-if (max(diRGBLinCalFormat(:)) > 1) && (max(diRGBLinCalFormat(:)) < cutoffUnder)
-    diRGBLinCalFormat(diRGBLinCalFormat>1) = .99; % For some reason, still goes out of gamut if I make these vals == 1, so .99 seems to work
-end
-if (min(diRGBLinCalFormat(:)) < 0) && (min(diRGBLinCalFormat(:)) > cutoffOver)
-    diRGBLinCalFormat(diRGBLinCalFormat<0) = 0; % For some reason, still goes out of gamut if I make these vals == 1, so .99 seems to work
-end
+% if (max(diRGBLinCalFormat(:)) > 1) && (max(diRGBLinCalFormat(:)) < cutoffUnder)
+%     diRGBLinCalFormat(diRGBLinCalFormat>1) = .99; % For some reason, still goes out of gamut if I make these vals == 1, so .99 seems to work
+% end
+% if (min(diRGBLinCalFormat(:)) < 0) && (min(diRGBLinCalFormat(:)) > cutoffOver)
+%     diRGBLinCalFormat(diRGBLinCalFormat<0) = 0; % For some reason, still goes out of gamut if I make these vals == 1, so .99 seems to work
+% end
 
-% Linear RGB --> LMS 
-diLMSCalFormat = rgbLin2LMSCalFormat(diRGBLinCalFormat,Disp,1,0);
+% Linear RGB --> LMS
+M_rgb2cones = Disp.T_cones*Disp.P_monitor;
+M_cones2rgb = inv(M_rgb2cones);
+diLMSCalFormat = inv(M_cones2rgb) * diRGBLinCalFormat;
+% diLMSCalFormat = rgbLin2LMSCalFormat(diRGBLinCalFormat,Disp,1,0);
 
 % CHECK IF MODULATED LMS IS IN GAMUT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -1,5 +1,5 @@
 
-function [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType,lambda_var,var)
+function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType,lambda_var,var)
 % Transform trichromatic image so that dichromat can see more color
 % contrast. Also want to try and preserve some naturalness. This is
 % accomplished in colorCorrectionOptimize where we incorporate similarity
@@ -96,8 +96,8 @@ switch (method)
     case 'linTransform'
         % decolorOptimize does mean subtraction, then maximizes variance fmincon 
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]  
-        [triLMScalFormatCorrected] = colorCorrectionOptimize(var, triLMSCalFormat,renderType,lambda_var,Disp);
-        [triLMScalFormatCorrected_plate] = colorCorrectionOptimize(var, triLMSCalFormat_plate,renderType,lambda_var,Disp);
+        [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal] = colorCorrectionOptimize(var, triLMSCalFormat,renderType,lambda_var,Disp);
+        [triLMScalFormatCorrected_plate,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = colorCorrectionOptimize(var, triLMSCalFormat_plate,renderType,lambda_var,Disp);
     case 'easyPCA'
         triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,renderType,Disp,bScale);
         triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,renderType,Disp,bScale);
@@ -157,7 +157,7 @@ diRGBImgFormatCorrected_plate    = CalFormatToImage(diRGBCalFormatCorrected_plat
 figure('Position',[161   302   562   552]);
 
 % Create a tiled layout
-tiledlayout(2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
+tiledlayout(1, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 
 % Add images to the tiles
 % nexttile
@@ -176,13 +176,13 @@ tiledlayout(2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 % imshow(diRGBImgFormatCorrected);
 % title('dichromat corrected');
 
-nexttile
-imshow(triRGBImgFormatOrig_plate);
-title('trichromat - plate');
-
-nexttile
-imshow(diRGBImgFormatOrig_plate);
-title('dichromat - plate');
+% nexttile
+% imshow(triRGBImgFormatOrig_plate);
+% title('trichromat - plate');
+% 
+% nexttile
+% imshow(diRGBImgFormatOrig_plate);
+% title('dichromat - plate');
 
 nexttile
 imshow(triRGBImgFormatCorrected_plate);
@@ -192,7 +192,7 @@ nexttile
 imshow(diRGBImgFormatCorrected_plate);
 title('dichromat corrected - plate');
 
-sgtitle(['variance = ' num2str(var)])
+sgtitle(['lambdavar = ' num2str(lambda_var)])
 end
 
 

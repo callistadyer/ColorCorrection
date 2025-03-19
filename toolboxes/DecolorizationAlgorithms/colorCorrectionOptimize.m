@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt] = colorCorrectionOptimize(var, triLMSCalFormat, renderType, lambda_var,Disp)
+function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal] = colorCorrectionOptimize(var, triLMSCalFormat, renderType, lambda_var,Disp)
 % Optimizes linear transformation of the original cone values
 %
 % Syntax:
@@ -117,7 +117,7 @@ end
     T0, A, b, [], [], [], [], ...,
     @(transformRGB) nonlin_con(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
 
-fValOpt = loss_function(var,transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
+[fValOpt, s_raw, v_raw, s_bal, v_bal] = loss_function(var,transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
 bCheck = A*transformRGB_opt(:);
 if (any(bCheck > b))
     fprintf('Failed to satisfy constraint\n');
@@ -158,7 +158,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 %% Functions
 
 % OBJECTIVE FUNCTION
-    function loss = loss_function(var, t_vec, LMSCalFormatTran, M_cones2rgb, lambda, renderType, Disp)
+    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(var, t_vec, LMSCalFormatTran, M_cones2rgb, lambda, renderType, Disp)
         T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
 
         % I - LMS
@@ -216,26 +216,26 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 
         %%%%%%%% Variance term %%%%%%%%
         var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormat);
-
         % Weight by lambda (use this when trying to find range of variances)
         var_term = lambda*var_term_raw;
-
+        % Normalize via total variance in white noise image
+        totalVariance = whiteNoiseVariance("newConeVar",renderType,Disp);
+        % Normalize by whiteNoiseVariance
+        var_term_balance = var_term/totalVariance;
         % Eventually, try to avoid lambda and choose variance wisely
         % var_term = var_term_raw;
 
-        % Normalize via total variance in white noise image
-        totalVariance = whiteNoiseVariance("newConeVar",renderType,Disp);
-        var_term_balance = var_term/totalVariance;
-
         %%%%%%%% Similarity term %%%%%%%%
         similarity_term_raw = similarityLMS('squared',LMSCalFormatTran,newLMSContrastCalFormatTran);
-
+        % Normalize by whiteNoiseSimilarity
+        totalSimilarity = whiteNoiseSimilarity('squared',Disp);
         % Weight by lambda
         similarity_term = (1-lambda)*similarity_term_raw;
-
+        similarity_term_balance = similarity_term/totalSimilarity;
         % Eventually, try to avoid lambda and choose variance wisely
         % similarity_term = similarity_term_raw; % Getting rid of lambda for now
 
+        
         % Loss
         % Scale loss so that it is small enough to make fmincon happy but not
         % so small that it is unhappy.
@@ -243,22 +243,23 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         fminconFactor = 1e6;
 
         % Variance range: use this to sample in between extreme variances
-        v0 = 5.0686e-14;
-        v1 = 5.4905e-06;
-
-        s0 = 1;
-        s1 = 0.9798;
-
-        similarity_range  = linspace(s1, s0, 10);
-        variance_range    = linspace(v0, v1, 10);
+        % v0 = 5.0686e-14;
+        % v1 = 5.4905e-06;
+        % 
+        % s0 = 1;
+        % s1 = 0.9798;
+        % 
+        % similarity_range  = linspace(s1, s0, 10);
+        % variance_range    = linspace(v0, v1, 10);
 
         % Difference between the current variance (var_term_raw) and desired variance (variance_range)  
-        var_diff = var_term_raw - variance_range(var);
-        sim_diff = similarity_term_raw - similarity_range(var);
+        % var_diff = var_term_raw - variance_range(var);
+        % sim_diff = similarity_term_raw - similarity_range(var);
 
         % Scale the difference by some amount so that fmincon prioritizes it  
         var_scalar = 1e6;
-        
+        var_scalar = 1e2;
+
         % To enforce a certain variance value, put it into the loss function
         varSpecificLoss = 0;
         if varSpecificLoss == 1
@@ -268,6 +269,10 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         else
             loss = -fminconFactor*(var_term_balance + similarity_term);
         end
+        s_raw = similarity_term_raw;
+        v_raw = var_term_raw;
+        s_bal = similarity_term_balance;
+        v_bal = var_term_balance;
     end
 
 
@@ -342,24 +347,30 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         else
             ceq = [];
         end
-      
+        
+        triLMSCalFormatTran_new = newRGBCalFormat'*inv(M_cones2rgb)';
+
+        [diLMSCalFormat] = tri2dichromatLMSCalFormat(triLMSCalFormatTran_new',renderType,Disp,0);
+
+        diRGBLinCalFormat = diLMSCalFormat' * M_cones2rgb';
+
         % Matrix to convert from rgb to xyz
         % Note: this matrix must be applied on the LEFT!!
-        M_rgb2xyz = Disp.T_xyz*Disp.P_monitor;
-        M_xyz2rgb = inv(M_rgb2xyz);
-
-        % Linear RGB --> XYZ (Brettel takes in XYZ)
-        triXYZCalFormat = M_rgb2xyz * newRGBCalFormat;
-        % Cal Format --> Image Format
-        triXYZImgFormat = CalFormatToImage(triXYZCalFormat,Disp.m,Disp.n);
-
-        % Convert with Brettel
-        [diXYZ] = DichromatSimulateBrettel(triXYZImgFormat, cbType, []);
-
-        % Image Format --> CalFormat
-        diXYZCalFormat = ImageToCalFormat(diXYZ);
-        % XYZ --> Linear RGB
-        diRGBLinCalFormat = M_xyz2rgb * diXYZCalFormat;
+        % M_rgb2xyz = Disp.T_xyz*Disp.P_monitor;
+        % M_xyz2rgb = inv(M_rgb2xyz);
+        % 
+        % % Linear RGB --> XYZ (Brettel takes in XYZ)
+        % triXYZCalFormat = M_rgb2xyz * newRGBCalFormat;
+        % % Cal Format --> Image Format
+        % triXYZImgFormat = CalFormatToImage(triXYZCalFormat,Disp.m,Disp.n);
+        % 
+        % % Convert with Brettel
+        % [diXYZ] = DichromatSimulateBrettel(triXYZImgFormat, cbType, []);
+        % 
+        % % Image Format --> CalFormat
+        % diXYZCalFormat = ImageToCalFormat(diXYZ);
+        % % XYZ --> Linear RGB
+        % diRGBLinCalFormat = M_xyz2rgb * diXYZCalFormat;
 
         % Nonlin constraints must be <= 0
         % Get c(1) and c(2) from min and max

@@ -3,7 +3,7 @@ function totalVariance = whiteNoiseVariance(varianceType,renderType,Disp)
 % Calculates total variance to normalize variance of given image size 
 %
 % Syntax:
-%   totalVariance = whiteNoiseVariance(Disp)
+%   totalVariance = whiteNoiseVariance(varianceType,renderType,Disp)
 %
 % Inputs:
 %   varianceType:  Type of variance computation
