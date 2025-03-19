@@ -227,6 +227,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 
         %%%%%%%% Similarity term %%%%%%%%
         similarity_term_raw = similarityLMS('squared',LMSCalFormatTran,newLMSContrastCalFormatTran);
+        % similarity_term_raw = similarityLMS('squared',round(LMSCalFormatTran,5),round(newLMSContrastCalFormatTran,5));
+
         % Normalize by whiteNoiseSimilarity
         totalSimilarity = whiteNoiseSimilarity('squared',Disp);
         % Weight by lambda
@@ -266,7 +268,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
             % loss = -fminconFactor*((var_scalar*(var_diff.^2)) + similarity_term);
             % Otherwise, just minimize this loss
         else
-            loss = -fminconFactor*(var_term_balance + similarity_term);
+            % loss = -fminconFactor*(var_term_balance + similarity_term)
+            loss = -fminconFactor*(var_term_balance + similarity_term_balance);
         end
         s_raw = similarity_term_raw;
         v_raw = var_term_raw;
