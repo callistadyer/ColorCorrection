@@ -111,6 +111,11 @@ end
 %       3.1295   -3.4495   -1.5253;
 %      -7.6800   -2.6694    3.1589];
 % T0 = T0*1.0e+03;
+% 
+% T0 = 1.0e+03 * [
+%    -0.4458    0.0131   -0.0867
+%    -1.1674    0.0363   -0.2376
+%     0.0161   -0.0204   -0.2822];
 
 % Optimization with linear constraints A,b:
 [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
@@ -230,7 +235,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % similarity_term_raw = similarityLMS('squared',round(LMSCalFormatTran,5),round(newLMSContrastCalFormatTran,5));
 
         % Normalize by whiteNoiseSimilarity
-        totalSimilarity = whiteNoiseSimilarity('squared',Disp);
+        totalSimilarity = abs(whiteNoiseSimilarity('squared',Disp));
         % Weight by lambda
         similarity_term = (1-lambda)*similarity_term_raw;
         similarity_term_balance = similarity_term/totalSimilarity;
@@ -242,7 +247,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Scale loss so that it is small enough to make fmincon happy but not
         % so small that it is unhappy.
         % How to determine this?
-        fminconFactor = 1e6;
+        fminconFactor = 1e4;
         % fminconFactor = 1e20;
 
         % Variance range: use this to sample in between extreme variances

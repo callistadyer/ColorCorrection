@@ -27,9 +27,9 @@ switch (similarityType)
     case 'angle'
         similarity = (LMS_new(:)'*LMS_old(:))/(norm(LMS_new(:))*norm(LMS_old(:)));
     case 'distance'
-        similarity = norm(LMS_new(:)-LMS_old(:))/norm(LMS_old(:));
+        similarity = -norm(LMS_new(:)-LMS_old(:))/norm(LMS_old(:));
     case "squared"
-        similarity = sum((LMS_new(:)-LMS_old(:)).^2);
+        similarity = -sum((LMS_new(:)-LMS_old(:)).^2);
     otherwise
         error('Unknown similarity type specified');
 end
