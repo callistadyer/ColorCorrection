@@ -6,14 +6,18 @@ function [calFormatDiLMS] = DichromSimulateLinear(calFormatLMS, grayLMS,  constr
 %    [calFormatDiLMS] = DichromatSimulateLinear(calFormatLMS, grayLMS,  constraintWl, cbType, Disp)
 %
 % Inputs:
-%   xyzImage: Input XYZ image
-%   cbTypes:  Array of integers specifying the types of color blindness to simulate:
-%             1 = Protanopia, 2 = Deuteranopia, 3 = Tritanopia.
-%             Example: [1, 2] will simulate Protanopia and Deuteranopia.
-%   rgbImage: Input RGB image (optional). If empty, defaults to '74.jpg' on the local path.
+%   calFormatLMS:   Input LMS image
+%   grayLMS:        gray point in LMS 
+%   constraintWl:   which wavelength defines the projection plane for
+%                   dichromats.
+%   cbType:         which type of dichromacy
+%                       "Protanopia"
+%                       "Deuteranopia"
+%                       "Tritanopia"
+%   Disp:           display parameters
 %
 % Outputs:
-%   diXYZ:    dichromat XYZ values
+%   calFormatDiLMS: dichromat LMS values
 %
 % Description:
 %   This function renders images to simulate their appearance to
@@ -48,7 +52,6 @@ T_cones = Disp.T_cones;
 P_monitor = Disp.P_monitor;
 
 % Convert cone excitations to cone contrast
-% calFormatLMSContrast = ExcitationsToContrast(calFormatLMS, grayLMS);
 calFormatLMSContrast = (calFormatLMS - grayLMS)./grayLMS;
 
 % Define achromatic constraint vector
@@ -58,7 +61,6 @@ constraint1LMSContrast = [1 1 1]';
 [~,index] = min(abs(wls-constraintWl));
 index = index(1);
 constraint2LMS = T_cones(:,index);
-% constraint2LMSContrast = ExcitationToContrast(constraint2LMS,grayLMS);
 constraint2LMSContrast = (constraint2LMS - grayLMS)./grayLMS;
 
 % Now we want to find the best least squares approximation to the trichromatic
@@ -77,15 +79,15 @@ switch (cbType)
         availableConeIdx = [1 2];
 end
 
+% Calculate missing cone value. See where on the plane the missing cone
+% should land when the plane is defined by the two constraint vectors. 
 missingCone = constraintMatrix(missingConeIdx,:) * inv([constraintMatrix(availableConeIdx(1),:); constraintMatrix(availableConeIdx(2),:)]) * calFormatLMSContrast(availableConeIdx,:);
 
+% Replace missing cone row with the value achieved through projection (above) 
 calFormatDiLMSContrast = calFormatLMSContrast;
 calFormatDiLMSContrast(missingConeIdx,:) = missingCone;
 
-% calFormatDiLMSContrast = constraintMatrix*(constraintMatrix\calFormatLMSContrast);
-
 % Convert back to excitations
-% calFormatDiLMS = ContrastToExcitation(calFormatDiLMSContrast,grayLMS);
 calFormatDiLMS = (calFormatDiLMSContrast.*grayLMS)+grayLMS;
 
 end
