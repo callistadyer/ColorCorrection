@@ -1,4 +1,4 @@
-function [calFormatDiLMS] = DichromatSimulateLinear(calFormatLMSContrast, grayLMS,  constraintWl, cbType, Disp)
+function [calFormatDiLMS] = DichromSimulateLinear(calFormatLMS, grayLMS,  constraintWl, cbType, Disp)
 % Simulates color vision for dichromatic viewers by projecting onto a plane
 % in LMS space
 %
@@ -48,26 +48,44 @@ T_cones = Disp.T_cones;
 P_monitor = Disp.P_monitor;
 
 % Convert cone excitations to cone contrast
-calFormatLMSContrast = ExcitationsToContrast(calFormatLMS, grayLMS);
+% calFormatLMSContrast = ExcitationsToContrast(calFormatLMS, grayLMS);
+calFormatLMSContrast = (calFormatLMS - grayLMS)./grayLMS;
 
 % Define achromatic constraint vector
 constraint1LMSContrast = [1 1 1]';
 
 % Define monochromatic constraint vector
-[~,index] = min(abs(wls-constraintWl)));
+[~,index] = min(abs(wls-constraintWl));
 index = index(1);
 constraint2LMS = T_cones(:,index);
-constraint2LMSContrast = ExcitationToContrast(constraint2LMS,grayLMS);
+% constraint2LMSContrast = ExcitationToContrast(constraint2LMS,grayLMS);
+constraint2LMSContrast = (constraint2LMS - grayLMS)./grayLMS;
 
 % Now we want to find the best least squares approximation to the trichromatic
 % LMS contrast, in the plane spanned by the two constraint vectors
 constraintMatrix = [constraint1LMSContrast  constraint2LMSContrast];
-calFormatDiLMSContrast = constraintMatrix*(constraintMatrix\calFormatLMSContrast);
+
+switch (cbType)
+    case 'Deuteranopia' % m cone deficiency
+        missingConeIdx = 2;
+        availableConeIdx = [1 3];
+    case 'Protanopia'   % l cone deficiency
+        missingConeIdx = 1;
+        availableConeIdx = [2 3];
+    case 'Tritanopia'   % s cone deficiency
+        missingConeIdx = 3;
+        availableConeIdx = [1 2];
+end
+
+missingCone = constraintMatrix(missingConeIdx,:) * inv([constraintMatrix(availableConeIdx(1),:); constraintMatrix(availableConeIdx(2),:)]) * calFormatLMSContrast(availableConeIdx,:);
+
+calFormatDiLMSContrast = calFormatLMSContrast;
+calFormatDiLMSContrast(missingConeIdx,:) = missingCone;
+
+% calFormatDiLMSContrast = constraintMatrix*(constraintMatrix\calFormatLMSContrast);
 
 % Convert back to excitations
-calFormatDiLMS = ContrastToExcitation(calFormatDiLMSContrast,grayLMS);
-
-
-end
+% calFormatDiLMS = ContrastToExcitation(calFormatDiLMSContrast,grayLMS);
+calFormatDiLMS = (calFormatDiLMSContrast.*grayLMS)+grayLMS;
 
 end

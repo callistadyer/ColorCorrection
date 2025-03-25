@@ -46,7 +46,6 @@ if isempty(triLMSCalFormat)
 end
 
 %% Find optimal transformation matrix
-
 switch (renderType)
     case 'Deuteranopia' % m cone deficiency
         cbType = 2;
@@ -64,6 +63,15 @@ M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 % Number of pixels
 nPix   = size(triLMSCalFormat,2);
+
+%%%%%%%%
+% grayRGB = [0.5 0.5 0.5]';
+% grayLMS = M_rgb2cones*grayRGB;
+% cbType = renderType;
+% [calFormatDiLMS] = DichromSimulateLinear(triLMSCalFormat, grayLMS,  585, cbType, Disp);
+% diRGBCalFormat = M_cones2rgb * calFormatDiLMS;
+% diImage = CalFormatToImage(diRGBCalFormat,Disp.m,Disp.n);
+% figure(); imagesc(diImage)
 
 % Constraint matrix (A, includes lots of I iterations) and vector (b)
 % triLMSCalFormatTran: trichromat LMS values in [nPix x 3] form
