@@ -130,10 +130,20 @@ end
 [triRGBcalFormatCorrected_plate]  = LMS2RGBCalFormat(triLMScalFormatCorrected_plate, Disp,bScale);       % isochromatic plate 
 
 % Corrected dichromat image
-diLMSCalFormatCorrected                  = tri2dichromatLMSCalFormat(triLMScalFormatCorrected,renderType,Disp,bScale); 
-diRGBCalFormatCorrected                  = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp,bScale);
-diLMSCalFormatCorrected_plate            = tri2dichromatLMSCalFormat(triLMScalFormatCorrected_plate,renderType,Disp,bScale);      % isochromatic plate 
-diRGBCalFormatCorrected_plate            = LMS2RGBCalFormat(diLMSCalFormatCorrected_plate, Disp,bScale); % isochromatic plate 
+M_rgb2cones = Disp.T_cones*Disp.P_monitor;
+M_cones2rgb = inv(M_rgb2cones);
+grayRGB = [0.5 0.5 0.5]';
+grayLMS = M_rgb2cones*grayRGB;
+
+[diLMSCalFormatCorrected,~]        = DichromSimulateLinear(triLMScalFormatCorrected, grayLMS,  585, renderType, Disp);
+diRGBCalFormatCorrected            = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp,bScale);
+[diLMSCalFormatCorrected_plate,~]  = DichromSimulateLinear(triLMScalFormatCorrected_plate, grayLMS,  585, renderType, Disp);
+diRGBCalFormatCorrected_plate      = LMS2RGBCalFormat(diLMSCalFormatCorrected_plate, Disp,bScale); % isochromatic plate 
+
+% diLMSCalFormatCorrected                  = tri2dichromatLMSCalFormat(triLMScalFormatCorrected,renderType,Disp,bScale); 
+% diRGBCalFormatCorrected                  = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp,bScale);
+% diLMSCalFormatCorrected_plate            = tri2dichromatLMSCalFormat(triLMScalFormatCorrected_plate,renderType,Disp,bScale);      % isochromatic plate 
+% diRGBCalFormatCorrected_plate            = LMS2RGBCalFormat(diLMSCalFormatCorrected_plate, Disp,bScale); % isochromatic plate 
 
 
 % Transform from cal format to image for viewing

@@ -61,45 +61,62 @@ triLMSCalFormatTran = triLMSCalFormat'; % data = [3 x nPix]
 % NOTE: MUST APPLY THIS M MATRIX ON THE LEFT OF CAL FORMAT DATA
 M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
+
+% Create gray 
+grayRGB = [0.5 0.5 0.5]';
+grayLMS = M_rgb2cones*grayRGB;
+
 % Number of pixels
 nPix   = size(triLMSCalFormat,2);
-
-%%%%%%%%
-% grayRGB = [0.5 0.5 0.5]';
-% grayLMS = M_rgb2cones*grayRGB;
-% cbType = renderType;
-% [calFormatDiLMS] = DichromSimulateLinear(triLMSCalFormat, grayLMS,  585, cbType, Disp);
-% diRGBCalFormat = M_cones2rgb * calFormatDiLMS;
-% diImage = CalFormatToImage(diRGBCalFormat,Disp.m,Disp.n);
-% figure(); imagesc(diImage)
 
 % Constraint matrix (A, includes lots of I iterations) and vector (b)
 % triLMSCalFormatTran: trichromat LMS values in [nPix x 3] form
 triRGBCalFormatTran = triLMSCalFormat' * M_cones2rgb';
 % Perhaps round to get rid of small discrepancies during gray subtraction
 triRGBCalFormatTran = round(triRGBCalFormatTran,4);
-% Create contrast image
-grayRGB = [0.5 0.5 0.5]';
-% Contrast RGB
+
+
+% Contrast RGB, trichromat
 triRGBContrastCalFormatTran = (triRGBCalFormatTran - grayRGB')./grayRGB';
 
-% Linear Constraint for staying in gamut
+constraintWL = 560;
+% Contrast RGB, dichromat
+[calFormatDiLMS,M_triToDi] = DichromSimulateLinear(triLMSCalFormat, grayLMS,  constraintWL, renderType, Disp);
+% calFormatDiLMSTran = calFormatDiLMS';  % [nPix x 3]
+% grayLMS_row = grayLMS'; % 1 x 3
+% LMSContrast = (calFormatDiLMSTran - grayLMS_row) ./ grayLMS_row;
+% diRGBContrastCalFormatTran = LMSContrast * M_cones2rgb';
+
+%%%%%% Linear Constraint for staying in gamut %%%%%%
 % Contrast version: the contrast image A
 A_upper = blkdiag(triRGBContrastCalFormatTran, triRGBContrastCalFormatTran, triRGBContrastCalFormatTran);      % Upper constraint blocks
-% % Non contrast version: regular RGB for A
-% A_upper = blkdiag(triRGBCalFormatTran, triRGBCalFormatTran, triRGBCalFormatTran);      % Upper constraint blocks
 % Lower is always negative of upper
 A_lower = -(A_upper);              % for -I * X <= 0
 % Create A from upper and lower
 A = double([A_upper; A_lower]);
 % b defines the gamut. In regular RGB, it must stay between 0 and 1
 % b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
-
 % % Update b to deal with contrast image
 % % (contrastA * T) * grayRGB + grayRGB <= b
 % % (contrastA * T)                     <= (b - grayRGB)/grayRGB
 % b = (b - grayRGB(1))./grayRGB(1);
 b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is background
+
+% Linear dichromat constraint
+%  triLMS -->  diLMS   -->   diRGB   -->  transformed diRGB
+% [ npix x 3 ]   *  [3 x 3]   *   [3 x 3]   * [ 3 x 3]
+% (triLMSContrastCalFormat' * M_triToDi') * M_cones2rgb' * T < b
+% A = triLMSContrastCalFormat' * M_triToDi' * M_cones2rgb'
+triLMSContrastCalFormat = (triLMSCalFormat - grayLMS)./grayLMS;
+diRGBContrastCalFormatTran = triLMSContrastCalFormat' * M_triToDi' * M_cones2rgb';
+A_di_upper = blkdiag(diRGBContrastCalFormatTran, diRGBContrastCalFormatTran, diRGBContrastCalFormatTran);
+A_di_lower = -A_di_upper;
+A_di = double([A_di_upper; A_di_lower]);
+b_di = [ones(nPix * 3, 1); ones(nPix * 3, 1)];
+
+A_total = [A; A_di];
+b_total = [b; b_di];
+
 
 % Initial guess at transformation matrix - start with identity
 T0 = eye(3, 3);
@@ -126,13 +143,15 @@ end
 %     0.0161   -0.0204   -0.2822];
 
 % Optimization with linear constraints A,b:
+% [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
+%     T0, A, b, [], [], [], [], ...,
+%     @(transformRGB) nonlin_con(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
 [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
-    T0, A, b, [], [], [], [], ...,
-    @(transformRGB) nonlin_con(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
+    T0, A_total, b_total, [], [], [], [], [], options);
 
 [fValOpt, s_raw, v_raw, s_bal, v_bal] = loss_function(var,transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
-bCheck = A*transformRGB_opt(:);
-if (any(bCheck > b))
+bCheck = A_total*transformRGB_opt(:);
+if (any(bCheck > b_total))
     fprintf('Failed to satisfy constraint\n');
 end
 
@@ -150,23 +169,11 @@ newRGBContrastCalFormatTranContrast_out = triRGBContrastCalFormatTran * transfor
 triRGBCalFormatTranOpt = (newRGBContrastCalFormatTranContrast_out.*grayRGB') + grayRGB';
 triRGBCalFormatOpt     = triRGBCalFormatTranOpt';
 
-% Check for small perterburbations around 0 and 1 in gamut...
-% transformations might have pushed it slightly out
-% if (min(triRGBCalFormatOpt(:)) < 0) && (min(triRGBCalFormatOpt(:)) > -.01)
-%     triRGBCalFormatOpt(triRGBCalFormatOpt<0) = 0;
-% end
-
 % Calculate optimal output from input * optimal transform
 % triRGBCalFormatTranOpt = triLMSCalFormatTran * M_cones2rgb' * transformRGBmatrix_opt;
 
 % Get LMS values to output
 triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
-
-% Check if is in gamut
-% inGamutAfterTransform = checkGamut(triLMSCalFormatOpt,Disp,0);
-% if inGamutAfterTransform == 0
-%     error(['ERROR: decolorOptimize, constraint is not working, transformation is pushing out of gamut'])
-% end
 
 %% Functions
 
@@ -257,20 +264,6 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % How to determine this?
         fminconFactor = 1e4;
         % fminconFactor = 1e20;
-
-        % Variance range: use this to sample in between extreme variances
-        % v0 = 5.0686e-14;
-        % v1 = 5.4905e-06;
-        %
-        % s0 = 1;
-        % s1 = 0.9798;
-        %
-        % similarity_range  = linspace(s1, s0, 10);
-        % variance_range    = linspace(v0, v1, 10);
-
-        % Difference between the current variance (var_term_raw) and desired variance (variance_range)
-        % var_diff = var_term_raw - variance_range(var);
-        % sim_diff = similarity_term_raw - similarity_range(var);
 
         % To enforce a certain variance value, put it into the loss function
         varSpecificLoss = 0;

@@ -1,4 +1,4 @@
-function [calFormatDiLMS] = DichromSimulateLinear(calFormatLMS, grayLMS,  constraintWl, cbType, Disp)
+function [calFormatDiLMS,M_triToDi] = DichromSimulateLinear(calFormatLMS, grayLMS,  constraintWl, cbType, Disp)
 % Simulates color vision for dichromatic viewers by projecting onto a plane
 % in LMS space
 %
@@ -81,13 +81,24 @@ end
 
 % Calculate missing cone value. See where on the plane the missing cone
 % should land when the plane is defined by the two constraint vectors. 
-missingCone = constraintMatrix(missingConeIdx,:) * inv([constraintMatrix(availableConeIdx(1),:); constraintMatrix(availableConeIdx(2),:)]) * calFormatLMSContrast(availableConeIdx,:);
-
-% Replace missing cone row with the value achieved through projection (above) 
-calFormatDiLMSContrast = calFormatLMSContrast;
-calFormatDiLMSContrast(missingConeIdx,:) = missingCone;
+A = constraintMatrix(availableConeIdx,:);     % 2x2
+B = constraintMatrix(missingConeIdx,:);       % 1x2
+% missingCone = B * inv(A) * calFormatLMSContrast(availableConeIdx,:);
+% 
+% % Replace missing cone row with the value achieved through projection (above) 
+% calFormatDiLMSContrast = calFormatLMSContrast;
+% calFormatDiLMSContrast(missingConeIdx,:) = missingCone;
 
 % Convert back to excitations
-calFormatDiLMS = (calFormatDiLMSContrast.*grayLMS)+grayLMS;
+% calFormatDiLMS = (calFormatDiLMSContrast.*grayLMS)+grayLMS;
+
+% Potential way to get M matrix:
+M_triToDi = eye(3);             
+M_triToDi(missingConeIdx, :) = 0; 
+M_triToDi(missingConeIdx, availableConeIdx) = B * inv(A);
+% Compute dichromat from transformation matrix M
+calFormatDiLMSContrast = M_triToDi * calFormatLMSContrast;
+% Convert back to LMS excitations
+calFormatDiLMS = (calFormatDiLMSContrast .* grayLMS) + grayLMS;
 
 end
