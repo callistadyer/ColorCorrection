@@ -7,7 +7,7 @@ function [calFormatDiLMS,M_triToDi] = DichromSimulateLinear(calFormatLMS, grayLM
 %
 % Inputs:
 %   calFormatLMS:   Input LMS image
-%   grayLMS:        gray point in LMS 
+%   grayLMS:        gray point in LMS
 %   constraintWl:   which wavelength defines the projection plane for
 %                   dichromats.
 %   cbType:         which type of dichromacy
@@ -53,12 +53,12 @@ P_monitor = Disp.P_monitor;
 
 constrainInContrast = 0;
 if constrainInContrast == 1
-% Convert cone excitations to cone contrast
-calFormatLMSContrast = (calFormatLMS - grayLMS)./grayLMS;
+    % Convert cone excitations to cone contrast
+    calFormatLMSContrast = (calFormatLMS - grayLMS)./grayLMS;
+    calFormatLMSnew = calFormatLMSContrast;
 else
-calFormatLMSContrast = calFormatLMS;
+    calFormatLMSnew = calFormatLMS;
 end
-% Define achromatic constraint vector
 
 % Define monochromatic constraint vector
 [~,index] = min(abs(wls-constraintWl));
@@ -66,17 +66,19 @@ index = index(1);
 constraint2LMS = T_cones(:,index);
 
 if constrainInContrast == 1
-constraint1LMSContrast = [1 1 1]';
-constraint2LMSContrast = (constraint2LMS - grayLMS)./grayLMS;
-else 
-constraint1LMSContrast = grayLMS;
-constraint2LMSContrast = constraint2LMS;
+    % Define achromatic constraint vector
+    constraint1LMS = [1 1 1]';
+    constraint2LMS = (constraint2LMS - grayLMS)./grayLMS;
+else
+    % Define achromatic constraint vector
+    constraint1LMS = grayLMS;
+    constraint2LMS = constraint2LMS;
 end
 
 
 % Now we want to find the best least squares approximation to the trichromatic
 % LMS contrast, in the plane spanned by the two constraint vectors
-constraintMatrix = [constraint1LMSContrast  constraint2LMSContrast];
+constraintMatrix = [constraint1LMS  constraint2LMS];
 
 switch (cbType)
     case 'Deuteranopia' % m cone deficiency
@@ -91,30 +93,31 @@ switch (cbType)
 end
 
 % Calculate missing cone value. See where on the plane the missing cone
-% should land when the plane is defined by the two constraint vectors. 
+% should land when the plane is defined by the two constraint vectors.
 A = constraintMatrix(availableConeIdx,:);     % 2x2
 B = constraintMatrix(missingConeIdx,:);       % 1x2
 % missingCone = B * inv(A) * calFormatLMSContrast(availableConeIdx,:);
-% 
-% % Replace missing cone row with the value achieved through projection (above) 
+
+% % Replace missing cone row with the value achieved through projection (above)
 % calFormatDiLMSContrast = calFormatLMSContrast;
 % calFormatDiLMSContrast(missingConeIdx,:) = missingCone;
-
-% Convert back to excitations
+% % Convert back to excitations
 % calFormatDiLMS = (calFormatDiLMSContrast.*grayLMS)+grayLMS;
 
 % Potential way to get M matrix:
-M_triToDi = eye(3);             
-M_triToDi(missingConeIdx, :) = 0; 
+M_triToDi = eye(3);
+M_triToDi(missingConeIdx, :) = 0;
 M_triToDi(missingConeIdx, availableConeIdx) = B * inv(A);
+
 % Compute dichromat from transformation matrix M
-calFormatDiLMSContrast = M_triToDi * calFormatLMSContrast;
+calFormatDiLMS = M_triToDi * calFormatLMSnew;
 
 if constrainInContrast == 1
-% Convert back to LMS excitations
-calFormatDiLMS = (calFormatDiLMSContrast .* grayLMS) + grayLMS;
+    % Convert back to LMS excitations
+    calFormatDiLMS = (calFormatDiLMS .* grayLMS) + grayLMS;
 else
-calFormatDiLMS = calFormatDiLMSContrast;
+    % Keep the same
+    calFormatDiLMS = calFormatDiLMS;
 end
 
 end

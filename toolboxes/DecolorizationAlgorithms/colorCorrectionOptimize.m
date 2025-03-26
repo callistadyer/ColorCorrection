@@ -71,13 +71,16 @@ nPix   = size(triLMSCalFormat,2);
 
 % Constraint matrix (A, includes lots of I iterations) and vector (b)
 % triLMSCalFormatTran: trichromat LMS values in [nPix x 3] form
-triRGBCalFormatTran = triLMSCalFormat' * M_cones2rgb';
+% triRGBCalFormatTran = triLMSCalFormat' * M_cones2rgb';
+triRGBCalFormat = M_cones2rgb * triLMSCalFormat;
+
 % Perhaps round to get rid of small discrepancies during gray subtraction
-triRGBCalFormatTran = round(triRGBCalFormatTran,4);
+% triRGBCalFormatTran = round(triRGBCalFormatTran,4);
 
 
 % Contrast RGB, trichromat
-triRGBContrastCalFormatTran = (triRGBCalFormatTran - grayRGB')./grayRGB';
+% triRGBContrastCalFormatTran = (triRGBCalFormatTran - grayRGB')./grayRGB';
+triRGBContrastCalFormat = (triRGBCalFormat - grayRGB)./grayRGB;
 
 constraintWL = 560;
 % Contrast RGB, dichromat
@@ -89,7 +92,7 @@ constraintWL = 560;
 
 %%%%%% Linear Constraint for staying in gamut %%%%%%
 % Contrast version: the contrast image A
-A_upper = blkdiag(triRGBContrastCalFormatTran, triRGBContrastCalFormatTran, triRGBContrastCalFormatTran);      % Upper constraint blocks
+A_upper = blkdiag(triRGBContrastCalFormat', triRGBContrastCalFormat', triRGBContrastCalFormat');      % Upper constraint blocks
 % Lower is always negative of upper
 A_lower = -(A_upper);              % for -I * X <= 0
 % Create A from upper and lower
