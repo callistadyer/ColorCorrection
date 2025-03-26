@@ -111,7 +111,8 @@ b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is ba
 % (triLMSContrastCalFormat' * M_triToDi') * M_cones2rgb' * T < b
 % A = triLMSContrastCalFormat' * M_triToDi' * M_cones2rgb'
 
-diRGBCalFormat = M_cones2rgb * M_triToDi * triLMSCalFormat; 
+diRGBCalFormat = M_cones2rgb * M_triToDi * M_rgb2cones * triRGBCalFormat';
+% diRGBCalFormat = M_cones2rgb * M_triToDi * triLMSCalFormat; 
 diRGBContrastCalFormat = (diRGBCalFormat - grayRGB)./grayRGB;
 A_di_upper = blkdiag(diRGBContrastCalFormat', diRGBContrastCalFormat', diRGBContrastCalFormat');
 A_di_lower = -A_di_upper;
@@ -167,7 +168,7 @@ grayRGB = [0.5 0.5 0.5]';
 
 % Transform contrast image
 % newRGBContrastCalFormatTranContrast_out = newRGBContrastCalFormatTranContrast_out * transformRGBmatrix_opt;
-newRGBContrastCalFormatTranContrast_out = triRGBContrastCalFormatTran * transformRGBmatrix_opt;
+newRGBContrastCalFormatTranContrast_out = triRGBContrastCalFormat' * transformRGBmatrix_opt;
 
 % Add back in gray before outputting the image
 triRGBCalFormatTranOpt = (newRGBContrastCalFormatTranContrast_out.*grayRGB') + grayRGB';
