@@ -107,9 +107,10 @@ b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is ba
 % [ npix x 3 ]   *  [3 x 3]   *   [3 x 3]   * [ 3 x 3]
 % (triLMSContrastCalFormat' * M_triToDi') * M_cones2rgb' * T < b
 % A = triLMSContrastCalFormat' * M_triToDi' * M_cones2rgb'
-triLMSContrastCalFormat = (triLMSCalFormat - grayLMS)./grayLMS;
-diRGBContrastCalFormatTran = triLMSContrastCalFormat' * M_triToDi' * M_cones2rgb';
-A_di_upper = blkdiag(diRGBContrastCalFormatTran, diRGBContrastCalFormatTran, diRGBContrastCalFormatTran);
+
+diRGBCalFormat = M_cones2rgb * M_triToDi * triLMSCalFormat; 
+diRGBContrastCalFormat = (diRGBCalFormat - grayRGB)./grayRGB;
+A_di_upper = blkdiag(diRGBContrastCalFormat', diRGBContrastCalFormat', diRGBContrastCalFormat');
 A_di_lower = -A_di_upper;
 A_di = double([A_di_upper; A_di_lower]);
 b_di = [ones(nPix * 3, 1); ones(nPix * 3, 1)];
