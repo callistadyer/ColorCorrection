@@ -254,7 +254,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Transformation on gray subtracted image
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%% STEP 6: APPLY TRANSFORMATION TO RGB CONTRAST %%%%%%%
-        newRGBContrastCalFormatTran_noGray = RGBContrastCalFormatTran * T;
+        newRGBContrastCalFormatTran_noGray = RGBContrastCalFormatTran * T';
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
         % Add gray back in

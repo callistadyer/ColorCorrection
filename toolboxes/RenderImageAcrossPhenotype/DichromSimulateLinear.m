@@ -51,7 +51,7 @@ wls = Disp.wls;
 T_cones = Disp.T_cones;
 P_monitor = Disp.P_monitor;
 
-constrainInContrast = 1;
+constrainInContrast = 0;
 if constrainInContrast == 1
     % Convert cone excitations to cone contrast
     calFormatLMSContrast = (calFormatLMS - grayLMS)./grayLMS;
