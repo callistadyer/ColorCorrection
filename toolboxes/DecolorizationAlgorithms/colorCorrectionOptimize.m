@@ -128,7 +128,7 @@ A = double([A_upper; A_lower]);
 b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is background
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Linear dichromat constraint
+%%%%%%%%%%%%%%% Linear dichromat constraint %%%%%%%%%%%%%%%
 %  triLMS -->  diLMS   -->   diRGB   -->  transformed diRGB
 % [ npix x 3 ]   *  [3 x 3]   *   [3 x 3]   * [ 3 x 3]
 % (triLMSContrastCalFormat' * M_triToDi') * M_cones2rgb' * T < b
@@ -142,22 +142,22 @@ b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is ba
 M_all = M_cones2rgb * M_triToDi * M_rgb2cones; % left apply this to tri rgb contrast image
 
 % Make big diagonal matrix of Ms to multiply at each pixel
-bigM = [];
-for i = 1:nPix
-    bigM = blkdiag(bigM, M_all);
-end
+% bigM = [];
+% for i = 1:nPix
+%     bigM = blkdiag(bigM, M_all);
+% end
 
-% Dichromat constraint is just trichromat constraint transformed?
-di_constraintA = bigM * constraintA;
-% A_di_upper = blkdiag(diRGBContrastCalFormat', diRGBContrastCalFormat', diRGBContrastCalFormat');
-A_di_upper = di_constraintA;
-A_di_lower = -A_di_upper;
-A_di = double([A_di_upper; A_di_lower]);
-b_di = [ones(nPix * 3, 1); ones(nPix * 3, 1)];
-
-A_total = [A; A_di];
-b_total = [b; b_di];
-
+% % Dichromat constraint is just trichromat constraint transformed?
+% di_constraintA = bigM * constraintA;
+% % A_di_upper = blkdiag(diRGBContrastCalFormat', diRGBContrastCalFormat', diRGBContrastCalFormat');
+% A_di_upper = di_constraintA;
+% A_di_lower = -A_di_upper;
+% A_di = double([A_di_upper; A_di_lower]);
+% b_di = [ones(nPix * 3, 1); ones(nPix * 3, 1)];
+% 
+% A_total = [A; A_di];
+% b_total = [b; b_di];
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Initial guess at transformation matrix - start with identity
 T0 = eye(3, 3);
@@ -166,55 +166,36 @@ T0 = eye(3, 3);
 % T0(T0==0) = .1;
 % T0 = T0(:);
 
-% OPTIMIZATION SETUP
+% Optimization
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',200);
-bCheck = A*T0(:);
-if (any(bCheck > b))
-    fprintf('Failed to satisfy constraint\n');
-end
-
-% T0 = [1.3220   -1.2685   -0.6358;
-%       3.1295   -3.4495   -1.5253;
-%      -7.6800   -2.6694    3.1589];
-% T0 = T0*1.0e+03;
-% 
-% T0 = 1.0e+03 * [
-%    -0.4458    0.0131   -0.0867
-%    -1.1674    0.0363   -0.2376
-%     0.0161   -0.0204   -0.2822];
 
 % Optimization with linear constraints A,b:
 % [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
 %     T0, A, b, [], [], [], [], ...,
 %     @(transformRGB) nonlin_con(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
 [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
-    T0, A, b, [], [], [], [], [], options);
+    T0(:), A, b, [], [], [], [], [], options);
 
 [fValOpt, s_raw, v_raw, s_bal, v_bal] = loss_function(var,transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
+
+% See if constraint worked
 bCheck = A*transformRGB_opt(:);
 if (any(bCheck > b))
     fprintf('Failed to satisfy constraint\n');
 end
 
-% RESHAPE THE OPTIMAL SOLUTION INTO MATRIX FORM
+% Reshape optimal solution into matrix
 transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 
-% Contrast manipulation
-grayRGB = [0.5 0.5 0.5]';
-
 % Transform contrast image
-% newRGBContrastCalFormatTranContrast_out = newRGBContrastCalFormatTranContrast_out * transformRGBmatrix_opt;
-newRGBContrastCalFormatTranContrast_out = triRGBContrastCalFormat' * transformRGBmatrix_opt;
+triRGBContrastCalFormatTran_T = triRGBContrastCalFormat' * transformRGBmatrix_opt';
 
 % Add back in gray before outputting the image
-triRGBCalFormatTranOpt = (newRGBContrastCalFormatTranContrast_out.*grayRGB') + grayRGB';
-triRGBCalFormatOpt     = triRGBCalFormatTranOpt';
-
-% Calculate optimal output from input * optimal transform
-% triRGBCalFormatTranOpt = triLMSCalFormatTran * M_cones2rgb' * transformRGBmatrix_opt;
+triRGBCalFormatTran_T = (triRGBContrastCalFormatTran_T.*grayRGB') + grayRGB';
+triRGBCalFormat_T     = triRGBCalFormatTran_T';
 
 % Get LMS values to output
-triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
+triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
 
 %% Functions
 
@@ -254,26 +235,14 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % Transformation on gray subtracted image
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%% STEP 6: APPLY TRANSFORMATION TO RGB CONTRAST %%%%%%%
-        newRGBContrastCalFormatTran_noGray = RGBContrastCalFormatTran * T;
+        newRGBContrastCalFormatTran_noGray = RGBContrastCalFormatTran * T';
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
         % Add gray back in
         newRGBContrastCalFormatTran = (newRGBContrastCalFormatTran_noGray.*grayRGB') + grayRGB';
+
         % Convert into LMS
         newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
-
-        % % Old code, before contrast manipulation:
-        % newRGBContrastCalFormatTran = LMSContrastCalFormatTran * M_cones2rgb' * T;
-        % newRGBCalFormatTran = LMSCalFormatTran * M_cones2rgb' * T;
-        % % Convert to LMS
-        % newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
-        % newLMSCalFormatTran = newRGBCalFormatTran*inv(M_cones2rgb)';
-        % Get into cal format
-        % newLMSCalFormat = newLMSCalFormatTran';
-        % newRGBCalFormat = newRGBCalFormatTran';
-        % Check in gamut?
-        % minRGB = min(newRGBCalFormatTran(:));
-        % maxRGB = max(newRGBCalFormatTran(:));
 
         % Get into cal format
         newLMSContrastCalFormat = newLMSContrastCalFormatTran';
@@ -357,10 +326,13 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
 
         % Convert to RGB to subtract gray in RGB space
         RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb';
+
         % Get contrast image
         RGBContrastCalFormatTran = (RGBCalFormatTran - grayRGB')./grayRGB';
+
         % Transformation
         newRGBContrastCalFormatTran = RGBContrastCalFormatTran * T;
+
         % Add back in the gray
         newRGBCalFormatTran = (newRGBContrastCalFormatTran.*grayRGB') + grayRGB';
         newRGBCalFormat = newRGBCalFormatTran';
