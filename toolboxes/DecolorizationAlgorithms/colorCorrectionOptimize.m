@@ -55,9 +55,9 @@ switch (renderType)
         cbType = 3;
 end
 
-% NOTE: I = LMS values [nPix x 3]
 triLMSCalFormatTran = triLMSCalFormat'; % data = [3 x nPix]
-% M = transformation matrix [3x3]'
+
+% Converting from cones to rgb and vice versa
 % NOTE: MUST APPLY THIS M MATRIX ON THE LEFT OF CAL FORMAT DATA
 M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
@@ -69,10 +69,7 @@ grayLMS = M_rgb2cones*grayRGB;
 % Number of pixels
 nPix   = size(triLMSCalFormat,2);
 
-% Constraint matrix (A, includes lots of I iterations) and vector (b)
-% triLMSCalFormatTran: trichromat LMS values in [nPix x 3] form
-% triRGBCalFormatTran = triLMSCalFormat' * M_cones2rgb';
-
+% Start building the linear constraints 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 1: GET TRICHROMAT RGB VALUES FROM LMS %%%%%%%
 triRGBCalFormat = M_cones2rgb * triLMSCalFormat;
@@ -109,7 +106,6 @@ A_upper = blkdiag(triRGBContrastCalFormat', triRGBContrastCalFormat', triRGBCont
     % A_upper = constraintA;
 
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 4: MAKE LOWER MATRIX JUST NEGATIVE OF UPPER %%%%%%%
 % Lower is always negative of upper
@@ -131,19 +127,12 @@ b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is ba
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%% Linear dichromat constraint %%%%%%%%%%%%%%%
-%  triLMS -->  diLMS   -->   diRGB   -->  transformed diRGB
-% [ npix x 3 ]   *  [3 x 3]   *   [3 x 3]   * [ 3 x 3]
-% (triLMSContrastCalFormat' * M_triToDi') * M_cones2rgb' * T < b
-% A = triLMSContrastCalFormat' * M_triToDi' * M_cones2rgb'
-% diRGBCalFormat = M_cones2rgb * M_triToDi * M_rgb2cones * triRGBCalFormat';
-% % diRGBCalFormat = M_cones2rgb * M_triToDi * triLMSCalFormat; 
-% diRGBContrastCalFormat = (diRGBCalFormat - grayRGB)./grayRGB;
-
 % Matrix that transforms contrast RGB trichromat input into contrast RGB
 % dichromat output --> this also needs to be in gamut
+
 % M_all = M_cones2rgb * M_triToDi * M_rgb2cones; % left apply this to tri rgb contrast image
 
-% Make big diagonal matrix of Ms to multiply at each pixel
+% % Make big diagonal matrix of Ms to multiply at each pixel
 % bigM = [];
 % for i = 1:nPix
 %     bigM = blkdiag(bigM, M_all);
@@ -151,33 +140,25 @@ b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is ba
 
 % % Dichromat constraint is just trichromat constraint transformed?
 % di_constraintA = bigM * constraintA;
-% % A_di_upper = blkdiag(diRGBContrastCalFormat', diRGBContrastCalFormat', diRGBContrastCalFormat');
 % A_di_upper = di_constraintA;
 % A_di_lower = -A_di_upper;
 % A_di = double([A_di_upper; A_di_lower]);
 % b_di = [ones(nPix * 3, 1); ones(nPix * 3, 1)];
-% 
+
+% % Combine trichromat and dichromat constraints
 % A_total = [A; A_di];
 % b_total = [b; b_di];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Initial guess at transformation matrix - start with identity
 T0 = eye(3, 3);
-% See if trying a different starting point would be helpful?
-% T0 = T0 * 0.8;
-% T0(T0==0) = .1;
-% T0 = T0(:);
 
 % Optimization
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',200);
-
-% Optimization with linear constraints A,b:
-% [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
-%     T0, A, b, [], [], [], [], ...,
-%     @(transformRGB) nonlin_con(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
+% fmincon
 [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
     T0(:), A, b, [], [], [], [], [], options);
-
+% Test loss function with final transformation matrix values
 [fValOpt, s_raw, v_raw, s_bal, v_bal] = loss_function(var,transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
 
 % See if constraint worked
@@ -188,7 +169,6 @@ end
 
 % Reshape optimal solution into matrix
 transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 7: TRANSFORM CONTRAST IMAGE W OPTIMAL %%%%%%%
@@ -220,12 +200,13 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         % M_cones2rgb = inv(M_rgb2cones)
         % M_rgb2cones -->     [3 x nPixels] x [nPixels x 3]  APPLY ON LEFT OF RGB VALUES WHEN IN CAL FORMAT
         % M_cones2rgb --> inv([3 x nPixels] x [nPixels x 3]) APPLY ON LEFT OF LMS VALUES WHEN IN CAL FORMAT
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+        %
         % Must apply M on RIGHT with a TRANSPOSE when LMS is in cal format TRANSPOSE
         % LMSCalFormatTran * M_cones2rgb' --> converts LMS to RGB values
         % T scales the RGB values
         % altogether, (LMSCalFormatTran * M_cones2rgb' * T) returns scaled RGB values in calFormatTransposed format
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
         % Weber contrast image
         grayRGB = [0.5 0.5 0.5]';
@@ -267,7 +248,6 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         %%%%%%%% Similarity term %%%%%%%%
         similarity_term_raw = similarityLMS('squared',LMSCalFormatTran,newLMSContrastCalFormatTran);
         % similarity_term_raw = similarityLMS('squared',round(LMSCalFormatTran,5),round(newLMSContrastCalFormatTran,5));
-
         % Normalize by whiteNoiseSimilarity
         totalSimilarity = abs(whiteNoiseSimilarity('squared',Disp));
         % Weight by lambda
@@ -276,13 +256,10 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         % Eventually, try to avoid lambda and choose similarity wisely
         % similarity_term = similarity_term_raw; % Getting rid of lambda for now
 
-
-        % Loss
+        %%%%%%%% Loss %%%%%%%%
         % Scale loss so that it is small enough to make fmincon happy but not
-        % so small that it is unhappy.
-        % How to determine this?
+        % so small that it is unhappy. How to determine this?
         fminconFactor = 1e4;
-        % fminconFactor = 1e20;
 
         % To enforce a certain variance value, put it into the loss function
         varSpecificLoss = 0;
