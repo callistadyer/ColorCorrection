@@ -189,8 +189,12 @@ end
 % Reshape optimal solution into matrix
 transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%% STEP 7: TRANSFORM CONTRAST IMAGE W OPTIMAL %%%%%%%
 % Transform contrast image
 triRGBContrastCalFormatTran_T = triRGBContrastCalFormat' * transformRGBmatrix_opt';
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Add back in gray before outputting the image
 triRGBCalFormatTran_T = (triRGBContrastCalFormatTran_T.*grayRGB') + grayRGB';
