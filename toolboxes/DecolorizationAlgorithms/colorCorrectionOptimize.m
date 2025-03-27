@@ -188,11 +188,11 @@ end
 %     T0, A, b, [], [], [], [], ...,
 %     @(transformRGB) nonlin_con(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, cbType, Disp), options);
 [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
-    T0, A_total, b_total, [], [], [], [], [], options);
+    T0, A, b, [], [], [], [], [], options);
 
 [fValOpt, s_raw, v_raw, s_bal, v_bal] = loss_function(var,transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
-bCheck = A_total*transformRGB_opt(:);
-if (any(bCheck > b_total))
+bCheck = A*transformRGB_opt(:);
+if (any(bCheck > b))
     fprintf('Failed to satisfy constraint\n');
 end
 
@@ -256,7 +256,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         %%%%%%% STEP 6: APPLY TRANSFORMATION TO RGB CONTRAST %%%%%%%
         newRGBContrastCalFormatTran_noGray = RGBContrastCalFormatTran * T;
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
+
         % Add gray back in
         newRGBContrastCalFormatTran = (newRGBContrastCalFormatTran_noGray.*grayRGB') + grayRGB';
         % Convert into LMS
