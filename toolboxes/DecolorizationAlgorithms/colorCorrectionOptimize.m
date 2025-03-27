@@ -72,49 +72,85 @@ nPix   = size(triLMSCalFormat,2);
 % Constraint matrix (A, includes lots of I iterations) and vector (b)
 % triLMSCalFormatTran: trichromat LMS values in [nPix x 3] form
 % triRGBCalFormatTran = triLMSCalFormat' * M_cones2rgb';
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%% STEP 1: GET TRICHROMAT RGB VALUES FROM LMS %%%%%%%
 triRGBCalFormat = M_cones2rgb * triLMSCalFormat;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Perhaps round to get rid of small discrepancies during gray subtraction
-% triRGBCalFormatTran = round(triRGBCalFormatTran,4);
-
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%% STEP 2: GET TRI CONTRAST RGB FROM RGB      %%%%%%%
 % Contrast RGB, trichromat
 % triRGBContrastCalFormatTran = (triRGBCalFormatTran - grayRGB')./grayRGB';
 triRGBContrastCalFormat = (triRGBCalFormat - grayRGB)./grayRGB;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-constraintWL = 560;
 % Contrast RGB, dichromat
+constraintWL = 560;
 [calFormatDiLMS,M_triToDi] = DichromSimulateLinear(triLMSCalFormat, grayLMS,  constraintWL, renderType, Disp);
 % calFormatDiLMSTran = calFormatDiLMS';  % [nPix x 3]
 % grayLMS_row = grayLMS'; % 1 x 3
 % LMSContrast = (calFormatDiLMSTran - grayLMS_row) ./ grayLMS_row;
 % diRGBContrastCalFormatTran = LMSContrast * M_cones2rgb';
 
-%%%%%% Linear Constraint for staying in gamut %%%%%%
+% Attempt at making the [3 x 9] matrix for each pixel, then append every
+% pixel on the bottom so that the total matrix is size [(3*nPix) x 9]
+% constraintA = [];
+% for i = 1:size(triRGBContrastCalFormat,2)
+% constraintA = [constraintA; eye(3)*triRGBContrastCalFormat(1,i), eye(3)*triRGBContrastCalFormat(2,i), eye(3)*triRGBContrastCalFormat(3,i)];
+% end 
+% A_upper = constraintA;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%% STEP 3: MAKE BLOCKED DIAGONAL MATRIX OF CONTRAST RGB %%%%%%%
 % Contrast version: the contrast image A
+% [(nPix x 3) x 9] =    [nPix x 3]                 [nPix x 3]              [nPix x 3]
 A_upper = blkdiag(triRGBContrastCalFormat', triRGBContrastCalFormat', triRGBContrastCalFormat');      % Upper constraint blocks
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%% STEP 4: MAKE LOWER MATRIX JUST NEGATIVE OF UPPER %%%%%%%
 % Lower is always negative of upper
 A_lower = -(A_upper);              % for -I * X <= 0
 % Create A from upper and lower
 A = double([A_upper; A_lower]);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % b defines the gamut. In regular RGB, it must stay between 0 and 1
 % b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
 % % Update b to deal with contrast image
 % % (contrastA * T) * grayRGB + grayRGB <= b
 % % (contrastA * T)                     <= (b - grayRGB)/grayRGB
 % b = (b - grayRGB(1))./grayRGB(1);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%% STEP 5: RIGHT HAND SIDE OF CONSTRAINT, POST CONTRAST %%%%%%%
 b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is background
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Linear dichromat constraint
 %  triLMS -->  diLMS   -->   diRGB   -->  transformed diRGB
 % [ npix x 3 ]   *  [3 x 3]   *   [3 x 3]   * [ 3 x 3]
 % (triLMSContrastCalFormat' * M_triToDi') * M_cones2rgb' * T < b
 % A = triLMSContrastCalFormat' * M_triToDi' * M_cones2rgb'
+% diRGBCalFormat = M_cones2rgb * M_triToDi * M_rgb2cones * triRGBCalFormat';
+% % diRGBCalFormat = M_cones2rgb * M_triToDi * triLMSCalFormat; 
+% diRGBContrastCalFormat = (diRGBCalFormat - grayRGB)./grayRGB;
 
-diRGBCalFormat = M_cones2rgb * M_triToDi * M_rgb2cones * triRGBCalFormat';
-% diRGBCalFormat = M_cones2rgb * M_triToDi * triLMSCalFormat; 
-diRGBContrastCalFormat = (diRGBCalFormat - grayRGB)./grayRGB;
-A_di_upper = blkdiag(diRGBContrastCalFormat', diRGBContrastCalFormat', diRGBContrastCalFormat');
+% Matrix that transforms contrast RGB trichromat input into contrast RGB
+% dichromat output --> this also needs to be in gamut
+M_all = M_cones2rgb * M_triToDi * M_rgb2cones; % left apply this to tri rgb contrast image
+
+% Make big diagonal matrix of Ms to multiply at each pixel
+bigM = [];
+for i = 1:nPix
+    bigM = blkdiag(bigM, M_all);
+end
+
+% Dichromat constraint is just trichromat constraint transformed?
+di_constraintA = bigM * constraintA;
+% A_di_upper = blkdiag(diRGBContrastCalFormat', diRGBContrastCalFormat', diRGBContrastCalFormat');
+A_di_upper = di_constraintA;
 A_di_lower = -A_di_upper;
 A_di = double([A_di_upper; A_di_lower]);
 b_di = [ones(nPix * 3, 1); ones(nPix * 3, 1)];
@@ -216,8 +252,11 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormatOpt;
         % RGBContrastCalFormatTran = RGBCalFormatTran;
 
         % Transformation on gray subtracted image
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%% STEP 6: APPLY TRANSFORMATION TO RGB CONTRAST %%%%%%%
         newRGBContrastCalFormatTran_noGray = RGBContrastCalFormatTran * T;
-
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
         % Add gray back in
         newRGBContrastCalFormatTran = (newRGBContrastCalFormatTran_noGray.*grayRGB') + grayRGB';
         % Convert into LMS
