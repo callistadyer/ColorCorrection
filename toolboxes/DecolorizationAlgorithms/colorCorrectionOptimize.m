@@ -93,20 +93,22 @@ constraintWL = 560;
 % LMSContrast = (calFormatDiLMSTran - grayLMS_row) ./ grayLMS_row;
 % diRGBContrastCalFormatTran = LMSContrast * M_cones2rgb';
 
-% Attempt at making the [3 x 9] matrix for each pixel, then append every
-% pixel on the bottom so that the total matrix is size [(3*nPix) x 9]
-% constraintA = [];
-% for i = 1:size(triRGBContrastCalFormat,2)
-% constraintA = [constraintA; eye(3)*triRGBContrastCalFormat(1,i), eye(3)*triRGBContrastCalFormat(2,i), eye(3)*triRGBContrastCalFormat(3,i)];
-% end 
-% A_upper = constraintA;
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 3: MAKE BLOCKED DIAGONAL MATRIX OF CONTRAST RGB %%%%%%%
 % Contrast version: the contrast image A
 % [(nPix x 3) x 9] =    [nPix x 3]                 [nPix x 3]              [nPix x 3]
 A_upper = blkdiag(triRGBContrastCalFormat', triRGBContrastCalFormat', triRGBContrastCalFormat');      % Upper constraint blocks
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % ALTERNATIVE:
+    % Attempt at making the [3 x 9] matrix for each pixel, then append every
+    % pixel on the bottom so that the total matrix is size [(3*nPix) x 9]
+    % constraintA = [];
+    % for i = 1:size(triRGBContrastCalFormat,2)
+    % constraintA = [constraintA; eye(3)*triRGBContrastCalFormat(1,i), eye(3)*triRGBContrastCalFormat(2,i), eye(3)*triRGBContrastCalFormat(3,i)];
+    % end 
+    % A_upper = constraintA;
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 4: MAKE LOWER MATRIX JUST NEGATIVE OF UPPER %%%%%%%
@@ -139,7 +141,7 @@ b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is ba
 
 % Matrix that transforms contrast RGB trichromat input into contrast RGB
 % dichromat output --> this also needs to be in gamut
-M_all = M_cones2rgb * M_triToDi * M_rgb2cones; % left apply this to tri rgb contrast image
+% M_all = M_cones2rgb * M_triToDi * M_rgb2cones; % left apply this to tri rgb contrast image
 
 % Make big diagonal matrix of Ms to multiply at each pixel
 % bigM = [];
