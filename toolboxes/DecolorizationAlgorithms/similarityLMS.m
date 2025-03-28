@@ -23,6 +23,9 @@ function similarity = similarityLMS(similarityType,LMS_old,LMS_new)
 %
 % Examples are included within the code
 
+% LMS_new = round(LMS_new,5);
+% LMS_old = round(LMS_old,5);
+
 switch (similarityType)
     case 'angle'
         similarity = (LMS_new(:)'*LMS_old(:))/(norm(LMS_new(:))*norm(LMS_old(:)));
