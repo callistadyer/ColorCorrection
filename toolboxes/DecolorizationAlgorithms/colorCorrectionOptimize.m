@@ -55,8 +55,6 @@ switch (renderType)
         cbType = 3;
 end
 
-triLMSCalFormatTran = triLMSCalFormat'; % data = [3 x nPix]
-
 % Converting from cones to rgb and vice versa
 % NOTE: MUST APPLY THIS M MATRIX ON THE LEFT OF CAL FORMAT DATA
 M_rgb2cones = Disp.T_cones*Disp.P_monitor;
@@ -72,47 +70,39 @@ nPix   = size(triLMSCalFormat,2);
 % Start building the linear constraints 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 1: GET TRICHROMAT RGB VALUES FROM LMS %%%%%%%
-triRGBCalFormat = M_cones2rgb * triLMSCalFormat;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+triRGBCalFormat = M_cones2rgb * triLMSCalFormat;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 2: GET TRI CONTRAST RGB FROM RGB      %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Contrast RGB, trichromat
-% triRGBContrastCalFormatTran = (triRGBCalFormatTran - grayRGB')./grayRGB';
 triRGBContrastCalFormat = (triRGBCalFormat - grayRGB)./grayRGB;
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Contrast RGB, dichromat
-constraintWL = 560;
-[calFormatDiLMS,M_triToDi] = DichromSimulateLinear(triLMSCalFormat, grayLMS,  constraintWL, renderType, Disp);
-% calFormatDiLMSTran = calFormatDiLMS';  % [nPix x 3]
-% grayLMS_row = grayLMS'; % 1 x 3
-% LMSContrast = (calFormatDiLMSTran - grayLMS_row) ./ grayLMS_row;
-% diRGBContrastCalFormatTran = LMSContrast * M_cones2rgb';
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%% STEP 3: MAKE BLOCKED DIAGONAL MATRIX OF CONTRAST RGB %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%% STEP 3: MAKE BLOCKED DIAGONAL MATRIX OF CONTRAST RGB %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Contrast version: the contrast image A
 % [(nPix x 3) x 9] =    [nPix x 3]                 [nPix x 3]              [nPix x 3]
-A_upper = blkdiag(triRGBContrastCalFormat', triRGBContrastCalFormat', triRGBContrastCalFormat');      % Upper constraint blocks
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% A_upper = blkdiag(triRGBContrastCalFormat', triRGBContrastCalFormat', triRGBContrastCalFormat');      % Upper constraint blocks
+
     % ALTERNATIVE:
     % Attempt at making the [3 x 9] matrix for each pixel, then append every
     % pixel on the bottom so that the total matrix is size [(3*nPix) x 9]
-    % constraintA = [];
-    % for i = 1:size(triRGBContrastCalFormat,2)
-    % constraintA = [constraintA; eye(3)*triRGBContrastCalFormat(1,i), eye(3)*triRGBContrastCalFormat(2,i), eye(3)*triRGBContrastCalFormat(3,i)];
-    % end 
-    % A_upper = constraintA;
+    constraintA = [];
+    for i = 1:size(triRGBContrastCalFormat,2)
+    constraintA = [constraintA; eye(3)*triRGBContrastCalFormat(1,i), eye(3)*triRGBContrastCalFormat(2,i), eye(3)*triRGBContrastCalFormat(3,i)];
+    end 
+    A_upper = constraintA;
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 4: MAKE LOWER MATRIX JUST NEGATIVE OF UPPER %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Lower is always negative of upper
 A_lower = -(A_upper);              % for -I * X <= 0
 % Create A from upper and lower
 A = double([A_upper; A_lower]);
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % b defines the gamut. In regular RGB, it must stay between 0 and 1
 % b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
@@ -121,33 +111,44 @@ A = double([A_upper; A_lower]);
 % % (contrastA * T)                     <= (b - grayRGB)/grayRGB
 % b = (b - grayRGB(1))./grayRGB(1);
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 5: RIGHT HAND SIDE OF CONSTRAINT, POST CONTRAST %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is background
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%% Linear dichromat constraint %%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%% STEP 6: BUILD CONSTRAINT FOR DICHROMAT     %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Matrix that transforms contrast RGB trichromat input into contrast RGB
 % dichromat output --> this also needs to be in gamut
+% Contrast RGB, dichromat
+constraintWL = 585;
+[calFormatDiLMS,M_triToDi] = DichromSimulateLinear(triLMSCalFormat, grayLMS,  constraintWL, renderType, Disp);
 
-% M_all = M_cones2rgb * M_triToDi * M_rgb2cones; % left apply this to tri rgb contrast image
+% Matrix that converts LMS contrast into rgb contrast
+M_conesC2rgbC = diag(1./grayLMS) * M_rgb2cones * diag(grayRGB);
+M_all = M_conesC2rgbC * M_triToDi * inv(M_conesC2rgbC); % left apply this to tri rgb contrast image
 
-% % Make big diagonal matrix of Ms to multiply at each pixel
-% bigM = [];
-% for i = 1:nPix
-%     bigM = blkdiag(bigM, M_all);
-% end
+% Make big diagonal matrix of Ms to multiply at each pixel
+bigM = [];
+for i = 1:nPix
+    bigM = blkdiag(bigM, M_all);
+end
 
-% % Dichromat constraint is just trichromat constraint transformed?
-% di_constraintA = bigM * constraintA;
-% A_di_upper = di_constraintA;
-% A_di_lower = -A_di_upper;
-% A_di = double([A_di_upper; A_di_lower]);
-% b_di = [ones(nPix * 3, 1); ones(nPix * 3, 1)];
+% Dichromat constraint is just trichromat constraint transformed
+% Left multuply the big M transformation matrix
+A_di_upper = bigM * constraintA;
+% Lower is just negative of upper
+A_di_lower = -A_di_upper;
+% Combine lower and upper
+A_di = double([A_di_upper; A_di_lower]);
+% b (right hand side of constraint AT<b) is constructed the same as orig
+b_di = [ones(nPix * 3, 1); ones(nPix * 3, 1)];
 
-% % Combine trichromat and dichromat constraints
-% A_total = [A; A_di];
-% b_total = [b; b_di];
+% Combine trichromat and dichromat constraints
+A_total = [A; A_di];
+b_total = [b; b_di];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Initial guess at transformation matrix - start with identity
@@ -156,14 +157,14 @@ T0 = eye(3, 3);
 % Optimization
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',200);
 % fmincon
-[transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(var, transformRGB, triLMSCalFormatTran, M_cones2rgb, lambda_var, renderType, Disp), ...
-    T0(:), A, b, [], [], [], [], [], options);
+[transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(var, transformRGB, triLMSCalFormat, M_cones2rgb, lambda_var, renderType, Disp), ...
+    T0(:), A_total, b_total, [], [], [], [], [], options);
 % Test loss function with final transformation matrix values
-[fValOpt, s_raw, v_raw, s_bal, v_bal] = loss_function(var,transformRGB_opt, triLMSCalFormatTran, M_cones2rgb, lambda_var,renderType, Disp);
+[fValOpt, s_raw, v_raw, s_bal, v_bal] = loss_function(var,transformRGB_opt, triLMSCalFormat, M_cones2rgb, lambda_var,renderType, Disp);
 
 % See if constraint worked
-bCheck = A*transformRGB_opt(:);
-if (any(bCheck > b))
+bCheck = A_total*transformRGB_opt(:);
+if (any(bCheck > b_total))
     fprintf('Failed to satisfy constraint\n');
 end
 
@@ -173,12 +174,11 @@ transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 7: TRANSFORM CONTRAST IMAGE W OPTIMAL %%%%%%%
 % Transform contrast image
-triRGBContrastCalFormatTran_T = triRGBContrastCalFormat' * transformRGBmatrix_opt';
+triRGBContrastCalFormat_T = transformRGBmatrix_opt * triRGBContrastCalFormat;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Add back in gray before outputting the image
-triRGBCalFormatTran_T = (triRGBContrastCalFormatTran_T.*grayRGB') + grayRGB';
-triRGBCalFormat_T     = triRGBCalFormatTran_T';
+triRGBCalFormat_T = (triRGBContrastCalFormat_T.*grayRGB) + grayRGB;
 
 % Get LMS values to output
 triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
@@ -186,7 +186,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
 %% Functions
 
 % OBJECTIVE FUNCTION
-    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(var, t_vec, LMSCalFormatTran, M_cones2rgb, lambda, renderType, Disp)
+    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(var, t_vec, LMSCalFormat, M_cones2rgb, lambda, renderType, Disp)
         T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
 
         % I - LMS
@@ -212,28 +212,28 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         grayRGB = [0.5 0.5 0.5]';
 
         % Convert into RGB where gray is removed
-        RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb';
+        RGBCalFormat = M_cones2rgb * LMSCalFormat;
 
         % Create contrast image
-        RGBContrastCalFormatTran = (RGBCalFormatTran - grayRGB')./grayRGB';
+        RGBContrastCalFormat     = (RGBCalFormat - grayRGB)./grayRGB;
         % Want to use non contrast version? Uncomment below:
-        % RGBContrastCalFormatTran = RGBCalFormatTran;
+        % RGBContrastCalFormat = RGBCalFormat;
 
         % Transformation on gray subtracted image
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%%% STEP 6: APPLY TRANSFORMATION TO RGB CONTRAST %%%%%%%
-        newRGBContrastCalFormatTran_noGray = RGBContrastCalFormatTran * T';
+        newRGBContrastCalFormat_noGray = T * RGBContrastCalFormat;
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
         % Add gray back in
-        newRGBContrastCalFormatTran = (newRGBContrastCalFormatTran_noGray.*grayRGB') + grayRGB';
+        newRGBContrastCalFormat = (newRGBContrastCalFormat_noGray.*grayRGB) + grayRGB;
 
         % Convert into LMS
-        newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
+        newLMSContrastCalFormat = inv(M_cones2rgb) * newRGBContrastCalFormat;
 
         % Get into cal format
-        newLMSContrastCalFormat = newLMSContrastCalFormatTran';
-
+        newLMSContrastCalFormatTran = newLMSContrastCalFormat';
+        LMSCalFormatTran = LMSCalFormat';
         %%%%%%%% Variance term %%%%%%%%
         var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormat);
         % Weight by lambda (use this when trying to find range of variances)
@@ -277,114 +277,6 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         v_raw = var_term_raw;
         s_bal = similarity_term_balance;
         v_bal = var_term_balance;
-    end
-
-
-% This ensures that dichromat rendering does not go out of gamut. Calls
-% DichromatSimulateBrettel and checks RGB values
-    function [c, ceq] = nonlin_con(var, t_vec, LMSCalFormatTran, M_cones2rgb, cbType, Disp)
-
-        T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
-
-        % I - LMS
-        % O - linear RGB
-        % M - LMS2RGB
-        % T - RGB TRANSFORMATION
-        % [nPizels x 3]     = [3 x nPixels] x [3 x 3] x [3 x 3]
-
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Transformation matrix tips %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % M_rgb2cones = Disp.T_cones*Disp.P_monitor;
-        % M_cones2rgb = inv(M_rgb2cones)
-        % M_rgb2cones -->     [3 x nPixels] x [nPixels x 3]  APPLY ON LEFT OF RGB VALUES WHEN IN CAL FORMAT
-        % M_cones2rgb --> inv([3 x nPixels] x [nPixels x 3]) APPLY ON LEFT OF LMS VALUES WHEN IN CAL FORMAT
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-        % Must apply M on RIGHT with a TRANSPOSE when LMS is in cal format TRANSPOSE
-        % LMSCalFormatTran * M_cones2rgb' --> converts LMS to RGB values
-        % T scales the RGB values
-        % altogether, (LMSCalFormatTran * M_cones2rgb' * T) returns scaled RGB values in calFormatTransposed format
-
-        % Weber contrast image
-        grayRGB = [0.5 0.5 0.5]';
-
-        % Convert to RGB to subtract gray in RGB space
-        RGBCalFormatTran = LMSCalFormatTran * M_cones2rgb';
-
-        % Get contrast image
-        RGBContrastCalFormatTran = (RGBCalFormatTran - grayRGB')./grayRGB';
-
-        % Transformation
-        newRGBContrastCalFormatTran = RGBContrastCalFormatTran * T;
-
-        % Add back in the gray
-        newRGBCalFormatTran = (newRGBContrastCalFormatTran.*grayRGB') + grayRGB';
-        newRGBCalFormat = newRGBCalFormatTran';
-
-        % Convert into LMS
-        newLMSContrastCalFormatTran = newRGBContrastCalFormatTran*inv(M_cones2rgb)';
-
-        % Once you have v0 and v1, now you can tell the function to search
-        % only for the solution with these values
-        % Nonlinear equality constraint: variance must match one in my chosen
-        % range
-        varSpecificNonlinear = 0;
-        if varSpecificNonlinear == 1
-            % For dichromat plate image
-            % Obtain v0 and v1 by running the code with lambda still included.
-            % Make lambda = 0 and 1 and collect values for var_term_raw in loss function
-            v0 = 5.0686e-14;
-            v1 = 5.4905e-06;
-
-            s0 = 1;
-            s1 = 0.9798;
-            similarity_range    = linspace(s1, s0, 10);
-            similarity_term_raw = similarityLMS('angle',LMSCalFormatTran,newLMSContrastCalFormatTran);
-
-            variance_range = linspace(v0, v1, 10);
-            var_term_raw   = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormatTran');
-
-            % ceq = var_term_raw - variance_range(var);
-            ceq = similarity_term_raw - similarity_range(var);
-
-            tol = 1e-2;
-
-            if abs(ceq) < tol
-                ceq = 0; % Treat it as zero within tolerance
-            end
-        else
-            ceq = [];
-        end
-
-        triLMSCalFormatTran_new = newRGBCalFormat'*inv(M_cones2rgb)';
-
-        [diLMSCalFormat] = tri2dichromatLMSCalFormat(triLMSCalFormatTran_new',renderType,Disp,0);
-
-        diRGBLinCalFormat = diLMSCalFormat' * M_cones2rgb';
-
-        % Matrix to convert from rgb to xyz
-        % Note: this matrix must be applied on the LEFT!!
-        % M_rgb2xyz = Disp.T_xyz*Disp.P_monitor;
-        % M_xyz2rgb = inv(M_rgb2xyz);
-        %
-        % % Linear RGB --> XYZ (Brettel takes in XYZ)
-        % triXYZCalFormat = M_rgb2xyz * newRGBCalFormat;
-        % % Cal Format --> Image Format
-        % triXYZImgFormat = CalFormatToImage(triXYZCalFormat,Disp.m,Disp.n);
-        %
-        % % Convert with Brettel
-        % [diXYZ] = DichromatSimulateBrettel(triXYZImgFormat, cbType, []);
-        %
-        % % Image Format --> CalFormat
-        % diXYZCalFormat = ImageToCalFormat(diXYZ);
-        % % XYZ --> Linear RGB
-        % diRGBLinCalFormat = M_xyz2rgb * diXYZCalFormat;
-
-        % Nonlin constraints must be <= 0
-        % Get c(1) and c(2) from min and max
-        % Nonlinear constraints for dichromat
-        c(1) = -1*min(diRGBLinCalFormat(:));
-        c(2) = max(diRGBLinCalFormat(:))-1;
-
     end
 
 end
