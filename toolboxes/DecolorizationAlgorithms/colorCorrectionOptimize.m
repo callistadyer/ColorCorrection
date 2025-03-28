@@ -172,9 +172,9 @@ transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 7: TRANSFORM CONTRAST IMAGE W OPTIMAL %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Transform contrast image
 triRGBContrastCalFormat_T = transformRGBmatrix_opt * triRGBContrastCalFormat;
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Add back in gray before outputting the image
 triRGBCalFormat_T = (triRGBContrastCalFormat_T.*grayRGB) + grayRGB;
@@ -218,11 +218,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         % Want to use non contrast version? Uncomment below:
         % RGBContrastCalFormat = RGBCalFormat;
 
-        % Transformation on gray subtracted image
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %%%%%%% STEP 6: APPLY TRANSFORMATION TO RGB CONTRAST %%%%%%%
+        %%%%%%%% Transformation on gray subtracted image %%%%%%%%
         newRGBContrastCalFormat_noGray = T * RGBContrastCalFormat;
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
         % Add gray back in
         newRGBContrastCalFormat = (newRGBContrastCalFormat_noGray.*grayRGB) + grayRGB;
