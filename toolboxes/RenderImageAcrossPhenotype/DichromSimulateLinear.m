@@ -51,29 +51,23 @@ wls = Disp.wls;
 T_cones = Disp.T_cones;
 P_monitor = Disp.P_monitor;
 
-constrainInContrast = 1;
-if constrainInContrast == 1
-    % Convert cone excitations to cone contrast
-    calFormatLMSContrast = (calFormatLMS - grayLMS)./grayLMS;
-    calFormatLMSnew = calFormatLMSContrast;
-else
-    calFormatLMSnew = calFormatLMS;
-end
+
+% Convert cone excitations to cone contrast
+calFormatLMSContrast = (calFormatLMS - grayLMS)./grayLMS;
 
 % Define monochromatic constraint vector
 [~,index] = min(abs(wls-constraintWl));
 index = index(1);
 constraint2LMS = T_cones(:,index);
 
-if constrainInContrast == 1
-    % Define achromatic constraint vector
-    constraint1LMS = [1 1 1]';
-    constraint2LMS = (constraint2LMS - grayLMS)./grayLMS;
-else
-    % Define achromatic constraint vector
-    constraint1LMS = grayLMS;
-    constraint2LMS = constraint2LMS;
-end
+% Define achromatic constraint vector
+constraint1LMS = [1 1 1]';
+constraint2LMS = (constraint2LMS - grayLMS)./grayLMS;
+
+% Define achromatic constraint vector (excitations)
+% constraint1LMS = grayLMS;
+% constraint2LMS = constraint2LMS;
+
 
 
 % Now we want to find the best least squares approximation to the trichromatic
@@ -110,14 +104,10 @@ M_triToDi(missingConeIdx, :) = 0;
 M_triToDi(missingConeIdx, availableConeIdx) = B * inv(A);
 
 % Compute dichromat from transformation matrix M
-calFormatDiLMS = M_triToDi * calFormatLMSnew;
+% NOTE: M_triToDi operates on contrast LMS 
+calFormatDiLMSContast = M_triToDi * calFormatLMSContrast;
 
-if constrainInContrast == 1
-    % Convert back to LMS excitations
-    calFormatDiLMS = (calFormatDiLMS .* grayLMS) + grayLMS;
-else
-    % Keep the same
-    calFormatDiLMS = calFormatDiLMS;
-end
+% Convert back to LMS excitations
+calFormatDiLMS = (calFormatDiLMSContast .* grayLMS) + grayLMS;
 
 end

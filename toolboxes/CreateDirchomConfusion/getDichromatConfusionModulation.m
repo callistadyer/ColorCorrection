@@ -50,7 +50,7 @@ scaleFactor_rgb(:,i) = MaximizeGamutContrast(modulationDirection_rgb,rgbImageCal
 end
 
 % Stay away from the very edge
-toleranceFactor = 0.9;
+toleranceFactor = 0.8;
 scaleFactor_rgb = toleranceFactor*scaleFactor_rgb;
 
 % Scale modulation direction by scale factor to get modulation

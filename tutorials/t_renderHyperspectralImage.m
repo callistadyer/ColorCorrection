@@ -49,7 +49,12 @@ t_renderHyperspectralImage('gray','Deuteranopia',0,0,10,'rand')
 
 % Render lms image that a trichromat sees.  Convert from cal format to image as well.
 triLMScalFormat = Disp.T_cones*hyperspectralImageCalFormat;
-[triRGBCalFormat,triRGBLinCalFormat,scaleFactor] = LMS2RGBCalFormat(triLMScalFormat,Disp,bScale);
+
+M_rgb2cones = Disp.T_cones*Disp.P_monitor;
+M_cones2rgb = inv(M_rgb2cones);
+triRGBCalFormat = M_cones2rgb * triLMScalFormat;
+
+% [triRGBCalFormat,triRGBLinCalFormat,scaleFactor] = LMS2RGBCalFormat(triLMScalFormat,Disp,bScale);
 triRGBImgFormat                                  = CalFormatToImage(triRGBCalFormat,m,n);
 
 
@@ -66,49 +71,47 @@ modDirection = vectors ./ magnitudes;  % Normalize to unit vectors
 % This function is taking rgbLinImageCalFormat2 and using MaximizeGamutContrast to determine how much we can move
 % in a given cone direction (specifically, the direction of the missing cone) without going out of gamut
 for i = 1:nSquares
-    [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(triRGBLinCalFormat,modDirection(i,:)',modType,Disp,scaleFactor,bScale);
+    [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(triRGBCalFormat,modDirection(i,:)',modType,Disp,0,bScale);
 end
 
 % Create isochromatic plates
-if ~strcmp(image,'74')
-    [triRGBCalFormat_plate, triLMSCalFormat_plate] = isochromaticPlates(image,renderType,lmsModulationImgFormat,Disp,bScale,nSquares, ...
-        'verbose',true);
-    triRGBImgFormat_plate = CalFormatToImage(triRGBCalFormat_plate,Disp.m,Disp.n);
-else
-    % no need for plate when using plate 
-    triLMSCalFormat_plate = triLMScalFormat;
-    triRGBImgFormat_plate = triRGBImgFormat;
-end
-% Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)  
-diLMScalFormat        = tri2dichromatLMSCalFormat(triLMScalFormat,renderType,Disp,bScale); % gray
-diLMScalFormat_plate  = tri2dichromatLMSCalFormat(triLMSCalFormat_plate,renderType,Disp,bScale); % modulated 
+[triRGBCalFormat_plate, triLMSCalFormat_plate] = isochromaticPlates(image,renderType,lmsModulationImgFormat,Disp,bScale,nSquares, ...
+    'verbose',true);
+triRGBImgFormat_plate = CalFormatToImage(triRGBCalFormat_plate,Disp.m,Disp.n);
+
+% Params
+M_rgb2cones = Disp.T_cones*Disp.P_monitor;
+M_cones2rgb = inv(M_rgb2cones);
+grayRGB = [0.5 0.5 0.5]';
+grayLMS = M_rgb2cones*grayRGB;
+constraintWl = 585;
+
+% Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)
+[diLMScalFormat,M_triToDi] = DichromSimulateLinear(triLMScalFormat, grayLMS,  constraintWl, renderType, Disp);
+[diLMScalFormat_plate,M_triToDi] = DichromSimulateLinear(triLMSCalFormat_plate, grayLMS,  constraintWl, renderType, Disp);
 
 % Dichromat LMS --> RGB
-[diRGBCalFormat,scaleFactor_di]             = LMS2RGBCalFormat(diLMScalFormat,Disp,bScale); % no modulation
-[diRGBCalFormat_plate,scaleFactor_di_plate] = LMS2RGBCalFormat(diLMScalFormat_plate, Disp,bScale);  % isochromatic plate 
+% [diRGBCalFormat,scaleFactor_di]             = LMS2RGBCalFormat(diLMScalFormat,Disp,bScale); % no modulation
+% [diRGBCalFormat_plate,scaleFactor_di_plate] = LMS2RGBCalFormat(diLMScalFormat_plate, Disp,bScale);  % isochromatic plate 
 
 % Dichromat RGB cal format --> image format
-diRGBImgFormat          = CalFormatToImage(diRGBCalFormat,m,n); % no modulation
-diRGBImgFormat_plate    = CalFormatToImage(diRGBCalFormat_plate,m,n); % isochromatic plate
+% diRGBImgFormat          = CalFormatToImage(diRGBCalFormat,m,n); % no modulation
+% diRGBImgFormat_plate    = CalFormatToImage(diRGBCalFormat_plate,m,n); % isochromatic plate
 
-% Plotting
-% Show the trichromatic image, dichromatic image, and trichromatic plate, dichromatic plate
-% figure('position',[ 896         364        1231         883]); 
-% subplot(2,2,1);
-% imshow(triRGBImgFormat);    % TRICHROMAT  
-% title('Trichromat rendering - no modulation','FontSize',20);
-% 
-% subplot(2,2,3);
-% imshow(triRGBImgFormat_plate);          % TRICHROMAT PLATE
-% title('Trichromat rendering - plate','FontSize',20);
-% 
-% subplot(2,2,2);
-% imshow(diRGBImgFormat);     % DICHROMAT
-% title([renderType ' rendering - no modulation'],'FontSize',20);
-% 
-% subplot(2,2,4);
-% imshow(diRGBImgFormat_plate);     % DICHROMAT PLATE 
-% title([renderType ' rendering - plate'],'FontSize',20);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 if bPLOTscatter == 1

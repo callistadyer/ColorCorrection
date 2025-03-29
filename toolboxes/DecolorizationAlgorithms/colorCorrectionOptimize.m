@@ -124,16 +124,26 @@ b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is ba
 % Contrast RGB, dichromat
 constraintWL = 585;
 [calFormatDiLMS,M_triToDi] = DichromSimulateLinear(triLMSCalFormat, grayLMS,  constraintWL, renderType, Disp);
+dirgb = inv(M_rgb2cones) * calFormatDiLMS;
+max(dirgb(:))
+min(dirgb(:))
 
 % Matrix that converts LMS contrast into rgb contrast
-M_conesC2rgbC = diag(1./grayLMS) * M_rgb2cones * diag(grayRGB);
+% M_rgbC2conesC = diag(1./grayLMS) * M_rgb2cones * diag(grayRGB);
+M_conesC2rgbC = diag(1./grayRGB) * inv(M_rgb2cones) * diag(grayLMS);
+
 M_all = M_conesC2rgbC * M_triToDi * inv(M_conesC2rgbC); % left apply this to tri rgb contrast image
 
+% NOTE: TRY TO DO THIS OUTISDE OF THE OPT. PROCEDURE TO SPEED IT UP ... JUT
+% NEED THE CONSTRAINT WL
 % Make big diagonal matrix of Ms to multiply at each pixel
-bigM = [];
-for i = 1:nPix
-    bigM = blkdiag(bigM, M_all);
-end
+
+contRGB = M_all * triRGBContrastCalFormat;
+RGB = (contRGB.*grayRGB)+grayRGB;
+max(RGB(:))
+min(RGB(:))
+
+bigM = kron(speye(nPix), M_all);
 
 % Dichromat constraint is just trichromat constraint transformed
 % Left multuply the big M transformation matrix
@@ -152,6 +162,10 @@ b_total = [b; b_di];
 
 % Initial guess at transformation matrix - start with identity
 T0 = eye(3, 3);
+bCheck = A_total*T0(:);
+if (any(bCheck > b_total))
+    fprintf('Failed to satisfy constraint\n');
+end
 
 % Optimization
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',200);
@@ -255,7 +269,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         %%%%%%%% Loss %%%%%%%%
         % Scale loss so that it is small enough to make fmincon happy but not
         % so small that it is unhappy. How to determine this?
-        fminconFactor = 1e4;
+        % fminconFactor = 1e4;
+        fminconFactor = 1e6;
 
         % To enforce a certain variance value, put it into the loss function
         varSpecificLoss = 0;
