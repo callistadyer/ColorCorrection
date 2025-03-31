@@ -115,7 +115,8 @@ if strcmp(img,'ishihara')
             % % This code case allows the squares to be random colors
             % modulationDirection_LMS = modulationDirection_LMS;
         case 'M' % m cone deficiency
-            modulationDirection_LMS = [0 1 0]';
+            modulationDirection_LMS  = [0 1 0]';
+            modulationDirection_back = [1 .5 0]';
         case 'L'   % l cone deficiency
             modulationDirection_LMS = [1 0 0]';
         case 'S'   % s cone deficiency
@@ -123,6 +124,7 @@ if strcmp(img,'ishihara')
     end
     modulationDirection_rgb = M_cones2rgb*modulationDirection_LMS;
 
+    modulationDirection_rgb_back = M_cones2rgb*modulationDirection_back;
 
     % NOTE: this scaleFactor_rgb is for scaling the modulation direction. This
     % is different from scaleFactor that goes into rgb->LMS conversions (and
@@ -130,16 +132,20 @@ if strcmp(img,'ishihara')
     % Background is the value of each pixel: this determines cone contrast separately for each pixel
     for i = 1:size(insideColors,1)
         scaleFactor_rgb(i) = MaximizeGamutContrast(modulationDirection_rgb,insideColors(i,:)'); % bg is in rgb cal format
+        scaleFactor_rgb_back(i) = MaximizeGamutContrast(modulationDirection_rgb_back,outsideColors(i,:)'); % bg is in rgb cal format
+
         % Stay away from the very edge
-        toleranceFactor = 0.8;
+        toleranceFactor = 0.7;
         % Scale modulation direction by scale factor to get modulation=
-        modulation_rgb(i,:) = scaleFactor_rgb(i).*toleranceFactor.*modulationDirection_rgb;
+        modulation_rgb(i,:) = scaleFactor_rgb(i).*modulationDirection_rgb;
+        modulation_rgb_back(i,:) = scaleFactor_rgb_back(i).*toleranceFactor.*modulationDirection_rgb_back;
     end
 
     % M_rgb2cones * modulation_rgb(1,:)'
-    insideColorsMod = insideColors + modulation_rgb;
+    insideColorsMod = insideColors + modulation_rgb.*[.9 .7 .5]';
+    outsideColorsMod = outsideColors + modulation_rgb_back.*[.9 .7 .5]';
 
-    imgRGBmod = generateIshiharaPlate('74', insideColorsMod, outsideColors,imgSize);
+    imgRGBmod = generateIshiharaPlate('74', insideColorsMod, outsideColorsMod,imgSize);
     imgRGBmod = im2double(imgRGBmod);
     figure();imagesc(imgRGBmod)
     axis square;
