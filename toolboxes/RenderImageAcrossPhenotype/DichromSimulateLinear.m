@@ -51,7 +51,6 @@ wls = Disp.wls;
 T_cones = Disp.T_cones;
 P_monitor = Disp.P_monitor;
 
-
 % Convert cone excitations to cone contrast
 calFormatLMSContrast = (calFormatLMS - grayLMS)./grayLMS;
 
@@ -61,18 +60,16 @@ index = index(1);
 constraint2LMS = T_cones(:,index);
 
 % Define achromatic constraint vector
-constraint1LMS = [1 1 1]';
-constraint2LMS = (constraint2LMS - grayLMS)./grayLMS;
+constraint1LMScontrast = [1 1 1]';
+constraint2LMScontrast = (constraint2LMS - grayLMS)./grayLMS;
 
 % Define achromatic constraint vector (excitations)
 % constraint1LMS = grayLMS;
 % constraint2LMS = constraint2LMS;
 
-
-
 % Now we want to find the best least squares approximation to the trichromatic
 % LMS contrast, in the plane spanned by the two constraint vectors
-constraintMatrix = [constraint1LMS  constraint2LMS];
+constraintMatrix = [constraint1LMScontrast  constraint2LMScontrast];
 
 switch (cbType)
     case 'Deuteranopia' % m cone deficiency

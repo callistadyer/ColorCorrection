@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal] = colorCorrectionOptimize(var, triLMSCalFormat, renderType, lambda_var,Disp)
+function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal] = colorCorrectionOptimize(var, triLMSCalFormat, renderType, lambda_var, constraintWL, Disp)
 % Optimizes linear transformation of the original cone values
 %
 % Syntax:
@@ -60,14 +60,14 @@ end
 M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 
-% Create gray 
+% Create gray
 grayRGB = [0.5 0.5 0.5]';
 grayLMS = M_rgb2cones*grayRGB;
 
 % Number of pixels
 nPix   = size(triLMSCalFormat,2);
 
-% Start building the linear constraints 
+% Start building the linear constraints
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 1: GET TRICHROMAT RGB VALUES FROM LMS %%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -86,14 +86,14 @@ triRGBContrastCalFormat = (triRGBCalFormat - grayRGB)./grayRGB;
 % [(nPix x 3) x 9] =    [nPix x 3]                 [nPix x 3]              [nPix x 3]
 % A_upper = blkdiag(triRGBContrastCalFormat', triRGBContrastCalFormat', triRGBContrastCalFormat');      % Upper constraint blocks
 
-    % ALTERNATIVE:
-    % Attempt at making the [3 x 9] matrix for each pixel, then append every
-    % pixel on the bottom so that the total matrix is size [(3*nPix) x 9]
-    constraintA = [];
-    for i = 1:size(triRGBContrastCalFormat,2)
+% ALTERNATIVE:
+% Attempt at making the [3 x 9] matrix for each pixel, then append every
+% pixel on the bottom so that the total matrix is size [(3*nPix) x 9]
+constraintA = [];
+for i = 1:size(triRGBContrastCalFormat,2)
     constraintA = [constraintA; eye(3)*triRGBContrastCalFormat(1,i), eye(3)*triRGBContrastCalFormat(2,i), eye(3)*triRGBContrastCalFormat(3,i)];
-    end 
-    A_upper = constraintA;
+end
+A_upper = constraintA;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -122,7 +122,6 @@ b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is ba
 % Matrix that transforms contrast RGB trichromat input into contrast RGB
 % dichromat output --> this also needs to be in gamut
 % Contrast RGB, dichromat
-constraintWL = 585;
 [calFormatDiLMS,M_triToDi] = DichromSimulateLinear(triLMSCalFormat, grayLMS,  constraintWL, renderType, Disp);
 dirgb = inv(M_rgb2cones) * calFormatDiLMS;
 max(dirgb(:))
@@ -168,7 +167,7 @@ if (any(bCheck > b_total))
 end
 
 % Optimization
-options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'Display', 'iter','MaxIterations',200);
+options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
 [transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(var, transformRGB, triLMSCalFormat, M_cones2rgb, lambda_var, renderType, Disp), ...
     T0(:), A_total, b_total, [], [], [], [], [], options);
@@ -189,8 +188,13 @@ transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Transform contrast image
 triRGBContrastCalFormat_T = transformRGBmatrix_opt * triRGBContrastCalFormat;
+diRGBContrastCalFormat_T = M_all * triRGBContrastCalFormat_T;
 
 % Add back in gray before outputting the image
+diRGBCalFormat_T = (diRGBContrastCalFormat_T.*grayRGB) + grayRGB;
+min(min(diRGBCalFormat_T(:)))
+max(max(diRGBCalFormat_T(:)))
+
 triRGBCalFormat_T = (triRGBContrastCalFormat_T.*grayRGB) + grayRGB;
 
 % Get LMS values to output
@@ -284,9 +288,9 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
             % loss = -fminconFactor*(var_term_balance + similarity_term)
             loss = -fminconFactor*(var_term_balance + similarity_term_balance);
         end
-        s_raw = similarity_term_raw;
+        s_raw = -similarity_term_raw;
         v_raw = var_term_raw;
-        s_bal = similarity_term_balance;
+        s_bal = -similarity_term_balance;
         v_bal = var_term_balance;
     end
 

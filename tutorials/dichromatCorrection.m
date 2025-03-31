@@ -1,5 +1,5 @@
 
-function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType,lambda_var,var)
+function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType,lambda_var,constraintWL,var)
 % Transform trichromatic image so that dichromat can see more color
 % contrast. Also want to try and preserve some naturalness. This is
 % accomplished in colorCorrectionOptimize where we incorporate similarity
@@ -52,7 +52,7 @@ for i = 1:length(lambdas)
 [RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',lambdas(i));
 end
 
-[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',0.1);
+[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',0,575,1);
 [RGBImage_dichromat] = dichromatCorrection('74','Deuteranopia',0,'linTransform',1,'M',0.1);
 [RGBImage_dichromat] = dichromatCorrection('scene2.mat','Deuteranopia',1,'linTransform',10,'M',0.1);
 %}
@@ -168,8 +168,8 @@ switch (method)
     case 'linTransform'
         % decolorOptimize does mean subtraction, then maximizes variance fmincon
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]
-        [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal] = colorCorrectionOptimize(var, triLMSCalFormat,renderType,lambda_var,Disp);
-        [triLMScalFormatCorrected_plate,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = colorCorrectionOptimize(var, triLMSCalFormat_plate,renderType,lambda_var,Disp);
+        [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal] = colorCorrectionOptimize(var, triLMSCalFormat,renderType,lambda_var,constraintWL,Disp);
+        [triLMScalFormatCorrected_plate,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = colorCorrectionOptimize(var, triLMSCalFormat_plate,renderType,lambda_var,constraintWL,Disp);
     case 'easyPCA'
         triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,renderType,Disp,bScale);
         triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,renderType,Disp,bScale);
@@ -206,9 +206,9 @@ M_cones2rgb = inv(M_rgb2cones);
 grayRGB = [0.5 0.5 0.5]';
 grayLMS = M_rgb2cones*grayRGB;
 
-[diLMSCalFormatCorrected,~]        = DichromSimulateLinear(triLMScalFormatCorrected, grayLMS,  585, renderType, Disp);
+[diLMSCalFormatCorrected,~]        = DichromSimulateLinear(triLMScalFormatCorrected, grayLMS,  constraintWL, renderType, Disp);
 diRGBCalFormatCorrected            = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp,bScale);
-[diLMSCalFormatCorrected_plate,~]  = DichromSimulateLinear(triLMScalFormatCorrected_plate, grayLMS,  585, renderType, Disp);
+[diLMSCalFormatCorrected_plate,~]  = DichromSimulateLinear(triLMScalFormatCorrected_plate, grayLMS,  constraintWL, renderType, Disp);
 diRGBCalFormatCorrected_plate      = LMS2RGBCalFormat(diLMSCalFormatCorrected_plate, Disp,bScale); % isochromatic plate
 
 % diLMSCalFormatCorrected                  = tri2dichromatLMSCalFormat(triLMScalFormatCorrected,renderType,Disp,bScale);
