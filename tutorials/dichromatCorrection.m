@@ -110,10 +110,15 @@ if strcmp(img,'ishihara')
     % Make initial inside (number) and outside (background) colors the
     % same... then add to the inside colors by only adding the M cone color
     insideColors = [
-    0.35  0.3   0.3;  
-    0.3   0.45  0.4;  
-    0.55  0.25  0.6  
-    ];
+    0.95, 0.6, 0.4;   % light orange
+    0.85, 0.4, 0.3;   % muted red-orange
+    0.9,  0.5, 0.2    % pumpkin tone
+];
+    % insideColors = [
+    % 0.35  0.3   0.3;  
+    % 0.3   0.45  0.4;  
+    % 0.55  0.25  0.6  
+    % ];
     outsideColors = insideColors;
 
     % % See if it's working... 
@@ -157,7 +162,9 @@ if strcmp(img,'ishihara')
 
     % New colors. Outside colors stay the same. Inside colors simply add
     % missing cone information to existing background colors.
-    insideColorsMod  = insideColors + modulation_rgb.*[.9 .7 .5]';
+    % insideColorsMod  = insideColors + modulation_rgb.*[.9 .7 .5]';
+    insideColorsMod  = insideColors + modulation_rgb;
+
     outsideColorsMod = outsideColors;
 
     % Generate plate now that you have the correct colors
