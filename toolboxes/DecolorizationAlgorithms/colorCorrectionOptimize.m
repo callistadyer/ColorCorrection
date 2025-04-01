@@ -6,8 +6,22 @@ function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt]
 %
 % Inputs:
 %   triLMSCalFormat:    original LMS values to be transformed
-%   bPLOT:              1 -> Plot the result, 0 -> Don't plot
+%   renderType:         String. Type of dichromat.  Options are:
+%                           'Deuteranopia'
+%                           'Protanopia'
+%                           'Tritanopia'
 %   lambda_var:         Weight for maximizing variance (0 <= lambda_var <= 1)
+%   constraintWL:       Wavelength that forms plane with gray that the
+%                       dichromat image gets projected onto in
+%                       DichromSimulateLinear.m 
+%                           585 for deuteronopes
+%   T_prev:             Initial transformation matrix for the RGB image 
+%                       Start this at T_prev = eye(3,3). Usually this is most
+%                       useful when you are looping over lambdas (see below)
+%                       because you want to use the previous T solution to
+%                       initialize the next optimization. This avoids some
+%                       wonky failures in the fmincon routine. 
+%   Disp:               Display parameters
 %
 % Outputs:
 %   triLMSCalFormatOpt: Transformed LMS values
