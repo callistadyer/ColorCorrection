@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal] = colorCorrectionOptimize(var, triLMSCalFormat, renderType, lambda_var, constraintWL, Disp)
+function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(triLMSCalFormat, renderType, lambda_var, constraintWL, T_prev, Disp)
 % Optimizes linear transformation of the original cone values
 %
 % Syntax:
@@ -160,7 +160,11 @@ b_total = [b; b_di];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Initial guess at transformation matrix - start with identity
+T_I    = eye(3, 3);
+T_prev = T_prev;
 T0 = eye(3, 3);
+
+
 bCheck = A_total*T0(:);
 if (any(bCheck > b_total))
     fprintf('Failed to satisfy constraint\n');
@@ -169,10 +173,26 @@ end
 % Optimization
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
-[transformRGB_opt, fval] = fmincon(@(transformRGB) loss_function(var, transformRGB, triLMSCalFormat, M_cones2rgb, lambda_var, renderType, Disp), ...
-    T0(:), A_total, b_total, [], [], [], [], [], options);
+[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormat, M_cones2rgb, lambda_var, renderType, Disp), ...
+    T_I(:), A_total, b_total, [], [], [], [], [], options);
 % Test loss function with final transformation matrix values
-[fValOpt, s_raw, v_raw, s_bal, v_bal] = loss_function(var,transformRGB_opt, triLMSCalFormat, M_cones2rgb, lambda_var,renderType, Disp);
+[fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(transformRGB_opt_TI, triLMSCalFormat, M_cones2rgb, lambda_var,renderType, Disp);
+
+% Optimization
+options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
+% fmincon
+[transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(transformRGB, triLMSCalFormat, M_cones2rgb, lambda_var, renderType, Disp), ...
+    T_prev(:), A_total, b_total, [], [], [], [], [], options);
+% Test loss function with final transformation matrix values
+[fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(transformRGB_opt_Tprev, triLMSCalFormat, M_cones2rgb, lambda_var,renderType, Disp);
+
+% Choose the transformation that gets a lower loss
+if fValOpt_TI <= fValOpt_Tprev
+    transformRGB_opt = transformRGB_opt_TI;
+elseif fValOpt_Tprev  < fValOpt_TI
+    transformRGB_opt = transformRGB_opt_Tprev;
+end
+
 
 % See if constraint worked
 bCheck = A_total*transformRGB_opt(:);
@@ -203,7 +223,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
 %% Functions
 
 % OBJECTIVE FUNCTION
-    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(var, t_vec, LMSCalFormat, M_cones2rgb, lambda, renderType, Disp)
+    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(t_vec, LMSCalFormat, M_cones2rgb, lambda, renderType, Disp)
         T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
 
         % I - LMS
@@ -288,9 +308,9 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
             % loss = -fminconFactor*(var_term_balance + similarity_term)
             loss = -fminconFactor*(var_term_balance + similarity_term_balance);
         end
-        s_raw = -similarity_term_raw;
+        s_raw = similarity_term_raw;
         v_raw = var_term_raw;
-        s_bal = -similarity_term_balance;
+        s_bal = similarity_term_balance;
         v_bal = var_term_balance;
     end
 

@@ -1,5 +1,5 @@
 
-function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType,lambda_var,constraintWL,var)
+function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType,lambda_var,constraintWL,T_prev,T_prev_P)
 % Transform trichromatic image so that dichromat can see more color
 % contrast. Also want to try and preserve some naturalness. This is
 % accomplished in colorCorrectionOptimize where we incorporate similarity
@@ -33,6 +33,27 @@ function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichrom
 %                       'L'
 %                       'S'
 %   lambda_var    - Weight on the variance term in the optimization [0 1]
+%   constraintWL  - Wavelength that forms plane with gray that the
+%                   dichromat image gets projected onto in
+%                   DichromSimulateLinear.m 
+%                        585 for deuteronopes
+%   T_prev        - Initial transformation matrix for the RGB image 
+%                   Start this at T_prev = eye(3,3). Usually this is most
+%                   useful when you are looping over lambdas (see below)
+%                   because you want to use the previous T solution to
+%                   initialize the next optimization. This avoids some
+%                   wonky failures in the fmincon routine. 
+%{
+                      for i = 1:30
+                          lambda = linspace(0,1,30)
+                          T{1} = eye(3,3);
+                          T_P{1} = eye(3,3);
+                          [RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',lambda(i),585,T{i},T_P{i},1);
+                      end
+%}
+%   T_prev_P      - Initial transformation matrix for the RGB image(isochromatic plate version)  
+%                   Same thing as above, but you have to get another start
+%                   point for the isochromatic plate version of the image.
 %
 % Outputs:
 %   triRGBImgFormatCorrected:  - Transformed RGB image after PCA and scaling. Also replaced missing cone as done in other code
@@ -47,14 +68,18 @@ function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichrom
 %
 % Examples:
 %{
-lambdas = linspace(0,.1,10)
-for i = 1:length(lambdas)
-[RGBImage_dichromat] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',lambdas(i));
+% Loop over lambdas:
+for i = 1:30
+lambda = linspace(0,1,30)
+lambdaval = lambda(i)
+T{1} = eye(3,3);
+T_P{1} = eye(3,3);
+[RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',lambda(i),585,T{i},T_P{i},1);
 end
 
-[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',0,575,1);
-[RGBImage_dichromat] = dichromatCorrection('74','Deuteranopia',0,'linTransform',1,'M',0.1);
-[RGBImage_dichromat] = dichromatCorrection('scene2.mat','Deuteranopia',1,'linTransform',10,'M',0.1);
+[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',0,585,eye(3,3),eye(3,3));
+[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection('ishihara','Deuteranopia',0,'linTransform',1,'M',0,585,eye(3,3),eye(3,3));
+
 %}
 
 % Close out any stray figures
@@ -168,8 +193,8 @@ switch (method)
     case 'linTransform'
         % decolorOptimize does mean subtraction, then maximizes variance fmincon
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]
-        [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal] = colorCorrectionOptimize(var, triLMSCalFormat,renderType,lambda_var,constraintWL,Disp);
-        [triLMScalFormatCorrected_plate,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = colorCorrectionOptimize(var, triLMSCalFormat_plate,renderType,lambda_var,constraintWL,Disp);
+        [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal, T] = colorCorrectionOptimize(triLMSCalFormat,renderType,lambda_var,constraintWL,T_prev,Disp);
+        [triLMScalFormatCorrected_plate,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T_P] = colorCorrectionOptimize(triLMSCalFormat_plate,renderType,lambda_var,constraintWL,T_prev_P, Disp);
     case 'easyPCA'
         triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,renderType,Disp,bScale);
         triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,renderType,Disp,bScale);
