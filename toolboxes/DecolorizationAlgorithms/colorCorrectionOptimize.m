@@ -274,16 +274,16 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         newRGBContrastCalFormat_noGray = T * RGBContrastCalFormat;
 
         % Add gray back in
-        newRGBContrastCalFormat = (newRGBContrastCalFormat_noGray.*grayRGB) + grayRGB;
+        newRGBCalFormat = (newRGBContrastCalFormat_noGray.*grayRGB) + grayRGB;
 
         % Convert into LMS
-        newLMSContrastCalFormat = inv(M_cones2rgb) * newRGBContrastCalFormat;
+        newLMSCalFormat = inv(M_cones2rgb) * newRGBCalFormat;
 
         % Get into cal format
-        newLMSContrastCalFormatTran = newLMSContrastCalFormat';
+        newLMSCalFormatTran = newLMSCalFormat';
         LMSCalFormatTran = LMSCalFormat';
         %%%%%%%% Variance term %%%%%%%%
-        var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSContrastCalFormat);
+        var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSCalFormat);
         % Weight by lambda (use this when trying to find range of variances)
         var_term = lambda*var_term_raw;
         % Normalize via total variance in white noise image
@@ -294,7 +294,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         % var_term = var_term_raw;
 
         %%%%%%%% Similarity term %%%%%%%%
-        similarity_term_raw = similarityLMS('squared',LMSCalFormatTran,newLMSContrastCalFormatTran);
+        similarity_term_raw = similarityLMS('squared',LMSCalFormatTran,newLMSCalFormatTran);
+        % similarity_term_raw = similarityLMS('squared',RGBCalFormat,newRGBCalFormat);
         % similarity_term_raw = similarityLMS('squared',round(LMSCalFormatTran,5),round(newLMSContrastCalFormatTran,5));
         % Normalize by whiteNoiseSimilarity
         totalSimilarity = abs(whiteNoiseSimilarity('squared',Disp));
@@ -302,7 +303,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         similarity_term = (1-lambda)*similarity_term_raw;
         similarity_term_balance = similarity_term/totalSimilarity;
         % Eventually, try to avoid lambda and choose similarity wisely
-        % similarity_term = similarity_term_raw; % Getting rid of lambda for now
+        % similarity_term = similarity_texrm_raw; % Getting rid of lambda for now
 
         %%%%%%%% Loss %%%%%%%%
         % Scale loss so that it is small enough to make fmincon happy but not

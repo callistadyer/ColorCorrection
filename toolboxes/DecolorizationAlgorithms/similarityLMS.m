@@ -34,10 +34,4 @@ switch (similarityType)
         error('Unknown similarity type specified');
 end
 
-% tolerance = 1e-30;
-% if -similarity < tolerance
-%     similarity = 0;
-% end
-
-
 end

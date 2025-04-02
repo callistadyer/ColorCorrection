@@ -38,6 +38,10 @@ hyperspectralNoiseCalFormat2 = Disp.P_monitor * whiteNoiseCalFormat2;
 triLMSNoiseCalFormat       = Disp.T_cones*hyperspectralNoiseCalFormat;
 triLMSNoiseCalFormat2      = Disp.T_cones*hyperspectralNoiseCalFormat2;
 
+% % Uncomment this to normalize for RGB values if you want to use RGB in
+% % similarity metric
+% triLMSNoiseCalFormat= whiteNoiseCalFormat;
+% triLMSNoiseCalFormat2= whiteNoiseCalFormat2;
 
 % Compute similarity 
 totalSimilarity = similarityLMS(similarityType,triLMSNoiseCalFormat,triLMSNoiseCalFormat2);
