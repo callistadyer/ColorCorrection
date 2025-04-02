@@ -67,6 +67,12 @@ function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] =
 %
 % Outputs:
 %   triRGBImgFormatCorrected:  - Transformed RGB image after PCA and scaling. Also replaced missing cone as done in other code
+%   s_raw_P                    - raw similarity values for current lambda (_P indicates that it is for the modulated image)  
+%   v_raw_P                    - raw variance values for current lambda
+%   s_bal_P                    - balanced similarity values for current lambda = (1-lambda) * s_raw_P   
+%   v_bal_P                    - balanced variance values for current lambda = (lambda) * v_raw_P 
+%   T
+%   T_P
 %
 % Optional key/value pairs:
 %   None
