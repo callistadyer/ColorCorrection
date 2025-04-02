@@ -84,11 +84,11 @@ lambda = linspace(0,1,30)
 lambdaval = lambda(i)
 T{1} = eye(3,3);
 T_P{1} = eye(3,3);
-[RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',lambda(i),585,T{i},T_P{i});
+[RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection('gray','Deuteranopia','linTransform',1,'M',lambda(i),585,T{i},T_P{i});
 end
 
-[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',0,585,eye(3,3),eye(3,3));
-[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection('ishihara','Deuteranopia',0,'linTransform',1,'M',0,585,eye(3,3),eye(3,3));
+[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection('gray','Deuteranopia','linTransform',1,'M',0,585,eye(3,3),eye(3,3));
+[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection('ishihara','Deuteranopia','linTransform',1,'M',0,585,eye(3,3),eye(3,3));
 
 %}
 
