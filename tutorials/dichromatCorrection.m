@@ -74,7 +74,7 @@ lambda = linspace(0,1,30)
 lambdaval = lambda(i)
 T{1} = eye(3,3);
 T_P{1} = eye(3,3);
-[RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',lambda(i),585,T{i},T_P{i},1);
+[RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',lambda(i),585,T{i},T_P{i});
 end
 
 [RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',0,585,eye(3,3),eye(3,3));
@@ -109,16 +109,22 @@ if strcmp(img,'ishihara')
 
     % Make initial inside (number) and outside (background) colors the
     % same... then add to the inside colors by only adding the M cone color
+%     insideColors = [
+%     0.95, 0.6, 0.4;   % light orange
+%     0.85, 0.4, 0.3;   % muted red-orange
+%     0.9,  0.5, 0.2    % pumpkin tone
+% ];
     insideColors = [
-    0.95, 0.6, 0.4;   % light orange
-    0.85, 0.4, 0.3;   % muted red-orange
-    0.9,  0.5, 0.2    % pumpkin tone
-];
-    % insideColors = [
-    % 0.35  0.3   0.3;  
-    % 0.3   0.45  0.4;  
-    % 0.55  0.25  0.6  
-    % ];
+    0.35  0.3   0.3;  
+    0.3   0.45  0.4;  
+    0.55  0.25  0.6  
+    ];
+    insideColors = [
+    0.5  0.5   0.5;  
+    0.5   0.5  0.5;  
+    0.5  0.5  0.5  
+    ];
+
     outsideColors = insideColors;
 
     % % See if it's working... 
