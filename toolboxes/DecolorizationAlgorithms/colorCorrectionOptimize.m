@@ -322,8 +322,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
             % loss = -fminconFactor*(var_term_balance + similarity_term)
             loss = -fminconFactor*(var_term_balance + similarity_term_balance);
         end
-        s_raw = similarity_term_raw;
-        v_raw = var_term_raw;
+        s_raw = similarity_term_raw/totalSimilarity;
+        v_raw = var_term_raw/totalVariance;
         s_bal = similarity_term_balance;
         v_bal = var_term_balance;
     end
