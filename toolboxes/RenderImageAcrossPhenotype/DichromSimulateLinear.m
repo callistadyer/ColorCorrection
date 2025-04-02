@@ -18,6 +18,8 @@ function [calFormatDiLMS,M_triToDi] = DichromSimulateLinear(calFormatLMS, grayLM
 %
 % Outputs:
 %   calFormatDiLMS: dichromat LMS values
+%   M_triToDi:      transformation matrix that left multiplies on trichromat 
+%                   contrast LMS and outputs dichromat contrast LMS values
 %
 % Description:
 %   This function renders images to simulate their appearance to
