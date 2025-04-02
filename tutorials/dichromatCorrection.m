@@ -1,12 +1,12 @@
 
-function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType,lambda_var,constraintWL,T_prev,T_prev_P)
+function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] = dichromatCorrection(img,renderType,method,nSquares,modType,lambda_var,constraintWL,T_prev,T_prev_P)
 % Transform trichromatic image so that dichromat can see more color
 % contrast. Also want to try and preserve some naturalness. This is
 % accomplished in colorCorrectionOptimize where we incorporate similarity
 % to original in the loss function
 %
 % Syntax:
-%   [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,bScale,method,nSquares,modType,lambda_var)
+%   [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,method,nSquares,modType,lambda_var)
 %
 % Description:
 %
@@ -19,8 +19,6 @@ function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] =
 %                       'Deuteranopia'
 %                       'Protanopia'
 %                       'Tritanopia'
-%   bScale:       - Boolean. Scale the image values into display range (1
-%                   or 0).  A good idea except for 'gray'.
 %   method:       - Color correction method:
 %                       'linTransform'
 %                       'easyPCA'
@@ -48,7 +46,7 @@ function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] =
                           lambda = linspace(0,1,30)
                           T{1} = eye(3,3);
                           T_P{1} = eye(3,3);
-                          [RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection('gray','Deuteranopia',0,'linTransform',1,'M',lambda(i),585,T{i},T_P{i},1);
+                          [RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection('gray','Deuteranopia','linTransform',1,'M',lambda(i),585,T{i},T_P{i});
                       end
                       % See how variance and similarity changes:
                       figure();
@@ -204,7 +202,7 @@ if strcmp(img,'ishihara')
 
 else
     % Get trichromatic (LMS) image
-    [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,bScale,nSquares,modType);
+    [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,nSquares,modType);
 end
 
 % This is also happening in colorCorrect, which is called by the block
@@ -216,8 +214,8 @@ switch (method)
         [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal, T] = colorCorrectionOptimize(triLMSCalFormat,renderType,lambda_var,constraintWL,T_prev,Disp);
         [triLMScalFormatCorrected_plate,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T_P] = colorCorrectionOptimize(triLMSCalFormat_plate,renderType,lambda_var,constraintWL,T_prev_P, Disp);
     case 'easyPCA'
-        triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,renderType,Disp,bScale);
-        triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,renderType,Disp,bScale);
+        triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,renderType,Disp);
+        triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,renderType,Disp);
     case 'hardPCA'
         numPCs = 2;
         triLMScalFormatCorrected = colorCorrectionHardPCA(triLMSCalFormat,numPCs,Disp);
@@ -226,24 +224,24 @@ end
 
 
 %%%% Old colorCorrection function %%%%
-% [triLMScalFormatCorrected       triLMSmeans]                   = colorCorrection(triLMSCalFormat,renderType,Disp,bScale);   % Original image
-% [triLMScalFormatCorrected_plate triLMSmeans_plate]             = colorCorrection(triLMSCalFormat_plate,renderType,Disp,bScale); % Image with plate
+% [triLMScalFormatCorrected       triLMSmeans]                   = colorCorrection(triLMSCalFormat,renderType,Disp);   % Original image
+% [triLMScalFormatCorrected_plate triLMSmeans_plate]             = colorCorrection(triLMSCalFormat_plate,renderType,Disp); % Image with plate
 % correctedLMS = K_opt_plate * D_mnew + T_mean_plate;
 
 % Create RGB image from LMS
 %%%%% ORIGINAL IMAGE AND PLATE %%%%%
 % Dichromat simulation of original image
-[diRGBCalFormatOrig]        = LMS2RGBCalFormat(diLMSCalFormat, Disp,bScale);
-[diRGBCalFormatOrig_plate]  = LMS2RGBCalFormat(diLMSCalFormat_plate, Disp,bScale);         % isochromatic plate
+[diRGBCalFormatOrig]        = LMS2RGBCalFormat(diLMSCalFormat, Disp);
+[diRGBCalFormatOrig_plate]  = LMS2RGBCalFormat(diLMSCalFormat_plate, Disp);         % isochromatic plate
 
 % Trichromat simulation of original image
-[triRGBcalFormatOrig]       = LMS2RGBCalFormat(triLMSCalFormat, Disp,bScale);
-[triRGBcalFormatOrig_plate] = LMS2RGBCalFormat(triLMSCalFormat_plate, Disp,bScale);  % isochromatic plate
+[triRGBcalFormatOrig]       = LMS2RGBCalFormat(triLMSCalFormat, Disp);
+[triRGBcalFormatOrig_plate] = LMS2RGBCalFormat(triLMSCalFormat_plate, Disp);  % isochromatic plate
 
 %%%%% CORRECTED IMAGE AND PLATE %%%%%
 % Corrected trichromat image
-[triRGBcalFormatCorrected]        = LMS2RGBCalFormat(triLMScalFormatCorrected, Disp,bScale);
-[triRGBcalFormatCorrected_plate]  = LMS2RGBCalFormat(triLMScalFormatCorrected_plate, Disp,bScale);       % isochromatic plate
+[triRGBcalFormatCorrected]        = LMS2RGBCalFormat(triLMScalFormatCorrected, Disp);
+[triRGBcalFormatCorrected_plate]  = LMS2RGBCalFormat(triLMScalFormatCorrected_plate, Disp);       % isochromatic plate
 
 % Corrected dichromat image
 M_rgb2cones = Disp.T_cones*Disp.P_monitor;
@@ -252,14 +250,14 @@ grayRGB = [0.5 0.5 0.5]';
 grayLMS = M_rgb2cones*grayRGB;
 
 [diLMSCalFormatCorrected,~]        = DichromSimulateLinear(triLMScalFormatCorrected, grayLMS,  constraintWL, renderType, Disp);
-diRGBCalFormatCorrected            = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp,bScale);
+diRGBCalFormatCorrected            = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp);
 [diLMSCalFormatCorrected_plate,~]  = DichromSimulateLinear(triLMScalFormatCorrected_plate, grayLMS,  constraintWL, renderType, Disp);
-diRGBCalFormatCorrected_plate      = LMS2RGBCalFormat(diLMSCalFormatCorrected_plate, Disp,bScale); % isochromatic plate
+diRGBCalFormatCorrected_plate      = LMS2RGBCalFormat(diLMSCalFormatCorrected_plate, Disp); % isochromatic plate
 
-% diLMSCalFormatCorrected                  = tri2dichromatLMSCalFormat(triLMScalFormatCorrected,renderType,Disp,bScale);
-% diRGBCalFormatCorrected                  = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp,bScale);
-% diLMSCalFormatCorrected_plate            = tri2dichromatLMSCalFormat(triLMScalFormatCorrected_plate,renderType,Disp,bScale);      % isochromatic plate
-% diRGBCalFormatCorrected_plate            = LMS2RGBCalFormat(diLMSCalFormatCorrected_plate, Disp,bScale); % isochromatic plate
+% diLMSCalFormatCorrected                  = tri2dichromatLMSCalFormat(triLMScalFormatCorrected,renderType,Disp);
+% diRGBCalFormatCorrected                  = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp);
+% diLMSCalFormatCorrected_plate            = tri2dichromatLMSCalFormat(triLMScalFormatCorrected_plate,renderType,Disp);      % isochromatic plate
+% diRGBCalFormatCorrected_plate            = LMS2RGBCalFormat(diLMSCalFormatCorrected_plate, Disp); % isochromatic plate
 
 
 % Transform from cal format to image for viewing

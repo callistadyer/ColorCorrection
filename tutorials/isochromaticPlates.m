@@ -1,9 +1,9 @@
-function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,renderType,LMSImageModulation,Disp,bScale,nSquares,options)
+function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,renderType,LMSImageModulation,Disp,nSquares,options)
 
 % function create isochromatic plates for testing dichromacy
 %
 % Syntax:
-%   [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,renderType,LMSImageModulation,Disp,bScale,nSquares,options)
+%   [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,renderType,LMSImageModulation,Disp,nSquares,options)
 %
 % Description:
 %
@@ -12,7 +12,6 @@ function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,render
 %       renderType:              Type of dichromacy
 %       LMSImageModulation:      LMS plate modulation in img format
 %       Disp:                    Display parameters
-%       bScale:                  Scale rgb values or not?
 %       nSquares:                Number of squares for modulation
 %
 % Outputs:
@@ -24,7 +23,7 @@ function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,render
 
 % Examples:
 %{
-    [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,renderType,LMSImageModulation,Disp,bScale,nSquares,options)
+    [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,renderType,LMSImageModulation,Disp,nSquares,options)
 %}
 
 %% Pick up optional arguments
@@ -33,7 +32,6 @@ arguments
     renderType
     LMSImageModulation
     Disp struct
-    bScale
     nSquares
     options.verbose (1,1) logical = false;
 end
@@ -51,7 +49,7 @@ LMSCalFormat = Disp.T_cones*hyperspectralImageCalFormat;
 LMSImage     = CalFormatToImage(LMSCalFormat,Disp.m,Disp.n);
 
 % Get original RGB image
-[RGBCalFormat rgbLinCalFormat]  = LMS2RGBCalFormat(LMSCalFormat,Disp,bScale);
+[RGBCalFormat rgbLinCalFormat]  = LMS2RGBCalFormat(LMSCalFormat,Disp);
 RGBimage                        = CalFormatToImage(RGBCalFormat,Disp.m,Disp.n);
 
 % CREATE SQUARE MODULATIONS
@@ -63,7 +61,7 @@ lmsImage_mod = LMSImage + deltaLMS;
 % CHECK IF MODULATED LMS IS IN GAMUT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lmsImage_modCalFormat = ImageToCalFormat(lmsImage_mod);
-inGamut = checkGamut(lmsImage_modCalFormat,Disp,bScale);
+inGamut = checkGamut(lmsImage_modCalFormat,Disp);
 if inGamut == 0
     error(['isochromaticPlates: WARNING! rgb values are out of gamut... lmsImage_mod values outside of the range [0 1]']);
 end
@@ -78,7 +76,7 @@ M_cones2rgb = inv(M_rgb2cones);
 
 RGBCalFormat_plate = M_cones2rgb * LMSCalFormat_plate;
 % convert to RGB
-% RGBCalFormat_plate2 = LMS2RGBCalFormat(LMSCalFormat_plate,Disp,bScale);
+% RGBCalFormat_plate2 = LMS2RGBCalFormat(LMSCalFormat_plate,Disp);
 
 % convert to image for viewing
 RGBimageModulated = CalFormatToImage(RGBCalFormat_plate,m,n);

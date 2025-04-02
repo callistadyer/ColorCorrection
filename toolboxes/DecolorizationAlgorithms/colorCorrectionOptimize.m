@@ -2,7 +2,7 @@ function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt]
 % Optimizes linear transformation of the original cone values
 %
 % Syntax:
-%   [triLMSCalFormatOpt] = colorCorrectionOptimize(triLMSCalFormat, renderType, lambda_var,Disp,bScale)
+%   [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(triLMSCalFormat, renderType, lambda_var, constraintWL, T_prev, Disp)
 %
 % Inputs:
 %   triLMSCalFormat:    original LMS values to be transformed

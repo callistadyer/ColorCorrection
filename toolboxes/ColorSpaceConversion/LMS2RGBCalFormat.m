@@ -1,10 +1,10 @@
-function [RGBCalFormat,rgbLinCalFormat,scaleFactor] = LMS2RGBCalFormat(lmsImageCalFormat,Disp,bScale)
+function [RGBCalFormat,rgbLinCalFormat] = LMS2RGBCalFormat(lmsImageCalFormat,Disp)
 
 % Converts LMS cone images to RGB images. Outputs both linear and gamma
 % corrected rgb/RGB values
 %
 % Syntax:
-%   [RGBImageCalFormat,rgbLinImageCalFormat,scaleFactor] = LMS2RGBCalFormat(lmsImageCalFormat,Disp,bScale)
+%   [RGBImageCalFormat,rgbLinImageCalFormat] = LMS2RGBCalFormat(lmsImageCalFormat,Disp)
 %
 % Description:
 %
@@ -16,12 +16,10 @@ function [RGBCalFormat,rgbLinCalFormat,scaleFactor] = LMS2RGBCalFormat(lmsImageC
 %       Disp.P_monitor             - [nWlx3]. Display primaries
 %       Disp.m                     - Scalar.  Row dimension of image     
 %       Disp.n                     - Scalar.  Column dimension of image     
-%   bScale                - Boolean. Scale or not 
 %
 % Outputs:
 %   RGBImageCalFormat     - RGB image in cal format
 %   rgbLinImageCalFormat  - linear rgb image in cal format
-%   scaleFactor           - scale factor used to scale img values
 %
 % Optional key/value pairs:
 %   None
@@ -32,29 +30,12 @@ M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 
 % Get linear RGB from LMS
-[rgbImageCalFormat,scaleFactor] = LMS2rgbLinCalFormat(lmsImageCalFormat,Disp,bScale);
+[rgbImageCalFormat] = LMS2rgbLinCalFormat(lmsImageCalFormat,Disp);
 rgbImage = CalFormatToImage(rgbImageCalFormat,Disp.m,Disp.n);
-
-if bScale == 1
-    % For right now, normalize so that maximum value in rgb is 1
-    scaleFactor = max(rgbImage(:)); % save scale factor for later
-    rgbImage = rgbImage/scaleFactor;
-else
-    scaleFactor = 1;
-end
 
 % Linear rgb values make sure not below 0
 rgbLinImage = rgbImage; 
 
-% Values of rgbImageTruncate should be between 0 and 1... if not, there's
-% gonna be an error in rgb2dac
-if any(rgbLinImage(:) > 1 | rgbLinImage(:) < 0)
-    if max(rgbLinImage(:) < 1.01)
-    rgbLinImage(rgbLinImage > 1) = 1;
-    else
-    error(['LMS2RGBCalFormat: WARNING! rgb values are out of gamut... rgbImageTruncate values outside of the range [0 1]']);
-    end
-end
 rgbLinCalFormat = ImageToCalFormat(rgbLinImage);
 
 % Gamma correct
