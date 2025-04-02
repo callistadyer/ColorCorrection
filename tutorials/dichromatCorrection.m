@@ -1,5 +1,5 @@
 
-function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] = dichromatCorrection(img,renderType,method,nSquares,modType,lambda_var,constraintWL,T_prev,T_prev_P)
+function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] = dichromatCorrection(var,img,renderType,method,nSquares,modType,lambda_var,constraintWL,T_prev,T_prev_P)
 % Transform trichromatic image so that dichromat can see more color
 % contrast. Also want to try and preserve some naturalness. This is
 % accomplished in colorCorrectionOptimize where we incorporate similarity
@@ -217,8 +217,8 @@ switch (method)
     case 'linTransform'
         % decolorOptimize does mean subtraction, then maximizes variance fmincon
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]
-        [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal, T] = colorCorrectionOptimize(triLMSCalFormat,renderType,lambda_var,constraintWL,T_prev,Disp);
-        [triLMScalFormatCorrected_plate,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T_P] = colorCorrectionOptimize(triLMSCalFormat_plate,renderType,lambda_var,constraintWL,T_prev_P, Disp);
+        [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal, T] = colorCorrectionOptimize(var,triLMSCalFormat,renderType,lambda_var,constraintWL,T_prev,Disp);
+        [triLMScalFormatCorrected_plate,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T_P] = colorCorrectionOptimize(var,triLMSCalFormat_plate,renderType,lambda_var,constraintWL,T_prev_P, Disp);
     case 'easyPCA'
         triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,renderType,Disp);
         triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,renderType,Disp);
@@ -322,6 +322,8 @@ nexttile
 imshow(diRGBImgFormatCorrected_plate);
 title('dichromat corrected - plate');
 
-sgtitle(['lambdavar = ' num2str(lambda_var)])
+% sgtitle(['lambdavar = ' num2str(lambda_var)])
+sgtitle(['var = ' num2str(var)])
+
 end
 
