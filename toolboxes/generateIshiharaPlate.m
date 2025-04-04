@@ -95,21 +95,23 @@ ylim(ax, [0 imgSize]);
 positions = [];
 
 % Check if dot can be placed
-function isValid = isValidPlacement(x, y, r, positions)
+function isValid = isValidPlacement(x_center, y_center, radius, positions)
     % Compute distance from the center of the plate
-    distFromCenter = sqrt((x - plateCenter(1))^2 + (y - plateCenter(2))^2);
+    distFromCenter = sqrt((x_center - plateCenter(1))^2 + (y_center - plateCenter(2))^2);
     % Inside the cirlce plate boundary?
-    if distFromCenter > (plateRadius - r)
+    if distFromCenter > (plateRadius - radius)
         isValid = false;
         return;
     end
     
     % Overlapping? 
     for i = 1:size(positions, 1)
-        dx = x - positions(i,1);
-        dy = y - positions(i,2);
+        % Get the distance between the new and all of the old circle centers 
+        dx = x_center - positions(i,1);
+        dy = y_center - positions(i,2);
         dist = sqrt(dx^2 + dy^2);
-        if dist < (r + positions(i,3) + buffer)
+        % If the distance is too close, don't place the new circle
+        if dist < (radius + positions(i,3) + buffer)
             isValid = false;
             return;
         end
@@ -129,7 +131,7 @@ function positions = placeCircles(positions, numCircles, radius)
         y = rand * imgSize;
         xi = round(x); yi = round(y);
         
-        % reject if coordinates are out of bounds
+        % reject if coordinates are out of bounds (between 1 and image size)
         if xi < 1 || xi > imgSize || yi < 1 || yi > imgSize
             attempts = attempts + 1;
             continue;
