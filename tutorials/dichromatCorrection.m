@@ -90,11 +90,11 @@ lambda = linspace(0,1,30)
 lambdaval = lambda(i)
 T{1} = eye(3,3);
 T_P{1} = eye(3,3);
-[RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection('gray','Deuteranopia','linTransform',1,'M',lambda(i),585,T{i},T_P{i});
+[RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection(20,'gray','Deuteranopia','linTransform',1,'M',lambda(i),585,T{i},T_P{i});
 end
 
-[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection('gray','Deuteranopia','linTransform',1,'M',0,585,eye(3,3),eye(3,3));
-[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection('ishihara','Deuteranopia','linTransform',1,'M',0,585,eye(3,3),eye(3,3));
+[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection(20,'gray','Deuteranopia','linTransform',1,'M',0,585,eye(3,3),eye(3,3));
+[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection(20,'ishihara','Deuteranopia','linTransform',1,'M',0,585,eye(3,3),eye(3,3));
 
 %}
 
@@ -104,7 +104,7 @@ end
 if strcmp(img,'ishihara')
     % Display
     % Wavelengths for display
-    imgSize = 128;
+    imgSize = 128*2;
     wls = (400:10:700)';
     d = displayCreate('LCD-Apple');
     P_monitor = SplineSrf(displayGet(d, 'wave'), displayGet(d, 'spd'), wls);
@@ -131,15 +131,15 @@ if strcmp(img,'ishihara')
 %     0.9,  0.5, 0.2    % pumpkin tone
 % ];
     insideColors = [
-    0.35  0.3   0.3;  
-    0.3   0.45  0.4;  
-    0.55  0.25  0.6  
+    0.85    0.45    0.30;
+    0.90    0.65    0.50;
+    0.75    0.40    0.35;
     ];
-    insideColors = [
-    0.5  0.5   0.5;  
-    0.5   0.5  0.5;  
-    0.5  0.5  0.5  
-    ];
+    % insideColors = [
+    % 0.5  0.5   0.5;  
+    % 0.5   0.5  0.5;  
+    % 0.5  0.5  0.5  
+    % ];
 
     outsideColors = insideColors;
 
@@ -165,7 +165,6 @@ if strcmp(img,'ishihara')
     % Direction of color (e.g., move in M cone direction to make a plate
     % that deuteranopes cannot see
     modulationDirection_rgb      = M_cones2rgb*modulationDirection_LMS;
-    modulationDirection_rgb_back = M_cones2rgb*modulationDirection_back;
 
     % NOTE: this scaleFactor_rgb is for scaling the modulation direction. This
     % is different from scaleFactor that goes into rgb->LMS conversions (and
@@ -173,13 +172,11 @@ if strcmp(img,'ishihara')
     % Background is the value of each pixel: this determines cone contrast separately for each pixel
     for i = 1:size(insideColors,1)
         scaleFactor_rgb(i)      = MaximizeGamutContrast(modulationDirection_rgb,insideColors(i,:)'); % bg is in rgb cal format
-        scaleFactor_rgb_back(i) = MaximizeGamutContrast(modulationDirection_rgb_back,outsideColors(i,:)'); % bg is in rgb cal format
 
         % Stay away from the very edge
-        toleranceFactor = 0.7;
+        toleranceFactor = 0.9;
         % Scale modulation direction by scale factor to get modulation=
         modulation_rgb(i,:)      = scaleFactor_rgb(i).*modulationDirection_rgb;
-        modulation_rgb_back(i,:) = scaleFactor_rgb_back(i).*toleranceFactor.*modulationDirection_rgb_back;
     end
 
     % New colors. Outside colors stay the same. Inside colors simply add

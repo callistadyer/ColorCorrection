@@ -6,9 +6,9 @@ function imgRGB = generateIshiharaPlate(textStr, insideColors, outsideColors, ou
 %
 % Inputs:
 %   textStr       - string. The numeric string to embed in the image (e.g., '74')
-%   insideColors  - 3x3 matrix. RGB colors for dots inside the number
-%   outsideColors - 3x3 matrix. RGB colors for dots outside the number
-%   outputSize    - integer. Final image resolution (e.g., 384 for 128x3)
+%   insideColors  - 3x3 matrix (3 possible colors). RGB colors for dots inside the number
+%   outsideColors - 3x3 matrix (3 possible colors). RGB colors for dots outside the number
+%   outputSize    - Final image resolution (e.g., 128)
 %
 % Output:
 %   imgRGB        - outputSize x outputSize x 3 RGB IMAGE. Final rendered Ishihara plate
@@ -26,7 +26,10 @@ outsideColors = [
     1.0 0.5 0.5
 ];
 img = generateIshiharaPlate('74', insideColors, outsideColors, 128);
-imshow(img)
+figure();
+imagesc(img)
+axis equal;
+title(['Isochromatic plate', textStr]);
 %}
 
 % Random seed for reproducibility
@@ -57,9 +60,9 @@ fontSize = 310;                     % Font size of embedded number
 
 
 % This part turns the grayscale image into a binary mask (numberMask)
-% where the number appears as a region of ones (white) and the background 
-% as zeros (black). This binary mask is later used to determine whether 
-% each dot in the Ishihara plate lies inside or outside the number shape.
+% where the number appears as ones (white) and the background 
+% as zeros (black). This mask is later used to determine whether 
+% each dot in the plate lies inside or outside the number
 % This helps us do the coloring correctly 
 fig = figure('Visible','off');
 axes('Position',[0 0 1 1]);
@@ -185,7 +188,7 @@ frame = getframe(ax);
 imgRGB = imresize(frame.cdata, [outputSize outputSize]);
 close(f);
 
-bPLOT = 1;
+bPLOT = 0;
 if bPLOT == 1
     figure();
     imagesc(imgRGB);

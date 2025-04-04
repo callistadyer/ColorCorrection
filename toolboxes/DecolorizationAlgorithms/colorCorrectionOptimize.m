@@ -313,8 +313,12 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         % fminconFactor = 1e4;
         fminconFactor = 1e6;
 
-        vL0 = 3.2863e-12 ;
-        vL1 = 0.8322;
+        % gray
+        % vL0 = 3.2863e-12 ;
+        % vL1 = 0.8322;
+
+        vL0 = 0.465164835526073;
+        vL1 = 1.374431710662593;
 
         vRange = linspace(vL1,vL0,20);
         sL0 = -2.5415e-12;
@@ -328,7 +332,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         var_diff = v_raw - vRange(var);
 
         % To enforce a certain variance value, put it into the loss function
-        varSpecificLoss = 1;
+        varSpecificLoss = 0;
         if varSpecificLoss == 1
             % Scale the difference by some amount so that fmincon prioritizes it
             var_scalar = 1e20;
