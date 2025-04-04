@@ -316,7 +316,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         vL0 = 3.2863e-12 ;
         vL1 = 0.8322;
 
-        vRange = linspace(vL0,vL1,20);
+        vRange = linspace(vL1,vL0,20);
         sL0 = -2.5415e-12;
         sL1 = -0.4452;
 
