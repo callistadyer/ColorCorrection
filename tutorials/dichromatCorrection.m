@@ -1,5 +1,5 @@
 
-function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] = dichromatCorrection(var,img,renderType,method,nSquares,modType,lambda_var,constraintWL,T_prev,T_prev_P)
+function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] = dichromatCorrection(lambdaOrVar,var,lambda_var,img,renderType,method,nSquares,modType,constraintWL,T_prev,T_prev_P)
 % Transform trichromatic image so that dichromat can see more color
 % contrast. Also want to try and preserve some naturalness. This is
 % accomplished in colorCorrectionOptimize where we incorporate similarity
@@ -11,6 +11,12 @@ function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] =
 % Description:
 %
 % Inputs:
+%   lambdaOrVar:  - String. Use lambda range or specific variance (computed from lamdbas)  
+%                   Optimize using lambda value (between 0 and 1) or var
+%                   which samples linspace between the variances of
+%                   lambda = 0 and lambda = 1
+%                       'lambda'
+%                       'var'
 %   img:          - String. Name of image to be rendered. If passed as the empty matrix, you get a
 %                   hyperspectral image of some stuffed animals. Some other options are
 %                       'sceneN.mat' - N is 1 to 5. One of our hypespectral scenes.
@@ -41,13 +47,15 @@ function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] =
 %                   because you want to use the previous T solution to
 %                   initialize the next optimization. This avoids some
 %                   wonky failures in the fmincon routine. 
+%   T_prev_P      - Initial transformation matrix for the RGB image(isochromatic plate version)  
+%                   Same thing as above, but you have to get another start
+%                   point for the isochromatic plate version of the image.
 %{
-                      for i = 1:30
-                          lambda = linspace(0,1,30)
-                          T{1} = eye(3,3);
-                          T_P{1} = eye(3,3);
-                          [RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection('gray','Deuteranopia','linTransform',1,'M',lambda(i),585,T{i},T_P{i});
-                      end
+                    for i = 1:10
+                        T{1} = eye(3,3);
+                        T_P{1} = eye(3,3);
+                        [RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection('var',i,lambda,'ishihara','Deuteranopia','linTransform',1,'M',585,T{i},T_P{i});
+                    end
                       % See how variance and similarity changes:
                       figure();
                       subplot(2,2,1); plot(lambda,s_raw_P,'-o',linewidth=2,markersize=10,markerfacecolor='white'); xlabel('lambda',fontsize=20); ylabel('similarity',fontsize=20); title('raw',fontsize=25);
@@ -61,9 +69,6 @@ function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] =
                       plot(lambda,s_bal_P+v_bal_P,'-o',linewidth=2,markersize=10,markerfacecolor='white'); xlabel('lambda',fontsize=20); ylabel('similarity+variance',fontsize=20); title('balanced',fontsize=25);
 
 %}
-%   T_prev_P      - Initial transformation matrix for the RGB image(isochromatic plate version)  
-%                   Same thing as above, but you have to get another start
-%                   point for the isochromatic plate version of the image.
 %
 % Outputs:
 %   triRGBImgFormatCorrected:  - Transformed RGB image after PCA and scaling. Also replaced missing cone as done in other code
@@ -84,17 +89,33 @@ function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] =
 %
 % Examples:
 %{
+
+%%%%%% MANIPULATING LAMBDA %%%%%%
+% TEST: this one has a lambda of 0 so should be no transformation = original image
+[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection('lambda',[],0,'gray','Deuteranopia','linTransform',1,'M',585,eye(3,3),eye(3,3));
+% TEST: this one has a lambda of 1 so should be max transformation = black and gray or white and gray image (max change in gamut) 
+[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection('lambda',[],1,'gray','Deuteranopia','linTransform',1,'M',585,eye(3,3),eye(3,3));
 % Loop over lambdas:
 for i = 1:30
-lambda = linspace(0,1,30)
-lambdaval = lambda(i)
-T{1} = eye(3,3);
-T_P{1} = eye(3,3);
-[RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection(20,'gray','Deuteranopia','linTransform',1,'M',lambda(i),585,T{i},T_P{i});
+    lambda = linspace(0,1,30)
+    T{1} = eye(3,3);
+    T_P{1} = eye(3,3);
+    [RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection('lambda',[],lambda(i),'gray','Deuteranopia','linTransform',1,'M',585,T{i},T_P{i});
 end
 
-[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection(20,'gray','Deuteranopia','linTransform',1,'M',0,585,eye(3,3),eye(3,3));
-[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection(20,'ishihara','Deuteranopia','linTransform',1,'M',0,585,eye(3,3),eye(3,3));
+%%%%%% MANIPULATING VAR %%%%%% 
+you need to have already run the lambda of 0 and 1,
+then used linspace to sample between the variances at 0 and 1. Then this
+"var" setting essentially finds you solutions with the variances equally
+spaced between the variance at lambda = 0 and lambda = 1
+
+[RGBImage_dichromat,s_raw_P, v_raw_P, s_bal_P, v_bal_P] = dichromatCorrection('var',10,[],'ishihara','Deuteranopia','linTransform',1,'M',585,eye(3,3),eye(3,3));
+% Loop over vars:
+for i = 1:10
+    T{1} = eye(3,3);
+    T_P{1} = eye(3,3);
+    [RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection('var',i,[],'ishihara','Deuteranopia','linTransform',1,'M',585,T{i},T_P{i});
+end
 
 %}
 
@@ -104,7 +125,7 @@ end
 if strcmp(img,'ishihara')
     % Display
     % Wavelengths for display
-    imgSize = 128*2;
+    imgSize = 128;
     wls = (400:10:700)';
     d = displayCreate('LCD-Apple');
     P_monitor = SplineSrf(displayGet(d, 'wave'), displayGet(d, 'spd'), wls);
@@ -135,7 +156,7 @@ if strcmp(img,'ishihara')
     0.90    0.65    0.50;
     0.75    0.40    0.35;
     ];
-    % insideColors = [
+% insideColors = [
     % 0.5  0.5   0.5;  
     % 0.5   0.5  0.5;  
     % 0.5  0.5  0.5  
@@ -155,7 +176,6 @@ if strcmp(img,'ishihara')
             % modulationDirection_LMS = modulationDirection_LMS;
         case 'M' % m cone deficiency
             modulationDirection_LMS  = [0 1 0]';
-            modulationDirection_back = [1 .5 0]';
         case 'L'   % l cone deficiency
             modulationDirection_LMS = [1 0 0]';
         case 'S'   % s cone deficiency
@@ -214,8 +234,8 @@ switch (method)
     case 'linTransform'
         % decolorOptimize does mean subtraction, then maximizes variance fmincon
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]
-        [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal, T] = colorCorrectionOptimize(var,triLMSCalFormat,renderType,lambda_var,constraintWL,T_prev,Disp);
-        [triLMScalFormatCorrected_plate,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T_P] = colorCorrectionOptimize(var,triLMSCalFormat_plate,renderType,lambda_var,constraintWL,T_prev_P, Disp);
+        [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal, T] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat,renderType,constraintWL,T_prev,Disp);
+        [triLMScalFormatCorrected_plate,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T_P] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat_plate,renderType,constraintWL,T_prev_P, Disp);
     case 'easyPCA'
         triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,renderType,Disp);
         triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,renderType,Disp);
