@@ -1,5 +1,5 @@
 
-function totalVariance = whiteNoiseVariance(varianceType,renderType,Disp)
+function totalVariance = whiteNoiseVariance(varianceType,renderType,T,Disp)
 % Calculates total variance to normalize variance of given image size 
 %
 % Syntax:
@@ -28,9 +28,18 @@ whiteNoiseCalFormat = ImageToCalFormat(whiteNoiseImage);
 hyperspectralNoiseCalFormat = Disp.P_monitor * whiteNoiseCalFormat;
 
 % LMS image
-triLMSNoiseCalFormat       = Disp.T_cones*hyperspectralNoiseCalFormat;
+triLMSNoiseCalFormat         = Disp.T_cones*hyperspectralNoiseCalFormat;
 
+% Corrected dichromat image
+M_rgb2cones = Disp.T_cones*Disp.P_monitor;
+M_cones2rgb = inv(M_rgb2cones);
+grayRGB = [0.5 0.5 0.5]';
+grayLMS = M_rgb2cones*grayRGB;
+
+
+triLMSNoiseCalFormatContrast = (triLMSNoiseCalFormat - grayLMS)./grayLMS;
+new = T * triLMSNoiseCalFormatContrast;
 % Compute total variance 
-totalVariance = varianceLMS(varianceType,renderType,[],triLMSNoiseCalFormat);
+totalVariance = varianceLMS(varianceType,renderType,[],triLMSNoiseCalFormat,triLMSNoiseCalFormatContrast,new);
 
 end

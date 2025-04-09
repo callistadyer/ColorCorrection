@@ -180,14 +180,17 @@ b_total = [b; b_di];
 
 % Initial guess at transformation matrix - start with identity
 T_I    = eye(3, 3);
+T_I = eye(3) + (2*randn(3)); 
+
 T_prev = T_prev;
-T0 = eye(3, 3);
 
-
-bCheck = A_total*T0(:);
-if (any(bCheck > b_total))
-    fprintf('Failed to satisfy constraint\n');
-end
+% T0 = eye(3, 3);
+% 
+% 
+% bCheck = A_total*T0(:);
+% if (any(bCheck > b_total))
+%     fprintf('Failed to satisfy constraint\n');
+% end
 
 % Optimization
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
@@ -197,6 +200,7 @@ options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance'
 % Test loss function with final transformation matrix values
 [fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var,lambda_var,transformRGB_opt_TI, triLMSCalFormat, M_cones2rgb,renderType, Disp);
 
+if (~isequal(T_prev,T_I)) && (~isequal(T_prev,eye(3,3)))
 % Optimization
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
@@ -204,13 +208,17 @@ options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance'
     T_prev(:), A_total, b_total, [], [], [], [], [], options);
 % Test loss function with final transformation matrix values
 [fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var, lambda_var, transformRGB_opt_Tprev, triLMSCalFormat, M_cones2rgb,renderType, Disp);
-
 % Choose the transformation that gets a lower loss
 if fValOpt_TI <= fValOpt_Tprev
     transformRGB_opt = transformRGB_opt_TI;
 elseif fValOpt_Tprev  < fValOpt_TI
     transformRGB_opt = transformRGB_opt_Tprev;
 end
+
+else
+    transformRGB_opt = transformRGB_opt_TI;
+end
+
 
 
 % See if constraint worked
@@ -288,7 +296,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         newLMSCalFormatTran = newLMSCalFormat';
         LMSCalFormatTran = LMSCalFormat';
         %%%%%%%% Variance term %%%%%%%%
-        var_term_raw = varianceLMS("newConeVar",renderType,[],newLMSCalFormat);
+        var_term_raw = varianceLMS("contrast",renderType,[],newLMSCalFormat,RGBContrastCalFormat,newRGBContrastCalFormat_noGray);
         % Weight by lambda (use this when trying to find range of variances)
         if strcmp(lambdaOrVar,'lambda')
             var_term = lambda*var_term_raw;
@@ -296,10 +304,10 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
             var_term = var_term_raw;
         end
         % Normalize via total variance in white noise image
-        totalVariance = whiteNoiseVariance("newConeVar",renderType,Disp);
+        totalVariance = whiteNoiseVariance("contrast",renderType,T,Disp);
         % Normalize by whiteNoiseVariance
         var_term_balance = var_term/totalVariance;
-
+        % var_term_balance = var_term;
         %%%%%%%% Similarity term %%%%%%%%
         similarity_term_raw = similarityLMS('squared',LMSCalFormatTran,newLMSCalFormatTran);
         % similarity_term_raw = similarityLMS('squared',RGBCalFormat,newRGBCalFormat);
@@ -317,24 +325,28 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         %%%%%%%% Loss %%%%%%%%
         % Scale loss so that it is small enough to make fmincon happy but not
         % so small that it is unhappy. How to determine this?
-        % fminconFactor = 1e4;
-        fminconFactor = 1e6;
+        % fminconFactor = 1e50;
+        fminconFactor = 1e8;
 
         % gray
-        % vL0 = 3.2863e-12 ;
-        % vL1 = 0.8322;
+        vL0 = 3.2863e-12 ;
+        vL1 = 0.8322;
 
         % Ishihara
-        vL0 = 0.465164835526073;
-        vL1 = 1.374431710662593;
-        vL0 = 0.657495707681425;
+        % vL0 = 0.465164835526073;
+        % vL1 = 1.374431710662593;
+        % vL0 = 0.657495707681425;
 
+        % vL0 = 0.704412325010509;
+        % vL1 = 1.277712522697652;
 
-        numSamps = 10;
+        numSamps = 20;
         vRange = linspace(vL0,vL1,numSamps);
 
         s_raw = similarity_term_raw/totalSimilarity;
-        v_raw = var_term_raw/totalVariance;
+        % v_raw = var_term_raw/totalVariance;
+        v_raw = var_term_raw;
+
         s_bal = similarity_term_balance;
         v_bal = var_term_balance;
 
@@ -353,7 +365,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
             % Otherwise, just minimize this loss
         else
             % loss = -fminconFactor*(var_term_balance + similarity_term)
-            loss = -fminconFactor*(var_term_balance + similarity_term_balance);
+            loss = -fminconFactor*((var_term_balance) + similarity_term_balance);
         end
 
     end

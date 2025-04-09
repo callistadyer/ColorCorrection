@@ -1,4 +1,4 @@
-function variance = varianceLMS(varianceType,renderType,LMS_old,LMS_new)
+function variance = varianceLMS(varianceType,renderType,LMS_old,LMS_new,LMSc_old,LMSc_new)
 % Computes variance metric between original and transformed LMS image
 %
 % Syntax:
@@ -11,6 +11,7 @@ function variance = varianceLMS(varianceType,renderType,LMS_old,LMS_new)
 %   renderType:        type of dichromacy
 %   LMS_old:           original LMS values
 %   LMS_new:           transformed LMS values
+%   LMSc_new           transformed LMS values, contrast
 %
 % Outputs:
 %   triLMSCalFormatOpt: Transformed LMS values
@@ -26,16 +27,24 @@ function variance = varianceLMS(varianceType,renderType,LMS_old,LMS_new)
 switch (renderType)
     case 'Deuteranopia' % m cone deficiency
         index = [1 3];
+        missingIdx = 2;
     case 'Protanopia'   % l cone deficiency
         index = [2 3];
+        missingIdx = 1;
     case 'Tritanopia'   % s cone deficiency
         index = [1 2];
+        missingIdx = 3;
 end
 
 % Variance term
 switch (varianceType)
     case 'newConeVar'
         variance = (var(LMS_new(index(1), :)) + var(LMS_new(index(2), :)));
+    case 'contrast'
+        delta1 = LMSc_old(index(1),:) - LMSc_new(index(1),:);
+        delta2 = LMSc_old(index(2),:) - LMSc_new(index(2),:);
+        missingCone = LMSc_old(missingIdx,:); % should this be old or new M??
+        variance = norm([delta1 .* missingCone; delta2 .* missingCone])^2;
     otherwise
         error('Unknown variance type specified');
 end

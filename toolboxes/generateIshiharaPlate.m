@@ -40,14 +40,12 @@ imgSize = 512;
 
 % Radius of the circular plate
 plateRadius = imgSize / 2 - 5;
-% plateRadius = plateRadius*.3;
 
 % Center coordinate of the plate
 plateCenter = [imgSize/2, imgSize/2];
 
-
 %%%%%%%%%%%%%%%%%%%%%%% Plate parameters %%%%%%%%%%%%%%%%%%%%%%%
-numDots = [80, 100, 450, 800, 200]; % Number of dots for each size
+numDots = [80, 100, 550, 800, 400]; % Number of dots for each size
 radii   = [12, 10,  6,   5,   3];   % Radii for each dot 
 buffer = 1.2;                       % Some space between dots
 fontSize = 310;                     % Font size of embedded number
@@ -67,7 +65,10 @@ fontSize = 310;                     % Font size of embedded number
 fig = figure('Visible','off');
 axes('Position',[0 0 1 1]);
 % Write the number 
+% text(0.5, 0.5, textStr, 'FontSize', fontSize, 'FontWeight','bold', ...
+%     'HorizontalAlignment','center', 'VerticalAlignment','middle');
 text(0.5, 0.5, textStr, 'FontSize', fontSize, 'FontWeight','bold', ...
+    'FontName','Arial Rounded MT Bold', ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle');
 xlim([0 1]); ylim([0 1]);
 axis off
@@ -124,7 +125,7 @@ end
 
 % Function that places circles
 function positions = placeCircles(positions, numCircles, radius)
-    count = 0; attempts = 0; attemptsLimit = 10000;
+    count = 0; attempts = 0; attemptsLimit = 10050;
     
     % Place dots so long as you have more dots to place... or if you've
     % tried for a long time, then give up

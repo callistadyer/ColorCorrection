@@ -156,11 +156,16 @@ if strcmp(img,'ishihara')
     0.90    0.65    0.50;
     0.75    0.40    0.35;
     ];
-% insideColors = [
-    % 0.5  0.5   0.5;  
-    % 0.5   0.5  0.5;  
-    % 0.5  0.5  0.5  
+    % insideColors = [
+    % 0.85    0.55    0.40;
+    % 1.0     0.75    0.60;
+    % 0.85    0.50    0.45;
     % ];
+% insideColors = [
+%     0.5  0.5   0.5;  
+%     0.5   0.5  0.5;  
+%     0.5  0.5  0.5  
+%     ];
 
     outsideColors = insideColors;
 
@@ -175,7 +180,7 @@ if strcmp(img,'ishihara')
             % % This code case allows the squares to be random colors
             % modulationDirection_LMS = modulationDirection_LMS;
         case 'M' % m cone deficiency
-            modulationDirection_LMS  = [0 1 0]';
+            modulationDirection_LMS = [0 1 0]';
         case 'L'   % l cone deficiency
             modulationDirection_LMS = [1 0 0]';
         case 'S'   % s cone deficiency
@@ -192,7 +197,6 @@ if strcmp(img,'ishihara')
     % Background is the value of each pixel: this determines cone contrast separately for each pixel
     for i = 1:size(insideColors,1)
         scaleFactor_rgb(i)      = MaximizeGamutContrast(modulationDirection_rgb,insideColors(i,:)'); % bg is in rgb cal format
-
         % Stay away from the very edge
         toleranceFactor = 0.9;
         % Scale modulation direction by scale factor to get modulation=
@@ -204,10 +208,8 @@ if strcmp(img,'ishihara')
     % insideColorsMod  = insideColors + modulation_rgb.*[.9 .7 .5]';
     insideColorsMod  = insideColors + modulation_rgb;
 
-    outsideColorsMod = outsideColors;
-
     % Generate plate now that you have the correct colors
-    imgRGBmod = generateIshiharaPlate('74', insideColorsMod, outsideColorsMod,imgSize);
+    imgRGBmod = generateIshiharaPlate('74', insideColorsMod, outsideColors,imgSize);
     imgRGBmod = im2double(imgRGBmod);
 
     % Plot modified RGB Image 
@@ -222,6 +224,11 @@ if strcmp(img,'ishihara')
     % Run the modulated image through the linear dichromat simulation
     [diLMSCalFormat,M_triToDi]       = DichromSimulateLinear(triLMSCalFormat, grayLMS,  constraintWL, renderType, Disp);
     [diLMSCalFormat_plate,M_triToDi] = DichromSimulateLinear(triLMSCalFormat_plate, grayLMS,  constraintWL, renderType, Disp);
+
+    % check
+    % rgb1 = inv(M_rgb2cones) * diLMSCalFormat;
+    % image = CalFormatToImage(rgb1,Disp.m,Disp.n);
+    % figure();imagesc(image);
 
 else
     % Get trichromatic (LMS) image
