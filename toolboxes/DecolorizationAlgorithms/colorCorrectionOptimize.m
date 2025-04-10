@@ -180,7 +180,7 @@ b_total = [b; b_di];
 
 % Initial guess at transformation matrix - start with identity
 T_I    = eye(3, 3);
-T_I = eye(3) + (2*randn(3)); 
+% T_I = eye(3) + (2*randn(3)); 
 
 T_prev = T_prev;
 
@@ -304,7 +304,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
             var_term = var_term_raw;
         end
         % Normalize via total variance in white noise image
-        totalVariance = whiteNoiseVariance("contrast",renderType,T,Disp);
+        totalVariance = whiteNoiseVariance("contrast",renderType,0.5*eye(3,3),Disp);
         % Normalize by whiteNoiseVariance
         var_term_balance = var_term/totalVariance;
         % var_term_balance = var_term;

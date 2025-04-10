@@ -125,7 +125,7 @@ end
 if strcmp(img,'ishihara')
     % Display
     % Wavelengths for display
-    imgSize = 128;
+    imgSize = 128*2;
     wls = (400:10:700)';
     d = displayCreate('LCD-Apple');
     P_monitor = SplineSrf(displayGet(d, 'wave'), displayGet(d, 'spd'), wls);
@@ -147,20 +147,20 @@ if strcmp(img,'ishihara')
     % Make initial inside (number) and outside (background) colors the
     % same... then add to the inside colors by only adding the M cone color
 %     insideColors = [
-%     0.95, 0.6, 0.4;   % light orange
-%     0.85, 0.4, 0.3;   % muted red-orange
-%     0.9,  0.5, 0.2    % pumpkin tone
-% ];
-    insideColors = [
-    0.85    0.45    0.30;
-    0.90    0.65    0.50;
-    0.75    0.40    0.35;
-    ];
+%     0.8, 0.1, 0.1;   % light orange
+%     0.85, 0.4, 0.4;   % muted red-orange
+%     1.0, 0.6, 0.6];    % pumpkin tone
+% % ];
     % insideColors = [
-    % 0.85    0.55    0.40;
-    % 1.0     0.75    0.60;
-    % 0.85    0.50    0.45;
+    % 0.85    0.45    0.30;
+    % 0.90    0.65    0.50;
+    % 0.75    0.40    0.35;
     % ];
+    insideColors = [
+    0.85    0.55    0.40;
+    1.0     0.75    0.60;
+    0.85    0.50    0.45;
+    ];
 % insideColors = [
 %     0.5  0.5   0.5;  
 %     0.5   0.5  0.5;  
