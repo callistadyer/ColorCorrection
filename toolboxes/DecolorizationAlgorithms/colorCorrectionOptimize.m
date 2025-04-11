@@ -280,24 +280,28 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
 
         % Create contrast image
         RGBContrastCalFormat     = (RGBCalFormat - grayRGB)./grayRGB;
+
         % Want to use non contrast version? Uncomment below:
-        LSMContrastCalFormat = inv(M_cones2rgb) * RGBContrastCalFormat;
+        grayLMS = inv(M_cones2rgb)*grayRGB;
+        LSMContrastCalFormat = (LMSCalFormat-grayLMS) ./ grayLMS;
         % RGBContrastCalFormat = RGBCalFormat;
 
         %%%%%%%% Transformation on gray subtracted image %%%%%%%%
         newRGBContrastCalFormat = T * RGBContrastCalFormat;
-        newLMSContrastCalFormat = inv(M_cones2rgb) * newRGBContrastCalFormat;
+
         % Add gray back in
         newRGBCalFormat = (newRGBContrastCalFormat.*grayRGB) + grayRGB;
 
-        % Convert into LMS
-        newLMSCalFormat = inv(M_cones2rgb) * newRGBCalFormat;
+        % Convert to LMS excitations and then to LMS contrast
+        newLMSCalFormat = inv(M_cones2rgb)*newRGBCalFormat;
+        newLMSContrastCalFormat =  (newLMSCalFormat-grayLMS) ./ grayLMS;
 
         % Get into cal format
         newLMSCalFormatTran = newLMSCalFormat';
         LMSCalFormatTran = LMSCalFormat';
         %%%%%%%% Variance term %%%%%%%%
         var_term_raw = varianceLMS("contrast",renderType,[],newLMSCalFormat,LSMContrastCalFormat,newLMSContrastCalFormat);
+        
         % Weight by lambda (use this when trying to find range of variances)
         if strcmp(lambdaOrVar,'lambda')
             var_term = lambda*var_term_raw;
