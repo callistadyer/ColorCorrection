@@ -125,7 +125,7 @@ end
 if strcmp(img,'ishihara')
     % Display
     % Wavelengths for display
-    imgSize = 128*2;
+    imgSize = 128;
     wls = (400:10:700)';
     d = displayCreate('LCD-Apple');
     P_monitor = SplineSrf(displayGet(d, 'wave'), displayGet(d, 'spd'), wls);
