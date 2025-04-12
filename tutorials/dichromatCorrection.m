@@ -132,7 +132,6 @@ if strcmp(img,'ishihara')
     load T_cones_ss2;
     T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
 
-
     Disp.wls = wls;
     Disp.d = d;
     Disp.P_monitor = P_monitor;
@@ -146,33 +145,22 @@ if strcmp(img,'ishihara')
 
     % Make initial inside (number) and outside (background) colors the
     % same... then add to the inside colors by only adding the M cone color
-%     insideColors = [
-%     0.8, 0.1, 0.1;   % light orange
-%     0.85, 0.4, 0.4;   % muted red-orange
-%     1.0, 0.6, 0.6];    % pumpkin tone
-% % ];
     insideColors = [
     0.85    0.45    0.30;
     0.90    0.65    0.50;
     0.75    0.40    0.35;
     ];
-
     % insideColors = [
-    % 0.85    0.55    0.40;
-    % 1.0     0.75    0.60;
-    % 0.85    0.50    0.45;
-    % ];
-% insideColors = [
-%     0.5  0.5   0.5;  
-%     0.5   0.5  0.5;  
-%     0.5  0.5  0.5  
-%     ];
-
-LS_directions = [
-    .2  0  0; 
-    .2  0 .2; 
-     0  0  .2; 
-]';
+    %     0.5  0.5   0.5;  
+    %     0.5   0.5  0.5;  
+    %     0.5  0.5  0.5  
+    %     ];
+    
+    LS_directions = [
+        .2  0  0; 
+        .2  0 .2; 
+         0  0  .2; 
+    ]';
 
 % Normalize each direction to unit length in LMS contrast space
 LS_directions = LS_directions ./ vecnorm(LS_directions);
@@ -264,6 +252,47 @@ outsideColors = insideColors;
     image = CalFormatToImage(rgb1,Disp.m,Disp.n);
     figure();imagesc(image); axis square;
     
+elseif strcmp(img,'pic')
+
+    % img_rgb = im2double(imread('slide.png'));       % Replace with your filename
+    % [rows, cols, ~] = size(img_rgb);                 % Get correct dimensions
+
+
+    img_rgb = im2double(imread('slide.png'));    % Load and convert image to double
+    scaleFactor = 0.3;                           % Downsample to 50% of original size
+    img_rgb = imresize(img_rgb, scaleFactor);   % Resize the image
+    [rows, cols, ~] = size(img_rgb);            % Get new dimensions
+
+    wls = (400:10:700)';
+    d = displayCreate('LCD-Apple');
+    P_monitor = SplineSrf(displayGet(d, 'wave'), displayGet(d, 'spd'), wls);
+    load T_cones_ss2;
+    T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
+
+    Disp.wls = wls;
+    Disp.d = d;
+    Disp.P_monitor = P_monitor;
+    Disp.m = cols;
+    Disp.n = rows;
+    Disp.T_cones = T_cones;
+    M_rgb2cones = Disp.T_cones*Disp.P_monitor;
+    M_cones2rgb = inv(M_rgb2cones);
+    grayRGB = [0.5 0.5 0.5]';
+    grayLMS = M_rgb2cones*grayRGB;
+
+    calFormatRGB = ImageToCalFormat(img_rgb);  
+    triLMSCalFormat = M_rgb2cones * calFormatRGB;
+    triLMSCalFormat_plate = triLMSCalFormat;
+
+    [diLMSCalFormat,M_triToDi]       = DichromSimulateLinear(triLMSCalFormat, grayLMS,  constraintWL, renderType, Disp);
+    
+    % check
+    rgb1 = inv(M_rgb2cones) * diLMSCalFormat;
+    imageDi = CalFormatToImage(rgb1, Disp.m, Disp.n);
+
+    figure();imagesc(imageDi);
+
+    diLMSCalFormat_plate = diLMSCalFormat;
 else
     % Get trichromatic (LMS) image
     [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,nSquares,modType);
@@ -275,8 +304,9 @@ switch (method)
     case 'linTransform'
         % decolorOptimize does mean subtraction, then maximizes variance fmincon
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]
+        disp('Entering optimization function');
         [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal, T] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat,renderType,constraintWL,T_prev,Disp);
-        if strcmp(img,'ishihara')
+        if strcmp(img,'ishihara') || strcmp(img,'pic')
             triLMScalFormatCorrected_plate = triLMScalFormatCorrected;
             s_raw_P = s_raw;
             v_raw_P = v_raw;
@@ -303,17 +333,26 @@ end
 % Create RGB image from LMS
 %%%%% ORIGINAL IMAGE AND PLATE %%%%%
 % Dichromat simulation of original image
-[diRGBCalFormatOrig]        = LMS2RGBCalFormat(diLMSCalFormat, Disp);
-[diRGBCalFormatOrig_plate]  = LMS2RGBCalFormat(diLMSCalFormat_plate, Disp);         % isochromatic plate
+diRGBCalFormatOrig = M_cones2rgb * diLMSCalFormat;
+diRGBCalFormatOrig_plate = M_cones2rgb * diLMSCalFormat_plate;
+
+% [diRGBCalFormatOrig]        = LMS2RGBCalFormat(diLMSCalFormat, Disp);
+% [diRGBCalFormatOrig_plate]  = LMS2RGBCalFormat(diLMSCalFormat_plate, Disp);         % isochromatic plate
 
 % Trichromat simulation of original image
-[triRGBcalFormatOrig]       = LMS2RGBCalFormat(triLMSCalFormat, Disp);
-[triRGBcalFormatOrig_plate] = LMS2RGBCalFormat(triLMSCalFormat_plate, Disp);  % isochromatic plate
+triRGBcalFormatOrig = M_cones2rgb * triLMSCalFormat;
+triRGBcalFormatOrig_plate = M_cones2rgb * triLMSCalFormat_plate;
+% 
+% [triRGBcalFormatOrig]       = LMS2RGBCalFormat(triLMSCalFormat, Disp);
+% [triRGBcalFormatOrig_plate] = LMS2RGBCalFormat(triLMSCalFormat_plate, Disp);  % isochromatic plate
 
 %%%%% CORRECTED IMAGE AND PLATE %%%%%
 % Corrected trichromat image
-[triRGBcalFormatCorrected]        = LMS2RGBCalFormat(triLMScalFormatCorrected, Disp);
-[triRGBcalFormatCorrected_plate]  = LMS2RGBCalFormat(triLMScalFormatCorrected_plate, Disp);       % isochromatic plate
+triRGBcalFormatCorrected = M_cones2rgb * triLMScalFormatCorrected;
+triRGBcalFormatCorrected_plate = M_cones2rgb * triLMScalFormatCorrected_plate;
+% 
+% [triRGBcalFormatCorrected]        = LMS2RGBCalFormat(triLMScalFormatCorrected, Disp);
+% [triRGBcalFormatCorrected_plate]  = LMS2RGBCalFormat(triLMScalFormatCorrected_plate, Disp);       % isochromatic plate
 
 % Corrected dichromat image
 M_rgb2cones = Disp.T_cones*Disp.P_monitor;
@@ -322,9 +361,12 @@ grayRGB = [0.5 0.5 0.5]';
 grayLMS = M_rgb2cones*grayRGB;
 
 [diLMSCalFormatCorrected,~]        = DichromSimulateLinear(triLMScalFormatCorrected, grayLMS,  constraintWL, renderType, Disp);
-diRGBCalFormatCorrected            = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp);
+diRGBCalFormatCorrected            = M_cones2rgb * diLMSCalFormatCorrected;
+% diRGBCalFormatCorrected            = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp);
+
 [diLMSCalFormatCorrected_plate,~]  = DichromSimulateLinear(triLMScalFormatCorrected_plate, grayLMS,  constraintWL, renderType, Disp);
-diRGBCalFormatCorrected_plate      = LMS2RGBCalFormat(diLMSCalFormatCorrected_plate, Disp); % isochromatic plate
+diRGBCalFormatCorrected_plate            = M_cones2rgb * diLMSCalFormatCorrected_plate;
+% diRGBCalFormatCorrected_plate      = LMS2RGBCalFormat(diLMSCalFormatCorrected_plate, Disp); % isochromatic plate
 
 % diLMSCalFormatCorrected                  = tri2dichromatLMSCalFormat(triLMScalFormatCorrected,renderType,Disp);
 % diRGBCalFormatCorrected                  = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp);

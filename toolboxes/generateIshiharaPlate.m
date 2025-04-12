@@ -194,7 +194,7 @@ if bPLOT == 1
     figure();
     imagesc(imgRGB);
     axis square;
-    title(['Isochromatic plate', textStr]);
+    % title(['Isochromatic plate', textStr]);
 end
 
 end

@@ -161,6 +161,7 @@ RGB = (contRGB.*grayRGB)+grayRGB;
 max(RGB(:))
 min(RGB(:))
 
+disp('Building a big constraint matrix... might take a minute')
 bigM = kron(speye(nPix), M_all);
 
 % Dichromat constraint is just trichromat constraint transformed
@@ -192,6 +193,7 @@ T_prev = T_prev;
 %     fprintf('Failed to satisfy constraint\n');
 % end
 
+disp('Step 2: Just reached optimization')
 % Optimization
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
@@ -219,6 +221,7 @@ else
     transformRGB_opt = transformRGB_opt_TI;
 end
 
+disp('Step 3: Just finished optimization')
 
 
 % See if constraint worked
@@ -321,7 +324,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
             var_term = var_term_raw;
         end
         % Normalize via total variance in white noise image
-        totalVariance = whiteNoiseVariance("contrast",renderType,0.5*eye(3,3),Disp);
+        totalVariance = whiteNoiseVariance(varianceType,renderType,0.5*eye(3,3),Disp);
         % Normalize by whiteNoiseVariance
         var_term_balance = var_term/totalVariance;
         % var_term_balance = var_term;
@@ -354,8 +357,12 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         % vL1 = 2.501747535212218e+04;
 
         % ishihara reddish
-        vL0 = 1.007510078514810e-07;
-        vL1 = 1.864814259114060;
+        % vL0 = 1.007510078514810e-07;
+        % vL1 = 1.864814259114060;
+
+        % slide
+        vL0 = 0.022048265177122;
+        vL1 = 2.952812981227842;
 
         numSamps = 10;
         vRange = linspace(vL0,vL1,numSamps);

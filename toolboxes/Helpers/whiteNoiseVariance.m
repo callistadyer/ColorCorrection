@@ -38,8 +38,20 @@ grayLMS = M_rgb2cones*grayRGB;
 
 
 triLMSNoiseCalFormatContrast = (triLMSNoiseCalFormat - grayLMS)./grayLMS;
-new = T * triLMSNoiseCalFormatContrast;
-% Compute total variance 
-totalVariance = varianceLMS(varianceType,renderType,[],triLMSNoiseCalFormat,triLMSNoiseCalFormatContrast,new);
+triLMSNoiseCalFormatContrastnew = T * triLMSNoiseCalFormatContrast;
+% Compute total variance
+
+switch (varianceType)
+    case 'LMdifferenceContrast'
+        LMSold = triLMSNoiseCalFormatContrast;
+        LMSnew = triLMSNoiseCalFormatContrastnew;
+    case 'delta'
+        LMSold = triLMSNoiseCalFormatContrast;
+        LMSnew = triLMSNoiseCalFormatContrastnew;
+    case 'newConeVar'
+        LMSold = triLMSNoiseCalFormat;
+        LMSnew = (triLMSNoiseCalFormatContrastnew.*grayLMS)+grayLMS;
+end
+totalVariance = varianceLMS(varianceType,renderType,LMSold,LMSnew);
 
 end
