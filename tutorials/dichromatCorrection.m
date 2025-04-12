@@ -151,23 +151,57 @@ if strcmp(img,'ishihara')
 %     0.85, 0.4, 0.4;   % muted red-orange
 %     1.0, 0.6, 0.6];    % pumpkin tone
 % % ];
-    % insideColors = [
-    % 0.85    0.45    0.30;
-    % 0.90    0.65    0.50;
-    % 0.75    0.40    0.35;
-    % ];
     insideColors = [
-    0.85    0.55    0.40;
-    1.0     0.75    0.60;
-    0.85    0.50    0.45;
+    0.85    0.45    0.30;
+    0.90    0.65    0.50;
+    0.75    0.40    0.35;
     ];
+
+    % insideColors = [
+    % 0.85    0.55    0.40;
+    % 1.0     0.75    0.60;
+    % 0.85    0.50    0.45;
+    % ];
 % insideColors = [
 %     0.5  0.5   0.5;  
 %     0.5   0.5  0.5;  
 %     0.5  0.5  0.5  
 %     ];
 
-    outsideColors = insideColors;
+LS_directions = [
+    .2  0  0; 
+    .2  0 .2; 
+     0  0  .2; 
+]';
+
+% Normalize each direction to unit length in LMS contrast space
+LS_directions = LS_directions ./ vecnorm(LS_directions);
+
+rgbColors = zeros(3, 3);
+
+for i = 1:3
+    modulation_LMS = LS_directions(:,i);
+    
+    % convert to RGB
+    modulation_RGB = M_cones2rgb * modulation_LMS;
+
+    % Maximize the amount of that RGB direction we can add to gray
+    scaleFactor = MaximizeGamutContrast(modulation_RGB, grayRGB);
+    scaleFactor = scaleFactor/3; % dont go all the way to the edge of gamut    
+    % Final color: background + scaled RGB direction
+    rgbModulated = grayRGB + scaleFactor * modulation_RGB;
+    
+    % Store
+    rgbColors(i, :) = rgbModulated';
+end
+
+insideColors  = rgbColors;
+    insideColors = [
+    0.85    0.45    0.30;
+    0.90    0.65    0.50;
+    0.75    0.40    0.35;
+    ];
+outsideColors = insideColors;
 
     % % See if it's working... 
     % imgRGB = generateIshiharaPlate('74', insideColors, outsideColors,imgSize);
@@ -198,7 +232,7 @@ if strcmp(img,'ishihara')
     for i = 1:size(insideColors,1)
         scaleFactor_rgb(i)      = MaximizeGamutContrast(modulationDirection_rgb,insideColors(i,:)'); % bg is in rgb cal format
         % Stay away from the very edge
-        toleranceFactor = 0.9;
+        % toleranceFactor = 0.9;
         % Scale modulation direction by scale factor to get modulation=
         modulation_rgb(i,:)      = scaleFactor_rgb(i).*modulationDirection_rgb;
     end
@@ -226,10 +260,10 @@ if strcmp(img,'ishihara')
     [diLMSCalFormat_plate,M_triToDi] = DichromSimulateLinear(triLMSCalFormat_plate, grayLMS,  constraintWL, renderType, Disp);
 
     % check
-    % rgb1 = inv(M_rgb2cones) * diLMSCalFormat;
-    % image = CalFormatToImage(rgb1,Disp.m,Disp.n);
-    % figure();imagesc(image);
-
+    rgb1 = inv(M_rgb2cones) * diLMSCalFormat;
+    image = CalFormatToImage(rgb1,Disp.m,Disp.n);
+    figure();imagesc(image); axis square;
+    
 else
     % Get trichromatic (LMS) image
     [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,nSquares,modType);
@@ -242,7 +276,16 @@ switch (method)
         % decolorOptimize does mean subtraction, then maximizes variance fmincon
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]
         [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal, T] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat,renderType,constraintWL,T_prev,Disp);
+        if strcmp(img,'ishihara')
+            triLMScalFormatCorrected_plate = triLMScalFormatCorrected;
+            s_raw_P = s_raw;
+            v_raw_P = v_raw;
+            s_bal_P = s_bal;
+            v_bal_P = v_bal;
+            T_P = T;
+        else
         [triLMScalFormatCorrected_plate,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T_P] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat_plate,renderType,constraintWL,T_prev_P, Disp);
+        end
     case 'easyPCA'
         triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,renderType,Disp);
         triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,renderType,Disp);
@@ -251,7 +294,6 @@ switch (method)
         triLMScalFormatCorrected = colorCorrectionHardPCA(triLMSCalFormat,numPCs,Disp);
         triLMScalFormatCorrected_plate = colorCorrectionHardPCA(triLMSCalFormat_plate,numPCs,Disp);
 end
-
 
 %%%% Old colorCorrection function %%%%
 % [triLMScalFormatCorrected       triLMSmeans]                   = colorCorrection(triLMSCalFormat,renderType,Disp);   % Original image

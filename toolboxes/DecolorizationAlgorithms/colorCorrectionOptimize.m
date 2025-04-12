@@ -283,7 +283,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
 
         % Want to use non contrast version? Uncomment below:
         grayLMS = inv(M_cones2rgb)*grayRGB;
-        LSMContrastCalFormat = (LMSCalFormat-grayLMS) ./ grayLMS;
+        LMSContrastCalFormat = (LMSCalFormat-grayLMS) ./ grayLMS;
         % RGBContrastCalFormat = RGBCalFormat;
 
         %%%%%%%% Transformation on gray subtracted image %%%%%%%%
@@ -300,7 +300,19 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         newLMSCalFormatTran = newLMSCalFormat';
         LMSCalFormatTran = LMSCalFormat';
         %%%%%%%% Variance term %%%%%%%%
-        var_term_raw = varianceLMS("contrast",renderType,[],newLMSCalFormat,LSMContrastCalFormat,newLMSContrastCalFormat);
+        varianceType = "LMdifferenceContrast";
+        switch (varianceType)
+            case 'LMdifferenceContrast'  
+                LMSold = LMSContrastCalFormat;
+                LMSnew = newLMSContrastCalFormat;
+            case 'delta'   
+                LMSold = LMSContrastCalFormat;
+                LMSnew = newLMSContrastCalFormat;
+            case 'newConeVar'
+                LMSold = LMSCalFormat;
+                LMSnew = newLMSCalFormat;
+        end
+        var_term_raw = varianceLMS(varianceType,renderType,LMSold,LMSnew);
         
         % Weight by lambda (use this when trying to find range of variances)
         if strcmp(lambdaOrVar,'lambda')
@@ -334,18 +346,18 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         fminconFactor = 1e8;
 
         % gray
-        vL0 = 3.2863e-12 ;
-        vL1 = 0.8322;
+        % vL0 = 3.2863e-12 ;
+        % vL1 = 0.8322;
 
-        % Ishihara
-        % vL0 = 0.465164835526073;
-        % vL1 = 1.374431710662593;
-        % vL0 = 0.657495707681425;
+        % Ishihara gray blue
+        % vL0 = 1.366190857215208e-06;
+        % vL1 = 2.501747535212218e+04;
 
-        % vL0 = 0.704412325010509;
-        % vL1 = 1.277712522697652;
+        % ishihara reddish
+        vL0 = 1.007510078514810e-07;
+        vL1 = 1.864814259114060;
 
-        numSamps = 20;
+        numSamps = 10;
         vRange = linspace(vL0,vL1,numSamps);
 
         s_raw = similarity_term_raw/totalSimilarity;
