@@ -142,26 +142,24 @@ b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is ba
 % dichromat output --> this also needs to be in gamut
 % Contrast RGB, dichromat
 [calFormatDiLMS,M_triToDi] = DichromSimulateLinear(triLMSCalFormat, grayLMS,  constraintWL, renderType, Disp);
-dirgb = inv(M_rgb2cones) * calFormatDiLMS;
-max(dirgb(:))
-min(dirgb(:))
+
+%%% Gamut check %%%
+% dirgb = inv(M_rgb2cones) * calFormatDiLMS;
+% max(dirgb(:))
+% min(dirgb(:))
 
 % Matrix that converts LMS contrast into rgb contrast
-% M_rgbC2conesC = diag(1./grayLMS) * M_rgb2cones * diag(grayRGB);
 M_conesC2rgbC = diag(1./grayRGB) * inv(M_rgb2cones) * diag(grayLMS);
-
 M_all = M_conesC2rgbC * M_triToDi * inv(M_conesC2rgbC); % left apply this to tri rgb contrast image
 
 % NOTE: TRY TO DO THIS OUTISDE OF THE OPT. PROCEDURE TO SPEED IT UP ... JUT
 % NEED THE CONSTRAINT WL
 % Make big diagonal matrix of Ms to multiply at each pixel
-
 contRGB = M_all * triRGBContrastCalFormat;
 RGB = (contRGB.*grayRGB)+grayRGB;
 max(RGB(:))
 min(RGB(:))
 
-disp('Building a big constraint matrix... might take a minute')
 bigM = kron(speye(nPix), M_all);
 
 % Dichromat constraint is just trichromat constraint transformed
@@ -182,7 +180,6 @@ b_total = [b; b_di];
 % Initial guess at transformation matrix - start with identity
 T_I    = eye(3, 3);
 % T_I = eye(3) + (2*randn(3)); 
-
 T_prev = T_prev;
 
 % T0 = eye(3, 3);
@@ -193,8 +190,9 @@ T_prev = T_prev;
 %     fprintf('Failed to satisfy constraint\n');
 % end
 
-disp('Step 2: Just reached optimization')
-% Optimization
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% OPTIMIZATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+disp('Just reached optimization')
+% Optimization - start with identity transformation matrix
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
 [transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType, Disp), ...
@@ -202,27 +200,26 @@ options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance'
 % Test loss function with final transformation matrix values
 [fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var,lambda_var,transformRGB_opt_TI, triLMSCalFormat, M_cones2rgb,renderType, Disp);
 
+% If previous transformation is the identity, then skip this step
 if (~isequal(T_prev,T_I)) && (~isequal(T_prev,eye(3,3)))
-% Optimization
-options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
-% fmincon
-[transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType, Disp), ...
-    T_prev(:), A_total, b_total, [], [], [], [], [], options);
-% Test loss function with final transformation matrix values
-[fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var, lambda_var, transformRGB_opt_Tprev, triLMSCalFormat, M_cones2rgb,renderType, Disp);
-% Choose the transformation that gets a lower loss
-if fValOpt_TI <= fValOpt_Tprev
-    transformRGB_opt = transformRGB_opt_TI;
-elseif fValOpt_Tprev  < fValOpt_TI
-    transformRGB_opt = transformRGB_opt_Tprev;
-end
-
+    % Optimization - start with previous transformation matrix
+    options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
+    % fmincon
+    [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType, Disp), ...
+        T_prev(:), A_total, b_total, [], [], [], [], [], options);
+    % Test loss function with final transformation matrix values
+    [fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var, lambda_var, transformRGB_opt_Tprev, triLMSCalFormat, M_cones2rgb,renderType, Disp);
+    % Choose the transformation that gets a lower loss
+    if fValOpt_TI <= fValOpt_Tprev
+        transformRGB_opt = transformRGB_opt_TI;
+    elseif fValOpt_Tprev  < fValOpt_TI
+        transformRGB_opt = transformRGB_opt_Tprev;
+    end
 else
     transformRGB_opt = transformRGB_opt_TI;
 end
-
-disp('Step 3: Just finished optimization')
-
+disp('Just finished optimization')
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % See if constraint worked
 bCheck = A_total*transformRGB_opt(:);
@@ -277,17 +274,16 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
 
         % Weber contrast image
         grayRGB = [0.5 0.5 0.5]';
+        grayLMS = inv(M_cones2rgb)*grayRGB;
 
         % Convert into RGB where gray is removed
         RGBCalFormat = M_cones2rgb * LMSCalFormat;
 
-        % Create contrast image
+        % Create original contrast image
         RGBContrastCalFormat     = (RGBCalFormat - grayRGB)./grayRGB;
-
-        % Want to use non contrast version? Uncomment below:
-        grayLMS = inv(M_cones2rgb)*grayRGB;
+        
+        % Convert original LMS to contrast image
         LMSContrastCalFormat = (LMSCalFormat-grayLMS) ./ grayLMS;
-        % RGBContrastCalFormat = RGBCalFormat;
 
         %%%%%%%% Transformation on gray subtracted image %%%%%%%%
         newRGBContrastCalFormat = T * RGBContrastCalFormat;
@@ -295,13 +291,16 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         % Add gray back in
         newRGBCalFormat = (newRGBContrastCalFormat.*grayRGB) + grayRGB;
 
-        % Convert to LMS excitations and then to LMS contrast
+        % Convert to LMS excitations 
         newLMSCalFormat = inv(M_cones2rgb)*newRGBCalFormat;
+
+        % Convert to LMS contrast 
         newLMSContrastCalFormat =  (newLMSCalFormat-grayLMS) ./ grayLMS;
 
         % Get into cal format
         newLMSCalFormatTran = newLMSCalFormat';
-        LMSCalFormatTran = LMSCalFormat';
+        LMSCalFormatTran    = LMSCalFormat';
+
         %%%%%%%% Variance term %%%%%%%%
         varianceType = "LMdifferenceContrast";
         switch (varianceType)
@@ -328,10 +327,10 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         % Normalize by whiteNoiseVariance
         var_term_balance = var_term/totalVariance;
         % var_term_balance = var_term;
+
+
         %%%%%%%% Similarity term %%%%%%%%
         similarity_term_raw = similarityLMS('squared',LMSCalFormatTran,newLMSCalFormatTran);
-        % similarity_term_raw = similarityLMS('squared',RGBCalFormat,newRGBCalFormat);
-        % similarity_term_raw = similarityLMS('squared',round(LMSCalFormatTran,5),round(newLMSContrastCalFormatTran,5));
         % Weight by lambda
         if strcmp(lambdaOrVar,'lambda')
             similarity_term = (1-lambda)*similarity_term_raw;
@@ -339,7 +338,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
             similarity_term = similarity_term_raw;
         end
         % Normalize by whiteNoiseSimilarity
-        totalSimilarity = abs(whiteNoiseSimilarity('squared',Disp));
+        totalSimilarity         = abs(whiteNoiseSimilarity('squared',Disp));
         similarity_term_balance = similarity_term/totalSimilarity;
 
         %%%%%%%% Loss %%%%%%%%
@@ -348,6 +347,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         % fminconFactor = 1e50;
         fminconFactor = 1e8;
 
+        % Variance values for different types of images
         % gray
         % vL0 = 3.2863e-12 ;
         % vL1 = 0.8322;
@@ -368,8 +368,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         vRange = linspace(vL0,vL1,numSamps);
 
         s_raw = similarity_term_raw/totalSimilarity;
-        % v_raw = var_term_raw/totalVariance;
-        v_raw = var_term_raw;
+        v_raw = var_term_raw/totalVariance;
+        % v_raw = var_term_raw;
 
         s_bal = similarity_term_balance;
         v_bal = var_term_balance;
@@ -388,7 +388,6 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
             % loss = -fminconFactor*((var_scalar*(var_diff.^2)) + similarity_term);
             % Otherwise, just minimize this loss
         else
-            % loss = -fminconFactor*(var_term_balance + similarity_term)
             loss = -fminconFactor*((var_term_balance) + similarity_term_balance);
         end
 
