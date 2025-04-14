@@ -156,7 +156,7 @@ disp('callista!!!!! Need to gamma correct!!!!');
 %%%%%%%%%%%%%%% ORIGINAL %%%%%%%%%%%%%%%
 % Create RGB image from LMS
 % Dichromat simulation of original image
-diRGBCalFormatOrig = M_cones2rgb * diLMSCalFormat;
+diRGBCalFormatOrig = Disp.M_cones2rgb * diLMSCalFormat;
 % [diRGBCalFormatOrig]        = LMS2RGBCalFormat(diLMSCalFormat, Disp);
 
 % Trichromat simulation of original image
@@ -165,7 +165,7 @@ triRGBcalFormatOrig = Disp.M_cones2rgb * triLMSCalFormat;
 
 %%%%%%%%%%%%%%% CORRECTED %%%%%%%%%%%%%%%
 % Corrected trichromat image
-triRGBcalFormatCorrected = M_cones2rgb * triLMScalFormatCorrected;
+triRGBcalFormatCorrected = Disp.M_cones2rgb * triLMScalFormatCorrected;
 % [triRGBcalFormatCorrected]        = LMS2RGBCalFormat(triLMScalFormatCorrected, Disp);
 
 [diLMSCalFormatCorrected,~]        = DichromSimulateLinear(triLMScalFormatCorrected, Disp.grayLMS,  constraintWL, renderType, Disp);
