@@ -1,4 +1,4 @@
-function [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,nSquares,modType)
+function [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate,modDirection] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,nSquares,modType,Disp)
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
@@ -40,7 +40,7 @@ t_renderHyperspectralImage('gray','Deuteranopia',0,0,10,'rand')
 %}
 
 %% Load hyperspectral image data
-[hyperspectralImage Disp] = loadImage(image);
+[hyperspectralImage] = loadImage(image,Disp);
 
 % Get cone responses for every pixel of the hyperspectral image
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);

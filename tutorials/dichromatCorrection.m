@@ -124,69 +124,10 @@ end
 % Load display 
 Disp = loadDisplay(img);
 
-if strcmp(img,'ishihara')
+% Load LMS values for this image
+[triLMSCalFormat,diLMSCalFormat] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,Disp);
 
-    plateType = 3;
-    [insideColors, outsideColors] = chooseIshiharaColors(renderType,plateType,Disp);
-
-    % Generate plate now that you have the correct colors
-    ishiharaRGB = generateIshiharaPlate('74', insideColors, outsideColors,Disp.m);
-    ishiharaRGB = im2double(ishiharaRGB);
-
-    % Plot modified RGB Image 
-    figure();imagesc(ishiharaRGB)
-    axis square;
-
-    % Put modified image into LMS 
-    triRGBCalFormat    = ImageToCalFormat(ishiharaRGB);
-    triLMSCalFormat       = Disp.M_rgb2cones * triRGBCalFormat;
-    triLMSCalFormat_plate = triLMSCalFormat;
-
-    % Run the modulated image through the linear dichromat simulation
-    [diLMSCalFormat,M_triToDi]       = DichromSimulateLinear(triLMSCalFormat, grayLMS,  constraintWL, renderType, Disp);
-    [diLMSCalFormat_plate,M_triToDi] = DichromSimulateLinear(triLMSCalFormat_plate, grayLMS,  constraintWL, renderType, Disp);
-
-    % Check
-    % rgb1 = inv(Disp.M_rgb2cones) * diLMSCalFormat;
-    % image = CalFormatToImage(rgb1,Disp.m,Disp.n);
-    % figure();imagesc(image); axis square;
-    
-elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'IgnoreCase', true)
-
-    img_rgb = im2double(imread(img));           % Load and convert image to double
-    if Disp.m > 128 || Disp.n > 128
-        scaleFactor = 0.3;                      % Downsample
-        img_rgb = imresize(img_rgb, scaleFactor);
-        [rows, cols, ~] = size(img_rgb);
-        Disp.m         = cols;
-        Disp.n         = rows;
-    end
-
-    % Cal format RGB 
-    triRGBCalFormat = ImageToCalFormat(img_rgb); 
-    % Convert to LMS 
-    triLMSCalFormat = Disp.M_rgb2cones * triRGBCalFormat;
-
-    [diLMSCalFormat,M_triToDi]       = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS,  constraintWL, renderType, Disp);
-    
-    % check
-    rgb1 = inv(Disp.M_rgb2cones) * diLMSCalFormat;
-    imageDi = CalFormatToImage(rgb1, Disp.m, Disp.n);
-    figure();imagesc(imageDi);
-
-else
-    % Get trichromatic (LMS) image
-    [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,nSquares,modType);
-    clear triLMSCalFormat;
-    clear diLMSCalFormat;
-    triLMSCalFormat = triLMSCalFormat_plate; % do this when you just want to see the isochromatic plate square version (other is just gray)
-    diLMSCalFormat  = diLMSCalFormat_plate;
-end
-%%%%%%%%%%%%%%%%%% PUT ALL OF THIS JUNK IN ANOTHER FUNCTION ^^^^^^ 
-
-
-% This is also happening in colorCorrect, which is called by the block
-% processing function
+% Color Correction Algorithm
 switch (method)
     case 'linTransform'
         % decolorOptimize does mean subtraction, then maximizes variance fmincon
@@ -207,8 +148,13 @@ switch (method)
         triLMScalFormatCorrected = colorCorrectionHardPCA(triLMSCalFormat,numPCs,Disp);
         % triLMScalFormatCorrected_plate = colorCorrectionHardPCA(triLMSCalFormat_plate,numPCs,Disp);
 end
+
+
+% Imaging the transformation 
+disp('callista!!!!! Need to gamma correct!!!!');
+
+%%%%%%%%%%%%%%% ORIGINAL %%%%%%%%%%%%%%%
 % Create RGB image from LMS
-%%%%% ORIGINAL IMAGE AND PLATE %%%%%
 % Dichromat simulation of original image
 diRGBCalFormatOrig = M_cones2rgb * diLMSCalFormat;
 % [diRGBCalFormatOrig]        = LMS2RGBCalFormat(diLMSCalFormat, Disp);
@@ -217,64 +163,30 @@ diRGBCalFormatOrig = M_cones2rgb * diLMSCalFormat;
 triRGBcalFormatOrig = Disp.M_cones2rgb * triLMSCalFormat;
 % [triRGBcalFormatOrig]       = LMS2RGBCalFormat(triLMSCalFormat, Disp);
 
-%%%%% CORRECTED IMAGE AND PLATE %%%%%
+%%%%%%%%%%%%%%% CORRECTED %%%%%%%%%%%%%%%
 % Corrected trichromat image
 triRGBcalFormatCorrected = M_cones2rgb * triLMScalFormatCorrected;
 % [triRGBcalFormatCorrected]        = LMS2RGBCalFormat(triLMScalFormatCorrected, Disp);
-
 
 [diLMSCalFormatCorrected,~]        = DichromSimulateLinear(triLMScalFormatCorrected, Disp.grayLMS,  constraintWL, renderType, Disp);
 diRGBCalFormatCorrected            = Disp.M_cones2rgb * diLMSCalFormatCorrected;
 % diRGBCalFormatCorrected            = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp);
 
-% diLMSCalFormatCorrected                  = tri2dichromatLMSCalFormat(triLMScalFormatCorrected,renderType,Disp);
-% diRGBCalFormatCorrected                  = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp);
 
-disp('callista!!!!! Need to gamma correct!!!!');
-
-% Transform from cal format to image for viewing
+% Transform to RGB image format for viewing:
 % original trichromat
 triRGBImgFormatOrig              = CalFormatToImage(triRGBcalFormatOrig,Disp.m,Disp.n); % no modulation
-
 % corrected trichromat
 triRGBImgFormatCorrected         = CalFormatToImage(triRGBcalFormatCorrected,Disp.m,Disp.n); % no modulation
-
 % original dichromat
 diRGBImgFormatOrig               = CalFormatToImage(diRGBCalFormatOrig,Disp.m,Disp.n); % no modulation
-
 % corrected dichromat
 diRGBImgFormatCorrected          = CalFormatToImage(diRGBCalFormatCorrected,Disp.m,Disp.n); % no modulation
 
 
 figure('Position',[161   302   562   552]);
-
-% Create a tiled layout
 tiledlayout(2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 
-% Add images to the tiles
-% nexttile
-% imshow(triRGBImgFormatOrig);
-% title('trichromat');
-%
-% nexttile
-% imshow(diRGBImgFormatOrig);
-% title('dichromat');
-%
-% nexttile
-% imshow(triRGBImgFormatCorrected);
-% title('trichromat corrected');
-%
-% nexttile
-% imshow(diRGBImgFormatCorrected);
-% title('dichromat corrected');
-
-% nexttile
-% imshow(triRGBImgFormatOrig_plate);
-% title('trichromat - plate');
-%
-% nexttile
-% imshow(diRGBImgFormatOrig_plate);
-% title('dichromat - plate');
 nexttile
 imshow(triRGBImgFormatOrig);
 title('trichromat original image');
