@@ -30,9 +30,5 @@ M_cones2rgb = inv(M_rgb2cones);
 
 % Get linear RGB from LMS
 rgbImageCalFormat = M_cones2rgb*lmsImageCalFormat;
-rgbImage = CalFormatToImage(rgbImageCalFormat,Disp.m,Disp.n);
-
-% Transform to cal format
-rgbImageCalFormat = ImageToCalFormat(rgbImage);
 
 end

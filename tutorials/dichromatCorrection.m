@@ -119,119 +119,103 @@ end
 
 %}
 
-% Close out any stray figures
-% close all;
+
+
+% Load display 
+Disp = loadDisplay(img);
 
 if strcmp(img,'ishihara')
-    % Display
-    % Wavelengths for display
-    imgSize = 128;
-    wls = (400:10:700)';
-    d = displayCreate('LCD-Apple');
-    P_monitor = SplineSrf(displayGet(d, 'wave'), displayGet(d, 'spd'), wls);
-    load T_cones_ss2;
-    T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
 
-    Disp.wls = wls;
-    Disp.d = d;
-    Disp.P_monitor = P_monitor;
-    Disp.m = imgSize;
-    Disp.n = imgSize;
-    Disp.T_cones = T_cones;
-    M_rgb2cones = Disp.T_cones*Disp.P_monitor;
-    M_cones2rgb = inv(M_rgb2cones);
-    grayRGB = [0.5 0.5 0.5]';
-    grayLMS = M_rgb2cones*grayRGB;
+    [insideColors, outsideColors] = chooseIshiharaColors(renderType,plateType,Disp);
+    % plateType: choose which kind you wanna make!
+    %       1  -> gray background with only missing cone modulation in number
+    %       2  -> some random colors with only missing cone modulation in number
+    %       3  -> outside colors are just cone modulations of present
+    %             cones, inside colors are just cone modulation of missing cones
 
     % Make initial inside (number) and outside (background) colors the
     % same... then add to the inside colors by only adding the M cone color
-    insideColors = [
-    0.85    0.45    0.30;
-    0.90    0.65    0.50;
-    0.75    0.40    0.35;
-    ];
     % insideColors = [
-    %     0.5  0.5   0.5;  
-    %     0.5   0.5  0.5;  
-    %     0.5  0.5  0.5  
+    %     0.85    0.45    0.30;
+    %     0.90    0.65    0.50;
+    %     0.75    0.40    0.35;
     %     ];
-    
-    LS_directions = [
-        .2  0  0; 
-        .2  0 .2; 
-         0  0  .2; 
-    ]';
+    % LS_directions = [
+    %     .2  0  0;
+    %     .2  0 .2;
+    %     0  0  .2;
+    %     ]';
 
-% Normalize each direction to unit length in LMS contrast space
-LS_directions = LS_directions ./ vecnorm(LS_directions);
-
-rgbColors = zeros(3, 3);
-
-for i = 1:3
-    modulation_LMS = LS_directions(:,i);
-    
-    % convert to RGB
-    modulation_RGB = M_cones2rgb * modulation_LMS;
-
-    % Maximize the amount of that RGB direction we can add to gray
-    scaleFactor = MaximizeGamutContrast(modulation_RGB, grayRGB);
-    scaleFactor = scaleFactor/3; % dont go all the way to the edge of gamut    
-    % Final color: background + scaled RGB direction
-    rgbModulated = grayRGB + scaleFactor * modulation_RGB;
-    
-    % Store
-    rgbColors(i, :) = rgbModulated';
-end
-
-insideColors  = rgbColors;
-    insideColors = [
-    0.85    0.45    0.30;
-    0.90    0.65    0.50;
-    0.75    0.40    0.35;
-    ];
-outsideColors = insideColors;
-
-    % % See if it's working... 
-    % imgRGB = generateIshiharaPlate('74', insideColors, outsideColors,imgSize);
-    % imgRGB = im2double(imgRGB);
-    % figure();imagesc(imgRGB)
-    % axis square;
-
-    switch (modType)
-        case 'rand'
-            % % This code case allows the squares to be random colors
-            % modulationDirection_LMS = modulationDirection_LMS;
-        case 'M' % m cone deficiency
-            modulationDirection_LMS = [0 1 0]';
-        case 'L'   % l cone deficiency
-            modulationDirection_LMS = [1 0 0]';
-        case 'S'   % s cone deficiency
-            modulationDirection_LMS = [0 0 1]';
-    end
-
-    % Direction of color (e.g., move in M cone direction to make a plate
-    % that deuteranopes cannot see
-    modulationDirection_rgb      = M_cones2rgb*modulationDirection_LMS;
-
-    % NOTE: this scaleFactor_rgb is for scaling the modulation direction. This
-    % is different from scaleFactor that goes into rgb->LMS conversions (and
-    % vice versa) which scales the image values to a sensible number
-    % Background is the value of each pixel: this determines cone contrast separately for each pixel
-    for i = 1:size(insideColors,1)
-        scaleFactor_rgb(i)      = MaximizeGamutContrast(modulationDirection_rgb,insideColors(i,:)'); % bg is in rgb cal format
-        % Stay away from the very edge
-        % toleranceFactor = 0.9;
-        % Scale modulation direction by scale factor to get modulation=
-        modulation_rgb(i,:)      = scaleFactor_rgb(i).*modulationDirection_rgb;
-    end
-
-    % New colors. Outside colors stay the same. Inside colors simply add
-    % missing cone information to existing background colors.
-    % insideColorsMod  = insideColors + modulation_rgb.*[.9 .7 .5]';
-    insideColorsMod  = insideColors + modulation_rgb;
+% % Normalize each direction to unit length in LMS contrast space
+% LS_directions = LS_directions ./ vecnorm(LS_directions);
+% 
+% rgbColors = zeros(3, 3);
+% 
+% for i = 1:3
+%     modulation_LMS = LS_directions(:,i);
+% 
+%     % convert to RGB
+%     modulation_RGB = M_cones2rgb * modulation_LMS;
+% 
+%     % Maximize the amount of that RGB direction we can add to gray
+%     scaleFactor = MaximizeGamutContrast(modulation_RGB, grayRGB);
+%     scaleFactor = scaleFactor/3; % dont go all the way to the edge of gamut    
+%     % Final color: background + scaled RGB direction
+%     rgbModulated = grayRGB + scaleFactor * modulation_RGB;
+% 
+%     % Store
+%     rgbColors(i, :) = rgbModulated';
+% end
+% 
+% insideColors  = rgbColors;
+%     insideColors = [
+%     0.85    0.45    0.30;
+%     0.90    0.65    0.50;
+%     0.75    0.40    0.35;
+%     ];
+% outsideColors = insideColors;
+% 
+%     % % See if it's working... 
+%     % imgRGB = generateIshiharaPlate('74', insideColors, outsideColors,imgSize);
+%     % imgRGB = im2double(imgRGB);
+%     % figure();imagesc(imgRGB)
+%     % axis square;
+% 
+%     switch (modType)
+%         case 'rand'
+%             % % This code case allows the squares to be random colors
+%             % modulationDirection_LMS = modulationDirection_LMS;
+%         case 'M' % m cone deficiency
+%             modulationDirection_LMS = [0 1 0]';
+%         case 'L'   % l cone deficiency
+%             modulationDirection_LMS = [1 0 0]';
+%         case 'S'   % s cone deficiency
+%             modulationDirection_LMS = [0 0 1]';
+%     end
+% 
+%     % Direction of color (e.g., move in M cone direction to make a plate
+%     % that deuteranopes cannot see
+%     modulationDirection_rgb      = Disp.M_cones2rgb*modulationDirection_LMS;
+% 
+%     % NOTE: this scaleFactor_rgb is for scaling the modulation direction. This
+%     % is different from scaleFactor that goes into rgb->LMS conversions (and
+%     % vice versa) which scales the image values to a sensible number
+%     % Background is the value of each pixel: this determines cone contrast separately for each pixel
+%     for i = 1:size(insideColors,1)
+%         scaleFactor_rgb(i)      = MaximizeGamutContrast(modulationDirection_rgb,insideColors(i,:)'); % bg is in rgb cal format
+%         % Stay away from the very edge
+%         % toleranceFactor = 0.9;
+%         % Scale modulation direction by scale factor to get modulation=
+%         modulation_rgb(i,:)      = scaleFactor_rgb(i).*modulationDirection_rgb;
+%     end
+% 
+%     % New colors. Outside colors stay the same. Inside colors simply add
+%     % missing cone information to existing background colors.
+%     % insideColorsMod  = insideColors + modulation_rgb.*[.9 .7 .5]';
+%     insideColorsMod  = insideColors + modulation_rgb;
 
     % Generate plate now that you have the correct colors
-    imgRGBmod = generateIshiharaPlate('74', insideColorsMod, outsideColors,imgSize);
+    imgRGBmod = generateIshiharaPlate('74', insideColors, outsideColors,imgSize);
     imgRGBmod = im2double(imgRGBmod);
 
     % Plot modified RGB Image 
@@ -248,7 +232,7 @@ outsideColors = insideColors;
     [diLMSCalFormat_plate,M_triToDi] = DichromSimulateLinear(triLMSCalFormat_plate, grayLMS,  constraintWL, renderType, Disp);
 
     % check
-    rgb1 = inv(M_rgb2cones) * diLMSCalFormat;
+    rgb1 = inv(Disp.M_rgb2cones) * diLMSCalFormat;
     image = CalFormatToImage(rgb1,Disp.m,Disp.n);
     figure();imagesc(image); axis square;
     
@@ -297,6 +281,8 @@ else
     % Get trichromatic (LMS) image
     [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(img,renderType,0,nSquares,modType);
 end
+%%%%%%%%%%%%%%%%%% PUT ALL OF THIS JUNK IN ANOTHER FUNCTION ^^^^^^ 
+
 
 % This is also happening in colorCorrect, which is called by the block
 % processing function
@@ -373,6 +359,8 @@ diRGBCalFormatCorrected_plate            = M_cones2rgb * diLMSCalFormatCorrected
 % diLMSCalFormatCorrected_plate            = tri2dichromatLMSCalFormat(triLMScalFormatCorrected_plate,renderType,Disp);      % isochromatic plate
 % diRGBCalFormatCorrected_plate            = LMS2RGBCalFormat(diLMSCalFormatCorrected_plate, Disp); % isochromatic plate
 
+
+disp('callista!!!!! Need to gamma correct!!!!');
 
 % Transform from cal format to image for viewing
 % original trichromat

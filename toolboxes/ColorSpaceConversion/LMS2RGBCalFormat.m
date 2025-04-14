@@ -39,7 +39,7 @@ rgbLinImage = rgbImage;
 rgbLinCalFormat = ImageToCalFormat(rgbLinImage);
 
 % Gamma correct
-iGtable = displayGet(Disp.d,'inversegamma');
+iGtable  = displayGet(Disp.d,'inversegamma');
 RGBImage = rgb2dac(rgbLinImage,iGtable)/(2^displayGet(Disp.d,'dacsize')-1);
 
 % Transform to cal format

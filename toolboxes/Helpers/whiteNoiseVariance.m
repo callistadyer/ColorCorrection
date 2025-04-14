@@ -30,14 +30,7 @@ hyperspectralNoiseCalFormat = Disp.P_monitor * whiteNoiseCalFormat;
 % LMS image
 triLMSNoiseCalFormat         = Disp.T_cones*hyperspectralNoiseCalFormat;
 
-% Corrected dichromat image
-M_rgb2cones = Disp.T_cones*Disp.P_monitor;
-M_cones2rgb = inv(M_rgb2cones);
-grayRGB = [0.5 0.5 0.5]';
-grayLMS = M_rgb2cones*grayRGB;
-
-
-triLMSNoiseCalFormatContrast = (triLMSNoiseCalFormat - grayLMS)./grayLMS;
+triLMSNoiseCalFormatContrast = (triLMSNoiseCalFormat - Disp.grayLMS)./Disp.grayLMS;
 triLMSNoiseCalFormatContrastnew = T * triLMSNoiseCalFormatContrast;
 % Compute total variance
 
@@ -50,7 +43,7 @@ switch (varianceType)
         LMSnew = triLMSNoiseCalFormatContrastnew;
     case 'newConeVar'
         LMSold = triLMSNoiseCalFormat;
-        LMSnew = (triLMSNoiseCalFormatContrastnew.*grayLMS)+grayLMS;
+        LMSnew = (triLMSNoiseCalFormatContrastnew.*Disp.grayLMS)+Disp.grayLMS;
 end
 totalVariance = varianceLMS(varianceType,renderType,LMSold,LMSnew);
 
