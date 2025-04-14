@@ -191,7 +191,8 @@ nexttile
 imshow(triRGBImgFormatOrig);
 title('trichromat original image');
 
-nexttile(diRGBImgFormatOrig);
+nexttile
+imshow(diRGBImgFormatOrig);
 title('dichromat original image');
 
 nexttile
