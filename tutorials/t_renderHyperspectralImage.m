@@ -1,4 +1,4 @@
-function [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate,modDirection] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,nSquares,modType,Disp)
+function [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate,modDirection] = t_renderHyperspectralImage(image,renderType,constraintWl,nSquares,modType,Disp)
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
@@ -47,14 +47,7 @@ t_renderHyperspectralImage('gray','Deuteranopia',0,0,10,'rand')
 
 % Render lms image that a trichromat sees.  Convert from cal format to image as well.
 triLMScalFormat = Disp.T_cones*hyperspectralImageCalFormat;
-
-M_rgb2cones = Disp.T_cones*Disp.P_monitor;
-M_cones2rgb = inv(M_rgb2cones);
-triRGBCalFormat = M_cones2rgb * triLMScalFormat;
-
-% [triRGBCalFormat,triRGBLinCalFormat,scaleFactor] = LMS2RGBCalFormat(triLMScalFormat,Disp);
-triRGBImgFormat                                  = CalFormatToImage(triRGBCalFormat,m,n);
-
+triRGBCalFormat = Disp.M_cones2rgb * triLMScalFormat;
 
 % Note: if you change modType to be "Deuteranopia" etc, then the following
 % code will be overwritten inside of getDichromatConfusionModulation.m ...
@@ -77,15 +70,8 @@ end
     'verbose',true);
 triRGBImgFormat_plate = CalFormatToImage(triRGBCalFormat_plate,Disp.m,Disp.n);
 
-% Params
-M_rgb2cones = Disp.T_cones*Disp.P_monitor;
-M_cones2rgb = inv(M_rgb2cones);
-grayRGB = [0.5 0.5 0.5]';
-grayLMS = M_rgb2cones*grayRGB;
-constraintWl = 585;
-
 % Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)
-[diLMScalFormat,M_triToDi] = DichromSimulateLinear(triLMScalFormat, grayLMS,  constraintWl, renderType, Disp);
-[diLMScalFormat_plate,M_triToDi] = DichromSimulateLinear(triLMSCalFormat_plate, grayLMS,  constraintWl, renderType, Disp);
+[diLMScalFormat,M_triToDi]       = DichromSimulateLinear(triLMScalFormat, Disp.grayLMS,  constraintWl, renderType, Disp);
+[diLMScalFormat_plate,M_triToDi] = DichromSimulateLinear(triLMSCalFormat_plate, Disp.grayLMS,  constraintWl, renderType, Disp);
 
 end
