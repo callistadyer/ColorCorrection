@@ -125,7 +125,7 @@ end
 Disp = loadDisplay(img);
 
 % Load LMS values for this image
-[triLMSCalFormat,diLMSCalFormat] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,Disp);
+[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,Disp);
 
 % Color Correction Algorithm
 switch (method)
