@@ -360,8 +360,11 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         % vL1 = 1.864814259114060;
 
         % slide
-        vL0 = 0.022048265177122;
-        vL1 = 2.952812981227842;
+        % vL0 = 0.022048265177122;
+        % vL1 = 2.952812981227842;
+          vL0 = 7.5634e-09;
+          vL1 = 89.50690475;
+
 
         numSamps = 10;
         vRange = linspace(vL0,vL1,numSamps);
