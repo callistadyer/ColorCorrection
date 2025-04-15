@@ -40,7 +40,6 @@ switch (renderType)
         index = [1 2];
         missingIdx = 3;
 end
-varianceType = 'LMdifferenceContrast';
 % Variance term
 switch (varianceType)
     case 'newConeVar'
@@ -64,11 +63,12 @@ switch (varianceType)
     case 'LMdifferenceContrast'
         
         % NOTE: needs to be adapted for all color blindness types...
+
         % Extract L and M contrast images
         L = LMS_old(1, :);
         M = LMS_old(2, :);
 
-        % Compute absolute difference (opponency cue)
+        % Compute absolute difference 
         LM_diff = abs(L - M);
 
         % Apply power to emphasize large differences
@@ -82,6 +82,8 @@ switch (varianceType)
 
         % Weighted contrast loss
         variance = norm([delta1 .* weight; delta2 .* weight])^2;
+
+
     otherwise
         error('Unknown variance type specified');
 end

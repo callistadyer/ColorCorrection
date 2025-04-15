@@ -1,5 +1,5 @@
 
-function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] = dichromatCorrection(lambdaOrVar,var,lambda_var,img,renderType,method,nSquares,modType,constraintWL,T_prev,T_prev_P)
+function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] = dichromatCorrection(lambdaOrVar,var,lambda_var,img,renderType,varianceType,plateType,method,nSquares,modType,constraintWL,T_prev,T_prev_P)
 % Transform trichromatic image so that dichromat can see more color
 % contrast. Also want to try and preserve some naturalness. This is
 % accomplished in colorCorrectionOptimize where we incorporate similarity
@@ -125,7 +125,7 @@ end
 Disp = loadDisplay(img);
 
 % Load LMS values for this image
-[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,Disp);
+[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,plateType,Disp);
 
 % Color Correction Algorithm
 switch (method)
@@ -133,7 +133,7 @@ switch (method)
         % decolorOptimize does mean subtraction, then maximizes variance fmincon
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]
         disp('Entering optimization function');
-        [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal, T] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat,renderType,constraintWL,T_prev,Disp);
+        [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal, T] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat,renderType,varianceType,constraintWL,T_prev,Disp);
             % triLMScalFormatCorrected_plate = triLMScalFormatCorrected;
             s_raw_P = s_raw;
             v_raw_P = v_raw;
@@ -157,20 +157,20 @@ disp('callista!!!!! Need to gamma correct!!!!');
 % Create RGB image from LMS
 % Dichromat simulation of original image
 diRGBCalFormatOrig = Disp.M_cones2rgb * diLMSCalFormat;
-% [diRGBCalFormatOrig]        = LMS2RGBCalFormat(diLMSCalFormat, Disp);
+[diRGBCalFormatOrig]        = LMS2RGBCalFormat(diLMSCalFormat, Disp);
 
 % Trichromat simulation of original image
 triRGBcalFormatOrig = Disp.M_cones2rgb * triLMSCalFormat;
-% [triRGBcalFormatOrig]       = LMS2RGBCalFormat(triLMSCalFormat, Disp);
+[triRGBcalFormatOrig]       = LMS2RGBCalFormat(triLMSCalFormat, Disp);
 
 %%%%%%%%%%%%%%% CORRECTED %%%%%%%%%%%%%%%
 % Corrected trichromat image
-triRGBcalFormatCorrected = Disp.M_cones2rgb * triLMScalFormatCorrected;
-% [triRGBcalFormatCorrected]        = LMS2RGBCalFormat(triLMScalFormatCorrected, Disp);
+% triRGBcalFormatCorrected = Disp.M_cones2rgb * triLMScalFormatCorrected;
+[triRGBcalFormatCorrected]        = LMS2RGBCalFormat(triLMScalFormatCorrected, Disp);
 
 [diLMSCalFormatCorrected,~]        = DichromSimulateLinear(triLMScalFormatCorrected, Disp.grayLMS,  constraintWL, renderType, Disp);
-diRGBCalFormatCorrected            = Disp.M_cones2rgb * diLMSCalFormatCorrected;
-% diRGBCalFormatCorrected            = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp);
+% diRGBCalFormatCorrected            = Disp.M_cones2rgb * diLMSCalFormatCorrected;
+diRGBCalFormatCorrected            = LMS2RGBCalFormat(diLMSCalFormatCorrected, Disp);
 
 
 % Transform to RGB image format for viewing:
@@ -203,8 +203,13 @@ nexttile
 imshow(diRGBImgFormatCorrected);
 title('dichromat corrected');
 
-% sgtitle(['lambdavar = ' num2str(lambda_var)])
-sgtitle(['var = ' num2str(var)])
+
+if strcmp(lambdaOrVar,'var')
+sgtitle(['var = ' num2str(var) ', variance: ' varianceType])
+elseif strcmp(lambdaOrVar,'lambda')
+sgtitle(['lambdavar = ' num2str(lambda_var) ', variance: ' varianceType])
+end
+
 
 end
 
