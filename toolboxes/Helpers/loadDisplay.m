@@ -7,7 +7,7 @@ elseif strcmp(img,'ishihara')
     imgSize = 128;
     Disp.m         = imgSize;
     Disp.n         = imgSize;
-elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(filename, '.jpg', 'IgnoreCase', true)
+elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'IgnoreCase', true)
     img_rgb = im2double(imread(img));
     [rows, cols, ~] = size(img_rgb);         
     Disp.m         = cols;
