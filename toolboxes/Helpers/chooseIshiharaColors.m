@@ -46,6 +46,11 @@ elseif plateType == 2 % background is random colors
         0.95, 0.69, 0.45;  % peach
         0.86, 0.41, 0.29;  % deeper orange-red
     ];
+    %     outsideColors = [
+    %     0.51, 0.49, 0.54;  
+    %     0.47, 0.5,  0.45;   
+    %     0.5, 0.53, 0.46; 
+    % ];
 
     switch (renderType)
         case 'Deuteranopia' % m cone deficiency

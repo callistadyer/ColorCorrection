@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat, renderType,varianceType, constraintWL, T_prev, Disp)
+function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat, renderType,varianceType, constraintWL, T_prev, Disp,V0,V1)
 % Optimizes linear transformation of the original cone values
 %
 % Syntax:
@@ -195,20 +195,20 @@ disp('Just reached optimization')
 % Optimization - start with identity transformation matrix
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
-[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType,varianceType, Disp), ...
+[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType,varianceType, Disp,V0,V1), ...
     T_I(:), A_total, b_total, [], [], [], [], [], options);
 % Test loss function with final transformation matrix values
-[fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var,lambda_var,transformRGB_opt_TI, triLMSCalFormat, M_cones2rgb,renderType,varianceType, Disp);
+[fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var,lambda_var,transformRGB_opt_TI, triLMSCalFormat, M_cones2rgb,renderType,varianceType, Disp,V0,V1);
 
 % If previous transformation is the identity, then skip this step
 if (~isequal(T_prev,T_I)) && (~isequal(T_prev,eye(3,3)))
     % Optimization - start with previous transformation matrix
     options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
     % fmincon
-    [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType,varianceType, Disp), ...
+    [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType,varianceType, Disp,V0,V1), ...
         T_prev(:), A_total, b_total, [], [], [], [], [], options);
     % Test loss function with final transformation matrix values
-    [fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var, lambda_var, transformRGB_opt_Tprev, triLMSCalFormat, M_cones2rgb,renderType,varianceType, Disp);
+    [fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var, lambda_var, transformRGB_opt_Tprev, triLMSCalFormat, M_cones2rgb,renderType,varianceType, Disp,V0,V1);
     % Choose the transformation that gets a lower loss
     if fValOpt_TI <= fValOpt_Tprev
         transformRGB_opt = transformRGB_opt_TI;
@@ -250,7 +250,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
 %% Functions
 
 % OBJECTIVE FUNCTION
-    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var,lambda,t_vec, LMSCalFormat, M_cones2rgb, renderType,varianceType, Disp)
+    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var,lambda,t_vec, LMSCalFormat, M_cones2rgb, renderType,varianceType, Disp,V0,V1)
         T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
 
         % I - LMS
@@ -303,13 +303,13 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
 
         %%%%%%%% Variance term %%%%%%%%
         switch (varianceType)
-            case 'LMdifferenceContrast'  
+            case 'LMdifferenceContrast'  % use LMS contrast
                 LMSold = LMSContrastCalFormat;
                 LMSnew = newLMSContrastCalFormat;
-            case 'delta'   
+            case 'delta'   % use LMS contrast
                 LMSold = LMSContrastCalFormat;
                 LMSnew = newLMSContrastCalFormat;
-            case 'newConeVar'
+            case 'newConeVar' % use LMS excitations
                 LMSold = LMSCalFormat;
                 LMSnew = newLMSCalFormat;
         end
@@ -346,35 +346,9 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         % fminconFactor = 1e50;
         fminconFactor = 1e8;
 
-        % Variance values for different types of images
-        % gray
-        % vL0 = 3.2863e-12 ;
-        % vL1 = 0.8322;
+        vL0 = V0;
+        vL1 = V1;
 
-        % Ishihara gray blue
-        % vL0 = 1.366190857215208e-06;
-        % vL1 = 2.501747535212218e+04;
-
-        % ishihara reddish
-        % vL0 = 1.007510078514810e-07;
-        % vL1 = 1.864814259114060;
-
-        % slide
-        % vL0 = 0.022048265177122;
-        % vL1 = 2.952812981227842;
-
-        % vL0 = 7.5634e-09;
-        % vL1 = 89.50690475;
-
-        % vL0 = 4.33E-06;
-        % vL1 = 106.842584897208;
-
-        % vL1 = 4.397305620914504;
-        % vL0 = 4.315122639840872e-08;
-
-        vL0 = 1.398402408170787e-07;
-        vL1 = 5.224274352115383;
-        
         numSamps = 10;
         vRange = linspace(vL0,vL1,numSamps);
 

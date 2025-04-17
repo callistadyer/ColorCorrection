@@ -109,4 +109,9 @@ calFormatDiLMSContast = M_triToDi * calFormatLMSContrast;
 % Convert back to LMS excitations
 calFormatDiLMS = (calFormatDiLMSContast .* grayLMS) + grayLMS;
 
+calFormatDiRGB = inv(Disp.M_rgb2cones) * calFormatDiLMS;
+calFormatDiRGB(calFormatDiRGB>1) = 1;
+calFormatDiRGB(calFormatDiRGB<0) = 0;
+
+calFormatDiLMS = Disp.M_rgb2cones * calFormatDiRGB;
 end
