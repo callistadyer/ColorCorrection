@@ -38,6 +38,9 @@ switch (varianceType)
     case 'LMdifferenceContrast'
         LMSold = triLMSNoiseCalFormatContrast;
         LMSnew = triLMSNoiseCalFormatContrastnew;
+    case 'regress'
+        LMSold = triLMSNoiseCalFormatContrast;
+        LMSnew = triLMSNoiseCalFormatContrastnew;
     case 'delta'
         LMSold = triLMSNoiseCalFormatContrast;
         LMSnew = triLMSNoiseCalFormatContrastnew;

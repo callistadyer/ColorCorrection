@@ -1,5 +1,5 @@
 
-function [triRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T, T_P] = dichromatCorrection(lambdaOrVar,var,lambda_var,img,renderType,varianceType,plateType,method,nSquares,modType,constraintWL,T_prev,T_prev_P,V0,V1)
+function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T] = dichromatCorrection(lambdaOrVar,var,lambda_var,img,renderType,varianceType,similarityType,plateType,method,nSquares,modType,constraintWL,T_prev,V0,V1)
 % Transform trichromatic image so that dichromat can see more color
 % contrast. Also want to try and preserve some naturalness. This is
 % accomplished in colorCorrectionOptimize where we incorporate similarity
@@ -133,13 +133,12 @@ switch (method)
         % decolorOptimize does mean subtraction, then maximizes variance fmincon
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]
         disp('Entering optimization function');
-        [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal, T] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat,renderType,varianceType,constraintWL,T_prev,Disp,V0,V1);
+        [triLMScalFormatCorrected,s_raw, v_raw, s_bal, v_bal, T] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat,renderType,varianceType,similarityType,constraintWL,T_prev,Disp,V0,V1);
             % triLMScalFormatCorrected_plate = triLMScalFormatCorrected;
             s_raw_P = s_raw;
             v_raw_P = v_raw;
             s_bal_P = s_bal;
             v_bal_P = v_bal;
-            T_P = T;
     case 'easyPCA'
         triLMScalFormatCorrected = colorCorrectionEasyPCA(triLMSCalFormat,renderType,Disp);
         % triLMScalFormatCorrected_plate = colorCorrectionEasyPCA(triLMSCalFormat_plate,renderType,Disp);
@@ -209,6 +208,14 @@ sgtitle(['var = ' num2str(var) ', variance: ' varianceType])
 elseif strcmp(lambdaOrVar,'lambda')
 sgtitle(['lambdavar = ' num2str(lambda_var) ', variance: ' varianceType])
 end
+
+
+figure(); tiledlayout(2, 1, 'TileSpacing', 'compact', 'Padding', 'compact'); nexttile
+imshow(triRGBImgFormatCorrected);
+title(['trichromat corrected, var = ' num2str(var)]);
+nexttile
+imshow(diRGBImgFormatCorrected);
+title('dichromat corrected');
 
 
 end

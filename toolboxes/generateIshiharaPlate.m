@@ -83,9 +83,15 @@ close(fig);
 % title(['Binary Mask for "', textStr, '"']);
 
 f = figure('Visible', 'off', 'Units', 'pixels', 'Position', [100, 100, imgSize, imgSize]);
+% f = figure('Visible', 'off', 'Units', 'pixels', ...
+%     'Position', [100, 100, imgSize, imgSize], ...
+%     'Color', [0.5 0.5 0.5]);  % Set whole figure background to gray
+
+
 
 % create axes within the figure that match the image dimensions
 ax = axes('Units', 'pixels', 'Position', [0, 0, imgSize, imgSize]);
+% set(ax, 'Color', [0.5 0.5 0.5]);  % Also set axes background to gray
 
 hold(ax, 'on');
 axis(ax, 'equal');
