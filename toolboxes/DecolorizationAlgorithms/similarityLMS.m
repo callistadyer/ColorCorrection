@@ -63,7 +63,7 @@ switch (similarityType)
 
         % weights for keeping it similar
         w_chroma = 1.0;
-        w_luminance = 0;
+        w_luminance = .2;
 
         similarity = sum(w_chroma * chroma_diff + w_luminance * lum_diff);
 

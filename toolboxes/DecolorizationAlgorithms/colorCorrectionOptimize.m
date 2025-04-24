@@ -195,7 +195,7 @@ T_prev = T_prev;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% OPTIMIZATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 disp('Just reached optimization')
 % Optimization - start with identity transformation matrix
-options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
+options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',120);
 % fmincon
 [transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType,varianceType,similarityType, Disp,V0,V1), ...
     T_I(:), A_total, b_total, [], [], [], [], [], options);
@@ -205,7 +205,7 @@ options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance'
 % If previous transformation is the identity, then skip this step
 if (~isequal(T_prev,T_I)) && (~isequal(T_prev,eye(3,3)))
     % Optimization - start with previous transformation matrix
-    options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
+    options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',120);
     % fmincon
     [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType,varianceType,similarityType, Disp,V0,V1), ...
         T_prev(:), A_total, b_total, [], [], [], [], [], options);
@@ -336,8 +336,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         %%%%%%%% Similarity term %%%%%%%%
         % bad is high, good is 0
         % SIMILARITY IN CONTRAST OR REGULAR IMAGE??
-        similarity_term_raw = similarityLMS(similarityType,LMSold',LMSnew');
-        % similarity_term_raw = similarityLMS(similarityType,LMSCalFormatTran,newLMSCalFormatTran);
+        % similarity_term_raw = similarityLMS(similarityType,LMSold',LMSnew');
+        similarity_term_raw = similarityLMS(similarityType,LMSCalFormatTran,newLMSCalFormatTran);
         % Weight by lambda
         if strcmp(lambdaOrVar,'lambda')
             similarity_term = (1-lambda)*similarity_term_raw;

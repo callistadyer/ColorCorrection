@@ -15,7 +15,7 @@ if plateType == 1 % gray with missing cone mod
         case 'Tritanopia'   % s cone deficiency
             modulationDirection_LMS = [0 0 1]';
     end
-
+    
     % Direction of color (e.g., move in M cone direction to make a plate
     % that deuteranopes cannot see
     modulationDirection_rgb      = Disp.M_cones2rgb*modulationDirection_LMS;
@@ -85,6 +85,9 @@ elseif plateType == 2 % background is random colors
 
 elseif plateType == 3
 
+    % CHECK THIS???? CONFUSED, THE DICHROMAT SHOULD BE ABLE TO SEE THIS.
+    % PERHAPS YOU ARE ADDING INCORRECTLY. 
+    % CHECK TO SEE IF 74 IS REVEAL WHEN YOU LEAVE 
 
     LS_directions = [
         .2  0  0;
@@ -105,7 +108,7 @@ elseif plateType == 3
 
         % Maximize the amount of that RGB direction we can add to gray
         scaleFactor = MaximizeGamutContrast(modulation_RGB, Disp.grayRGB);
-        scaleFactor = scaleFactor/3; % dont go all the way to the edge of gamut
+        scaleFactor = scaleFactor/2; % dont go all the way to the edge of gamut
         % Final color: gray + scaled RGB direction
         rgbModulated = Disp.grayRGB + scaleFactor * modulation_RGB;
 
@@ -141,8 +144,6 @@ elseif plateType == 3
     % insideColorsMod  = insideColors + modulation_rgb.*[.9 .7 .5]';
     insideColors  = Disp.grayRGB + modulation_rgb;
 
-    insideColors(insideColors<0) = 0;
-    insideColors(insideColors>1) = 1;
 elseif plateType == 4 % background is random colors
     % Generate 3 colors, each with RGB values between 0.4 and 0.6
     rng(1);
@@ -177,13 +178,15 @@ elseif plateType == 4 % background is random colors
     % missing cone information to existing background colors.
     % insideColorsMod  = insideColors + modulation_rgb.*[.9 .7 .5]';
     insideColors  = outsideColors + modulation_rgb;
-    insideColors(insideColors<0) = 0;
 
 
 else
     error('undefined plateType')
 end
 
+insideColors(insideColors<0) = 0;
+insideColors(insideColors>1) = 1;
 
-
+outsideColors(outsideColors<0) = 0;
+outsideColors(outsideColors>1) = 1;
 end
