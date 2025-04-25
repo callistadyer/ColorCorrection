@@ -205,7 +205,7 @@ options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance'
 % If previous transformation is the identity, then skip this step
 if (~isequal(T_prev,T_I)) && (~isequal(T_prev,eye(3,3)))
     % Optimization - start with previous transformation matrix
-    options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',120);
+    options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
     % fmincon
     [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType,varianceType,similarityType, Disp,V0,V1), ...
         T_prev(:), A_total, b_total, [], [], [], [], [], options);
@@ -213,7 +213,8 @@ if (~isequal(T_prev,T_I)) && (~isequal(T_prev,eye(3,3)))
     [fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var, lambda_var, transformRGB_opt_Tprev, triLMSCalFormat, M_cones2rgb,renderType,varianceType,similarityType, Disp,V0,V1);
     % Choose the transformation that gets a lower loss
     if fValOpt_TI <= fValOpt_Tprev
-        transformRGB_opt = transformRGB_opt_TI;
+        % transformRGB_opt = transformRGB_opt_TI;
+        transformRGB_opt = transformRGB_opt_Tprev;
     elseif fValOpt_Tprev  < fValOpt_TI
         transformRGB_opt = transformRGB_opt_Tprev;
     end
@@ -245,6 +246,9 @@ min(min(diRGBCalFormat_T(:)))
 max(max(diRGBCalFormat_T(:)))
 
 triRGBCalFormat_T = (triRGBContrastCalFormat_T.*grayRGB) + grayRGB;
+if (max(triRGBCalFormat_T(:))>1)
+    triRGBCalFormat_T(triRGBCalFormat_T>1)=1;
+end
 
 % Get LMS values to output
 triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;

@@ -88,19 +88,28 @@ switch (varianceType)
         availableCones_old = LMS_old(index, :);        % 2 x n
         missingCone_old    = LMS_old(missingIdx, :);   % 1 x n
 
-        % Add bias term for regression 
-        X = [availableCones_old', ones(size(availableCones_old, 2), 1)];  % n x 3
+        % Add bias term???
+        X = availableCones_old';  % n x 3
         y = missingCone_old';  % n x 1
 
         % Linear regression to predict missing cone from the available ones
-        beta = X \ y;          % Least squares fit
-        y_hat = X * beta;      % Predicted missing cone
+        % XB = y --> B = X\y
+        %
+        % Deal with numerical issues
+        smallestInteresingContrast = 1e-5;
+        X(X < smallestInteresingContrast) = 0;
+        if (all(X == 0))
+            residual = y;
+        else
+            beta = X \ y;          % Least squares fit
+            y_hat = X * beta;      % Predicted missing cone
 
-        % Residual: part not explained by other two cones
-        residual = y - y_hat;  % n x 1
+            % Residual: part not explained by other two cones
+            residual = y - y_hat;
+        end
 
         % Weighting: use squared residuals to emphasize areas poorly explained
-        weight = residual'.^2;  % 1 x n
+        weight = residual'.^2;  
 
         % Compute deltas in available cone planes
         delta1 = LMS_old(index(1), :) - LMS_new(index(1), :);
