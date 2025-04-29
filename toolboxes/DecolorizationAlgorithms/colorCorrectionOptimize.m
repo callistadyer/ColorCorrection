@@ -195,7 +195,7 @@ T_prev = T_prev;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% OPTIMIZATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 disp('Just reached optimization')
 % Optimization - start with identity transformation matrix
-options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',120);
+options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
 [transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType,varianceType,similarityType, Disp,V0,V1), ...
     T_I(:), A_total, b_total, [], [], [], [], [], options);
@@ -318,11 +318,14 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
             case 'delta'   % use LMS contrast
                 LMSold = LMSContrastCalFormat;
                 LMSnew = newLMSContrastCalFormat;
+            case 'detail'   % use LMS contrast
+                LMSold = LMSContrastCalFormat;
+                LMSnew = newLMSContrastCalFormat;
             case 'newConeVar' % use LMS excitations
                 LMSold = LMSCalFormat;
                 LMSnew = newLMSCalFormat;
         end
-        var_term_raw = varianceLMS(varianceType,renderType,LMSold,LMSnew);
+        var_term_raw = varianceLMS(varianceType,renderType,LMSold,LMSnew,Disp);
         
         % Weight by lambda (use this when trying to find range of variances)
         if strcmp(lambdaOrVar,'lambda')

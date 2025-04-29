@@ -52,6 +52,23 @@ if strcmp(img,'ishihara')
     % Put modified image into LMS 
     triRGBCalFormat    = ImageToCalFormat(ishiharaRGB);
     triLMSCalFormat    = Disp.M_rgb2cones * triRGBCalFormat;
+    % 
+    % M_plane = triLMSCalFormat(2,:);
+    % % Assuming M_plane is 1 x N
+    % N = length(M_plane);
+    % 
+    % % Fill in L and S planes with mean of M (or another estimate)
+    % L_plane = mean(M_plane) * zeros(1, N);
+    % S_plane = mean(M_plane) * zeros(1, N);
+    % LMS_full = [L_plane; M_plane; S_plane];
+    % M_cones2rgb = inv(Disp.M_rgb2cones);
+    % RGB = M_cones2rgb * LMS_full;
+    % 
+    % rgbImage = reshape(RGB', Disp.m, Disp.n, 3);
+    % figure();
+    % imshow(rgbImage);
+
+
 
     % Run the modulated image through the linear dichromat simulation
     [diLMSCalFormat,M_triToDi]       = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS,  constraintWL, renderType, Disp);
@@ -63,17 +80,27 @@ if strcmp(img,'ishihara')
     
 elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'IgnoreCase', true)
 
-    img_rgb = im2double(imread(img));           % Load and convert image to double
-    if Disp.m > 128 || Disp.n > 128
-        scaleFactor = 0.3;                      % Downsample
-        img_rgb = imresize(img_rgb, scaleFactor);
-        [rows, cols, ~] = size(img_rgb);
-        Disp.m         = cols;
-        Disp.n         = rows;
+    % img_rgb = im2double(imread(img));           % Load and convert image to double
+    % if Disp.m > 128 || Disp.n > 128
+    %     scaleFactor = 0.6;                      % Downsample
+    %     img_rgb = imresize(img_rgb, scaleFactor);
+    %     [rows, cols, ~] = size(img_rgb);
+    %     Disp.m         = cols;
+    %     Disp.n         = rows;
+
+    img_rgb = im2double(imread(img));                % Load and convert image to double
+    img_rgb = imresize(img_rgb, [128, 128]);         % Resize to 128x128 pixels
+
+    [rows, cols, ~] = size(img_rgb);
+    Disp.m = cols;
+    Disp.n = rows;
+    
     end
 
     % Cal format RGB 
     triRGBCalFormat = ImageToCalFormat(img_rgb); 
+    triRGBCalFormat(triRGBCalFormat>1) = 1;
+    triRGBCalFormat(triRGBCalFormat<0) = 0;
     % Convert to LMS 
     triLMSCalFormat = Disp.M_rgb2cones * triRGBCalFormat;
 

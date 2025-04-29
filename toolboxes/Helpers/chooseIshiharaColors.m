@@ -149,6 +149,18 @@ elseif plateType == 4 % background is random colors
     rng(1);
     outsideColors = 0.3 + (0.7 - 0.3) * rand(3, 3);
 
+    % 1. Create 15 random colors
+    % baseColors = 0.4 + (0.6 - 0.4) * rand(15, 3);
+    % 
+    % % 2. Create a brightness scaling factor (e.g., 0.8 for slightly dimmer)
+    % brightnessScale = 0.8;
+    % 
+    % % 3. Create the brightness-scaled versions
+    % scaledColors = baseColors * brightnessScale;
+    % 
+    % % 4. Concatenate them
+    % outsideColors = [baseColors; scaledColors];
+
     switch (renderType)
         case 'Deuteranopia' % m cone deficiency
             modulationDirection_LMS = [0 1 0]';
@@ -169,9 +181,12 @@ elseif plateType == 4 % background is random colors
     for i = 1:size(outsideColors,1)
         scaleFactor_rgb(i)      = MaximizeGamutContrast(modulationDirection_rgb,outsideColors(i,:)'); % bg is in rgb cal format
         % Stay away from the very edge
+        scale = [.8 .9 1];
+        scale_repeated = repmat(scale, 1, 10);
+        scale = scale_repeated;
         % toleranceFactor = 0.9;
         % Scale modulation direction by scale factor to get modulation=
-        modulation_rgb(i,:)      = scaleFactor_rgb(i).*modulationDirection_rgb;
+        modulation_rgb(i,:)      = scaleFactor_rgb(i).*modulationDirection_rgb.* scale(i);
     end
 
     % New colors. Outside colors stay the same. Inside colors simply add

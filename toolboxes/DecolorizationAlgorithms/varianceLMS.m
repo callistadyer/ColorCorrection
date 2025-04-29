@@ -1,4 +1,4 @@
-function variance = varianceLMS(varianceType,renderType,LMS_old,LMS_new)
+function variance = varianceLMS(varianceType,renderType,LMS_old,LMS_new,Disp)
 % Computes variance metric between original and transformed LMS image
 %
 % Syntax:
@@ -119,7 +119,86 @@ switch (varianceType)
         variance = norm([delta1 .* weight; delta2 .* weight])^2;
 
 
+    case 'detail'
+        % Convert transformed LMS to dichromat simulation
+        constraintWL = 585;
+        LMS_CVD = DichromSimulateLinear(LMS_new, Disp.grayLMS, constraintWL, renderType, Disp);
 
+        % Only analyze one cone channel (e.g., L) or average over channels
+        % For better perceptual relevance, we can use L+M (luminance-like)
+        LMS_old_lum = LMS_old(1,:) + LMS_old(2,:);    % 1 x n
+        LMS_CVD_lum = LMS_CVD(1,:) + LMS_CVD(2,:);    % 1 x n
+
+        % Convert to image dimensions (Disp.m = width, Disp.n = height)
+        img_orig = reshape(LMS_old_lum, [Disp.n, Disp.m]);  % H x W
+        img_cvd  = reshape(LMS_CVD_lum,  [Disp.n, Disp.m]);
+
+        % Define local patch size (odd number)
+        patchSize = 11;
+        halfSize = floor(patchSize / 2);
+
+        % Pad images to avoid border issues
+        img_orig_padded = padarray(img_orig, [halfSize halfSize], 'symmetric');
+        img_cvd_padded  = padarray(img_cvd,  [halfSize halfSize], 'symmetric');
+
+        % Preallocate local variance maps
+        var_orig = zeros(size(img_orig));
+        var_cvd  = zeros(size(img_cvd));
+
+        % Compute local variance in sliding window
+        for i = 1:Disp.n
+            for j = 1:Disp.m
+                patch_orig = img_orig_padded(i:i+patchSize-1, j:j+patchSize-1);
+                patch_cvd  = img_cvd_padded(i:i+patchSize-1, j:j+patchSize-1);
+
+                mu_orig = mean(patch_orig(:));
+                mu_cvd  = mean(patch_cvd(:));
+
+                var_orig(i,j) = mean((patch_orig(:) - mu_orig).^2);
+                var_cvd(i,j)  = mean((patch_cvd(:)  - mu_cvd).^2);
+            end
+        end
+
+        % Compute squared difference between variances
+        % varianceMap = (var_orig - var_cvd).^2;
+        varianceMap = var_orig .* (var_orig - var_cvd).^2;
+
+        % Total detail variance loss (sum or mean — your choice)
+        variance = sum(varianceMap(:));  % could use mean(...) too
+    case 'missingDetailGradient'
+        % Convert LMS_new to dichromat-simulated LMS image
+        constraintWL = 585;  % use whatever your standard is
+        LMS_CVD = DichromSimulateLinear(LMS_new, Disp.grayLMS, constraintWL, renderType, Disp);
+
+        % Compute luminance-like signals (L+M) for original and simulated images
+        LMS_old_lum = LMS_old(1,:) + LMS_old(2,:);   % original luminance
+        LMS_CVD_lum = LMS_CVD(1,:) + LMS_CVD(2,:);   % simulated luminance
+
+        % Reshape to images for spatial filtering
+        img_orig = reshape(LMS_old_lum, [Disp.n, Disp.m]);  % H x W
+        img_cvd  = reshape(LMS_CVD_lum,  [Disp.n, Disp.m]);
+
+        % Compute image gradients (magnitude of spatial change)
+        [Gx_orig, Gy_orig] = gradient(img_orig);
+        [Gx_cvd,  Gy_cvd]  = gradient(img_cvd);
+
+        grad_orig = sqrt(Gx_orig.^2 + Gy_orig.^2);  % edge strength
+        grad_cvd  = sqrt(Gx_cvd.^2  + Gy_cvd.^2);
+
+        % Compute loss of gradient energy: what disappears after simulation
+        missing_detail = max(grad_orig - grad_cvd, 0);
+        weight = missing_detail .^ 2;  % square to emphasize large losses
+
+        % Reshape to vector
+        weight = reshape(weight, 1, []);
+
+        % Compute deltas in available cone channels
+        delta1 = LMS_old(index(1), :) - LMS_new(index(1), :);
+        delta2 = LMS_old(index(2), :) - LMS_new(index(2), :);
+
+        % Weighted contrast loss focused on disappearing detail
+        variance = norm([delta1 .* weight; delta2 .* weight])^2;
+        
     otherwise
         error('Unknown variance type specified');
 end

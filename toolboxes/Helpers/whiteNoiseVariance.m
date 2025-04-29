@@ -44,10 +44,13 @@ switch (varianceType)
     case 'delta'
         LMSold = triLMSNoiseCalFormatContrast;
         LMSnew = triLMSNoiseCalFormatContrastnew;
+    case 'detail'
+        LMSold = triLMSNoiseCalFormatContrast;
+        LMSnew = triLMSNoiseCalFormatContrastnew;    
     case 'newConeVar'
         LMSold = triLMSNoiseCalFormat;
         LMSnew = (triLMSNoiseCalFormatContrastnew.*Disp.grayLMS)+Disp.grayLMS;
 end
-totalVariance = varianceLMS(varianceType,renderType,LMSold,LMSnew);
+totalVariance = varianceLMS(varianceType,renderType,LMSold,LMSnew,Disp);
 
 end
