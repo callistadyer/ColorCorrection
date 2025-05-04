@@ -40,10 +40,13 @@ t_renderHyperspectralImage('gray','Deuteranopia',0,0,10,'rand')
 %}
 
 %% Load hyperspectral image data
-[hyperspectralImage] = loadImage(image,Disp);
+[hyperspectralImage] = loadImage(image);
 
 % Get cone responses for every pixel of the hyperspectral image
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
+Disp.m = m;
+Disp.n = n;
+
 
 % Render lms image that a trichromat sees.  Convert from cal format to image as well.
 triLMScalFormat = Disp.T_cones*hyperspectralImageCalFormat;

@@ -89,13 +89,11 @@ elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'Ignor
     %     Disp.n         = rows;
 
     img_rgb = im2double(imread(img));                % Load and convert image to double
-    img_rgb = imresize(img_rgb, [128, 128]);         % Resize to 128x128 pixels
+    img_rgb = imresize(img_rgb, [128*2, 128*2]);         % Resize to 128x128 pixels
 
     [rows, cols, ~] = size(img_rgb);
     Disp.m = cols;
     Disp.n = rows;
-    
-    end
 
     % Cal format RGB 
     triRGBCalFormat = ImageToCalFormat(img_rgb); 

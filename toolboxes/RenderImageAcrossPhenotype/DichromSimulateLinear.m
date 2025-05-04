@@ -114,4 +114,5 @@ calFormatDiRGB(calFormatDiRGB>1) = 1;
 calFormatDiRGB(calFormatDiRGB<0) = 0;
 
 calFormatDiLMS = Disp.M_rgb2cones * calFormatDiRGB;
+
 end

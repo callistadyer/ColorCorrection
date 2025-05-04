@@ -365,7 +365,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         vL1 = V1;
 
         numSamps = 10;
-        vRange = linspace(vL0,vL1,numSamps);
+        vRange = linspace(vL0,vL1,20);
+        vRange = vRange(1:numSamps);
 
         s_raw = similarity_term_raw/totalSimilarity;
         v_raw = var_term_raw/totalVariance;
@@ -381,7 +382,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
                 error(['Make sure you are properly choosing your var values. Remember they are indices' ...
                     'between 1 and ' num2str(numSamps)])
             end
-            var_diff = v_raw - vRange(var);
+            var_diff = v_raw - vRange(var+4);
             % Scale the difference by some amount so that fmincon prioritizes it
             var_scalar = 1e20;
             % want low loss

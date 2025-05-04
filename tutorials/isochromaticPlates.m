@@ -42,7 +42,7 @@ end
 
 disp('Callista come back to this - make it so this func takes in LMS image')
 % Load hyperspectral image
-[hyperspectralImage] = loadImage(img,Disp);
+[hyperspectralImage] = loadImage(img);
 % Get LMS values
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
 LMSCalFormat = Disp.T_cones*hyperspectralImageCalFormat;
