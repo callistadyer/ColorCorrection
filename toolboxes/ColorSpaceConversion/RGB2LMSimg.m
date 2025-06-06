@@ -1,4 +1,4 @@
-function lmsImage = RGB2LMSimg(RGBImage,d,T_cones,P_monitor,scaleFactor,m,n,bScale)
+function lmsImage = RGB2LMSimg(RGBImage,Disp,scaleFactor,bScale)
 
 % function takes in RGB image in image format, and outputs LMS image in image format 
 % also calls function rgb2LMSimg.m
@@ -27,10 +27,10 @@ function lmsImage = RGB2LMSimg(RGBImage,d,T_cones,P_monitor,scaleFactor,m,n,bSca
 
 
 % Reverse the gamma correction
-gammaTable = displayGet(d,'gammatable');
-rgbImage = dac2rgb(RGBImage, gammaTable)*(2^displayGet(d,'dacsize')-1);
+gammaTable = displayGet(Disp.d,'gammatable');
+rgbImage = dac2rgb(RGBImage, gammaTable)*(2^displayGet(Disp.d,'dacsize')-1);
 
 % Undo scaling and convert to LMS
-lmsImage = rgbLin2LMSimg(rgbImage,T_cones,P_monitor,scaleFactor,m,n,bScale);
+lmsImage = rgbLin2LMSimg(rgbImage,Disp.T_cones,Disp.P_monitor,scaleFactor,Disp.m,Disp.n,bScale);
 
 end

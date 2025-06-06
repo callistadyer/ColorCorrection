@@ -47,6 +47,7 @@ function obj = adjustLMSObjectiveFunction(kScale,correctedLMS,originalLMS)
 obj = sqrt( sum( ((kScale'.*correctedLMS) - originalLMS ).^2,"all") );
 end
 
+
 end
 
 
