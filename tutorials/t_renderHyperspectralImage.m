@@ -43,7 +43,7 @@ t_renderHyperspectralImage('scene1.mat','Protanopia'  ,0,1,0)
 [lmsImageCalFormat,lmsModuledCalFormat] = t_renderHyperspectralImage('scene2.mat','Deuteranopia',0,1,0);    
 t_renderHyperspectralImage('scene3.mat','Tritanopia'  ,0,1,0)    
 t_renderHyperspectralImage('scene4.mat','Deuteranopia',0,1,0)  
-t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1,0)    
+t_renderHyperspectralImage('scene5.mat','Deuteranopia',0,1,0,10)    
 t_renderHyperspectralImage('gray','Deuteranopia',0,0,0)           
 %}
 
