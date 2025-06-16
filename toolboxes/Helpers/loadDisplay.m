@@ -1,8 +1,9 @@
 function Disp = loadDisplay(img)
-    
+% Loads the necessary display parameters.    
 
 if strcmp(img,'gray')
-
+    Disp.m         = 32;
+    Disp.n         = 32;
 elseif strcmp(img,'ishihara')
     imgSize = 128;
     Disp.m         = imgSize;

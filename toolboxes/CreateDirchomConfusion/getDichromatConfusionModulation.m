@@ -1,4 +1,4 @@
-function [modulationLMSimage] = getDichromatConfusionModulation(rgbImageCalFormat,modulationDirection_LMS,modType,Disp,scaleFactor)
+function [modulationLMSimage] = getDichromatConfusionModulation(rgbImageCalFormat,modType,Disp,scaleFactor)
 
 % function that calculates the modulation in the L M or S cone based on the
 % input image and the gamut limitations
@@ -27,7 +27,11 @@ M_cones2rgb = inv(M_rgb2cones);
 switch (modType)
     case 'rand'
         % This code case allows the squares to be random colors
-        modulationDirection_LMS = modulationDirection_LMS;
+        % modulationDirection_LMS = modulationDirection_LMS;
+        vectors = rand(1, 3); % Uniform random values between 0 and 1
+        magnitudes = sqrt(sum(vectors.^2, 2)); % Compute the magnitudes
+        modulationDirection_LMS = vectors ./ magnitudes;  % Normalize to unit vectors
+        modulationDirection_LMS = modulationDirection_LMS';
     case 'M' % m cone deficiency
         modulationDirection_LMS = [0 1 0]';
     case 'L'   % l cone deficiency

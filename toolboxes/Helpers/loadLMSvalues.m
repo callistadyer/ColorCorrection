@@ -111,9 +111,12 @@ elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'Ignor
 
 else
     % Get trichromatic (LMS) image
-    Disp.m = 64;
-    Disp.n = 64;
+    Disp.m = 32;
+    Disp.n = 32;
 
+    % I think t_renderHyperspectralImage is only used in order to create
+    % LMS values for the gray image with square isochromatic plates added
+    % on. Maybe you can simplify this? Not sure. 
     [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate,modDirection] = t_renderHyperspectralImage(img,renderType,constraintWL,nSquares,modType,Disp);
     clear triLMSCalFormat;
     clear diLMSCalFormat;

@@ -1,4 +1,4 @@
-function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,renderType,LMSImageModulation,Disp,nSquares,options)
+function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,renderType,LMSImage,LMSImageModulation,Disp,nSquares,options)
 
 % function create isochromatic plates for testing dichromacy
 %
@@ -30,6 +30,7 @@ function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,render
 arguments
     img
     renderType
+    LMSImage
     LMSImageModulation
     Disp struct
     nSquares
@@ -42,9 +43,10 @@ end
 
 disp('Callista come back to this - make it so this func takes in LMS image')
 % Load hyperspectral image
-[hyperspectralImage] = loadImage(img);
+% [hyperspectralImage] = loadImage(img);
+
 % Get LMS values
-[hyperspectralImageCalFormat,m,n] = ImageToCalFormat(hyperspectralImage);
+[hyperspectralImageCalFormat,m,n] = ImageToCalFormat(LMSImage);
 LMSCalFormat = Disp.T_cones*hyperspectralImageCalFormat;
 LMSImage     = CalFormatToImage(LMSCalFormat,Disp.m,Disp.n);
 
@@ -52,7 +54,7 @@ LMSImage     = CalFormatToImage(LMSCalFormat,Disp.m,Disp.n);
 [RGBCalFormat rgbLinCalFormat]  = LMS2RGBCalFormat(LMSCalFormat,Disp);
 RGBimage                        = CalFormatToImage(RGBCalFormat,Disp.m,Disp.n);
 
-% CREATE SQUARE MODULATIONS
+% Create square modulations
 deltaLMS = plateSquare(size(LMSImage),LMSImageModulation,nSquares);
 
 % Add the delta to the L M S values to modulate cones (original LMS + modulation) 

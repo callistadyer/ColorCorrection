@@ -11,12 +11,25 @@ function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_b
 % Description:
 %
 % Inputs:
+% 
+% T_prev,V0,V1)
 %   lambdaOrVar:  - String. Use lambda range or specific variance (computed from lamdbas)  
 %                   Optimize using lambda value (between 0 and 1) or var
 %                   which samples linspace between the variances of
 %                   lambda = 0 and lambda = 1
 %                       'lambda'
 %                       'var'
+%   var:          - Double. Variance value. Leave empty if you are using
+%                   lambda. Otherwise, we get the var value by
+%                   interpolating between the variances at lambda=0 and
+%                   lambda=1. Why are we doing this? We don't get nice
+%                   evenly spaced image transformations when we use
+%                   linspace(lambda=0, lambda=1, 10). Instead, we search
+%                   for 10 images where we linspace between the variances
+%                   at those endpoints:
+%                   linspace(var(lambda=0),var(lambda=1),10) where var is
+%                   taken from v_raw_P (or maybe v_bal_P?? not sure)
+%   lambda_var:   - Weight on the variance term in the optimization [0 1]
 %   img:          - String. Name of image to be rendered. If passed as the empty matrix, you get a
 %                   hyperspectral image of some stuffed animals. Some other options are
 %                       'sceneN.mat' - N is 1 to 5. One of our hypespectral scenes.
@@ -25,6 +38,16 @@ function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_b
 %                       'Deuteranopia'
 %                       'Protanopia'
 %                       'Tritanopia'
+%   varianceType: - String. Method for quantifying the variance or contrast
+%                   enhancement term in optimization
+%                       'LMdifferenceContrast' ** this one is pretty good 
+%                       'regress' 
+%                       'delta'                
+%                       'detail'
+%                       'newConeVar' ** original
+%
+%   similarityType: - FILL IN
+%   plateType:    - FILL IN
 %   method:       - Color correction method:
 %                       'linTransform'
 %                       'easyPCA'
@@ -36,7 +59,6 @@ function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_b
 %                       'M'
 %                       'L'
 %                       'S'
-%   lambda_var    - Weight on the variance term in the optimization [0 1]
 %   constraintWL  - Wavelength that forms plane with gray that the
 %                   dichromat image gets projected onto in
 %                   DichromSimulateLinear.m 
@@ -47,10 +69,26 @@ function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_b
 %                   because you want to use the previous T solution to
 %                   initialize the next optimization. This avoids some
 %                   wonky failures in the fmincon routine. 
-%   T_prev_P      - Initial transformation matrix for the RGB image(isochromatic plate version)  
-%                   Same thing as above, but you have to get another start
-%                   point for the isochromatic plate version of the image.
+%   V0:           - FILL IN
+%   V1:           - FILL IN
+%
 %{
+lambdaOrVar = 'lambda';
+var = [];
+lambda_var = 0.5;
+img = 'gray';
+renderType = 'Deuteranopia';
+varianceType = 'LMdifferenceContrast';
+similarityType = 'squared';
+plateType = []; % only for ishihara plates
+method = 'linTransform';
+nSquares = 1;
+modType = 'M';
+constraintWL = 585;
+T_prev = eye(3,3); % change this to be last run
+V0 = [];
+V1 = []; % These are only relavent when youre using var instead of lambda
+
                     for i = 1:10
                         T{1} = eye(3,3);
                         T_P{1} = eye(3,3);
@@ -101,6 +139,7 @@ for i = 1:30
     T{1} = eye(3,3);
     T_P{1} = eye(3,3);
     [RGBImage_dichromat,s_raw_P(i), v_raw_P(i), s_bal_P(i), v_bal_P(i),T{i+1},T_P{i+1}] = dichromatCorrection('lambda',[],lambda(i),'gray','Deuteranopia','linTransform',1,'M',585,T{i},T_P{i});
+                                                                                          dichromatCorrection('lambda',[],lambda(i),'gray','Deuteranopia','LMdifferenceContrast','squared',plateType,'linTransform',nSquares,modType,585,T_prev,V0,V1)
 end
 
 %%%%%% MANIPULATING VAR %%%%%% 
