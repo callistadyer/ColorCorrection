@@ -6,7 +6,7 @@ function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_b
 % to original in the loss function
 %
 % Syntax:
-%   [triRGBImgFormatCorrected] = dichromatCorrection(img,renderType,method,nSquares,modType,lambda_var)
+%   [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T] = dichromatCorrection(lambdaOrVar,var,lambda_var,img,renderType,varianceType,similarityType,plateType,method,nSquares,modType,constraintWL,T_prev,V0,V1)
 %
 % Description:
 %
@@ -73,6 +73,9 @@ function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_b
 %   V1:           - FILL IN
 %
 %{
+
+% EXAMPLE INPUTS:
+
 lambdaOrVar = 'lambda';
 var = [];
 lambda_var = 0.5;
