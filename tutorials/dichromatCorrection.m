@@ -46,8 +46,14 @@ function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_b
 %                       'detail'
 %                       'newConeVar' ** original
 %
-%   similarityType: - FILL IN
-%   plateType:    - FILL IN
+%   similarityType: - type of similarity metric
+%                        "squared"   -> sum of squared error
+%                        "luminance" -> keep chromaticity similar only
+%   plateType:    - Double. Only relevant for ishihara plates. 
+%                        1 -> gray with missing cone mod
+%                        2 -> background random inside with missing cone mod
+%                        3 -> LS background, M inside
+%                        4 -> like 2 but constrained between .3 and .7 colors so more room for modulation
 %   correctionMethod:   - Color correction method:
 %                       'linTransform'
 %                       'easyPCA'
