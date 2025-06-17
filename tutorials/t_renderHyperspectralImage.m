@@ -2,7 +2,7 @@ function [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_pl
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
-%   [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate,Disp,modDirection] = t_renderHyperspectralImage(image,renderType,bPLOTscatter,nSquares,modType)
+%   [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate] = t_renderHyperspectralImage(image,renderType,constraintWl,nSquares,modType,Disp)    
 %
 % Description:
 %
