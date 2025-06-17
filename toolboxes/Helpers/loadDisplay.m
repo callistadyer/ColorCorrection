@@ -1,5 +1,36 @@
 function Disp = loadDisplay(img)
-% Loads the necessary display parameters.    
+
+% loadDisplay  Sets display parameters and color space transforms
+%
+% Syntax:
+%   Disp = loadDisplay(img)
+%
+% Inputs:
+%   img:  String specifying image type or filename. Can be:
+%         - 'gray'       : Use default 32×32 grayscale display
+%         - 'ishihara'   : Use 128×128 grid for synthetic Ishihara plate
+%         - filename     : Path to .png or .jpg image to load dimensions from
+%
+% Outputs:
+%   Disp: Struct with display parameters including:
+%         - Disp.m, Disp.n           : Image width and height
+%         - Disp.wls                 : Wavelength sampling (400–700 nm)
+%         - Disp.d                   : Display structure (from ISET)
+%         - Disp.P_monitor           : Monitor spectral power distribution
+%         - Disp.T_cones             : Cone fundamentals (SS2 2°)
+%         - Disp.M_rgb2cones         : Matrix from RGB to LMS
+%         - Disp.M_cones2rgb         : Matrix from LMS to RGB
+%         - Disp.grayRGB             : RGB vector for neutral gray [0.5 0.5 0.5]
+%         - Disp.grayLMS             : LMS value corresponding to gray
+%
+% Description:
+%   Loads and defines display colorimetric transformations using a predefined
+%   LCD display model (Apple LCD from ISETBio). Converts spectral monitor
+%   primaries to cone fundamentals to compute RGB ↔ LMS mappings. 
+%   Image size is inferred based on the type or path provided.
+%
+% History:
+%   06/17/2025  cmd commented 
 
 if strcmp(img,'gray')
     Disp.m         = 32;

@@ -1,12 +1,12 @@
 
-function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T] = dichromatCorrection(lambdaOrVar,var,lambda_var,img,renderType,varianceType,similarityType,plateType,method,nSquares,modType,constraintWL,T_prev,V0,V1)
+function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T] = dichromatCorrection(lambdaOrVar,var,lambda_var,img,renderType,varianceType,similarityType,plateType,correctionMethod,nSquares,modType,constraintWL,T_prev,V0,V1)
 % Transform trichromatic image so that dichromat can see more color
 % contrast. Also want to try and preserve some naturalness. This is
 % accomplished in colorCorrectionOptimize where we incorporate similarity
 % to original in the loss function
 %
 % Syntax:
-%   [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T] = dichromatCorrection(lambdaOrVar,var,lambda_var,img,renderType,varianceType,similarityType,plateType,method,nSquares,modType,constraintWL,T_prev,V0,V1)
+%   [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T] = dichromatCorrection(lambdaOrVar,var,lambda_var,img,renderType,varianceType,similarityType,plateType,correctionMethod,nSquares,modType,constraintWL,T_prev,V0,V1)
 %
 % Description:
 %
@@ -48,7 +48,7 @@ function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_b
 %
 %   similarityType: - FILL IN
 %   plateType:    - FILL IN
-%   method:       - Color correction method:
+%   correctionMethod:   - Color correction method:
 %                       'linTransform'
 %                       'easyPCA'
 %                       'hardPCA'
@@ -84,7 +84,7 @@ renderType = 'Deuteranopia';
 varianceType = 'LMdifferenceContrast';
 similarityType = 'squared';
 plateType = []; % only for ishihara plates
-method = 'linTransform';
+correctionMethod = 'linTransform';
 nSquares = 1;
 modType = 'M';
 constraintWL = 585;
@@ -170,7 +170,7 @@ Disp = loadDisplay(img);
 [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,plateType,Disp);
 
 % Color Correction Algorithm
-switch (method)
+switch (correctionMethod)
     case 'linTransform'
         % decolorOptimize does mean subtraction, then maximizes variance fmincon
         % expects x y z dimensions in rows and measurements in columns ie. [3 x 1000]
