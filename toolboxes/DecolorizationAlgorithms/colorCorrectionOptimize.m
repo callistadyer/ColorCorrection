@@ -383,7 +383,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
             vRange = linspace(vL0,vL1,20);
             vRange = vRange(1:numSamps);
 
-            var_diff = v_raw - vRange(var+4);
+            var_diff = v_raw - vRange(var);
             % Scale the difference by some amount so that fmincon prioritizes it
             var_scalar = 1e20;
             % want low loss
