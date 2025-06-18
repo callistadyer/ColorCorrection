@@ -75,25 +75,8 @@ function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_b
 %                   because you want to use the previous T solution to
 %                   initialize the next optimization. This avoids some
 %                   wonky failures in the fmincon routine. 
-%   V0:           - FILL IN
-%   V1:           - FILL IN
-%
-%{
-
-
-                      % See how variance and similarity changes:
-                      figure();
-                      subplot(2,2,1); plot(lambda,s_raw_P,'-o',linewidth=2,markersize=10,markerfacecolor='white'); xlabel('lambda',fontsize=20); ylabel('similarity',fontsize=20); title('raw',fontsize=25);
-                      subplot(2,2,2); plot(lambda,s_bal_P,'-o',linewidth=2,markersize=10,markerfacecolor='white'); xlabel('lambda',fontsize=20); ylabel('similarity',fontsize=20); title('balanced',fontsize=25);
-                      subplot(2,2,3); plot(lambda,v_raw_P,'-o',linewidth=2,markersize=10,markerfacecolor='white'); xlabel('lambda',fontsize=20); ylabel('variance',fontsize=20); title('raw',fontsize=25);
-                      subplot(2,2,4); plot(lambda,v_bal_P,'-o',linewidth=2,markersize=10,markerfacecolor='white'); xlabel('lambda',fontsize=20); ylabel('variance',fontsize=20); title('balanced',fontsize=25);
-                      figure();
-                      subplot(1,2,1);
-                      plot(lambda,s_raw_P+v_raw_P,'-o',linewidth=2,markersize=10,markerfacecolor='white'); xlabel('lambda',fontsize=20); ylabel('similarity+variance',fontsize=20); title('raw',fontsize=25);
-                      subplot(1,2,2);
-                      plot(lambda,s_bal_P+v_bal_P,'-o',linewidth=2,markersize=10,markerfacecolor='white'); xlabel('lambda',fontsize=20); ylabel('similarity+variance',fontsize=20); title('balanced',fontsize=25);
-
-%}
+%   V0:           - variance at lambda = 0. Used for lambdaOrVar = 'var'
+%   V1:           - variance at lambda = 1. Used for lambdaOrVar = 'var'
 %
 % Outputs:
 %   triRGBImgFormatCorrected:  - Transformed RGB image after PCA and scaling. Also replaced missing cone as done in other code
@@ -101,8 +84,9 @@ function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_b
 %   v_raw_P                    - raw variance values for current lambda
 %   s_bal_P                    - balanced similarity values for current lambda = (1-lambda) * s_raw_P   
 %   v_bal_P                    - balanced variance values for current lambda = (lambda) * v_raw_P 
-%   T
-%   T_P
+%   T                          - starting point for the transformation matrix. First go should always 
+%                                be identity eye(3,3) but when doing loops through lambda or var, we 
+%                                use the optimal T that was found from the previous run through the loop
 %
 % Optional key/value pairs:
 %   None
@@ -137,7 +121,7 @@ V1 = []; % These are only relavent when youre using var instead of lambda - what
 [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T] = dichromatCorrection(lambdaOrVar,var,lambda_var,img,renderType,varianceType,similarityType,plateType,correctionMethod,nSquares,modType,constraintWL,T_prev,V0,V1)
 
 
-%%%%%% LOOPING THROUGH LAMBDA %%%%%%
+%%%%%%%%%%%%%%%% LOOPING THROUGH LAMBDA %%%%%%%%%%%%%%%%
 % TEST: this one has a lambda of 0 so should be no transformation = original image
 [triRGB_0, diRGB_0, s_raw_0, v_raw_0, s_bal_0, v_bal_0, T_0] = ...
     dichromatCorrection('lambda',[],0, ...
@@ -169,7 +153,33 @@ for i = 1:nSteps
         T_prev{i},[],[]);
 end
 
-%%%%%% LOOPING THROUGH VAR %%%%%% 
+% Plot how raw and balanced variance and similarity changes across lambda
+lambda = lambda_vals;  % Just alias for readability
+figure();
+subplot(2,2,1);
+plot(lambda, s_raw_P, '-o', 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'white');
+xlabel('lambda', 'FontSize', 20); ylabel('similarity', 'FontSize', 20); title('raw', 'FontSize', 25);
+subplot(2,2,2);
+plot(lambda, s_bal_P, '-o', 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'white');
+xlabel('lambda', 'FontSize', 20); ylabel('similarity', 'FontSize', 20); title('balanced', 'FontSize', 25);
+subplot(2,2,3);
+plot(lambda, v_raw_P, '-o', 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'white');
+xlabel('lambda', 'FontSize', 20); ylabel('variance', 'FontSize', 20); title('raw', 'FontSize', 25);
+subplot(2,2,4);
+plot(lambda, v_bal_P, '-o', 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'white');
+xlabel('lambda', 'FontSize', 20); ylabel('variance', 'FontSize', 20); title('balanced', 'FontSize', 25);
+
+figure();
+subplot(1,2,1);
+plot(lambda, s_raw_P + v_raw_P, '-o', 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'white');
+xlabel('lambda', 'FontSize', 20); ylabel('similarity + variance', 'FontSize', 20); title('raw', 'FontSize', 25);
+subplot(1,2,2);
+plot(lambda, s_bal_P + v_bal_P, '-o', 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'white');
+xlabel('lambda', 'FontSize', 20); ylabel('similarity + variance', 'FontSize', 20); title('balanced', 'FontSize', 25);
+
+
+
+%%%%%%%%%%%%%%%% LOOPING THROUGH VAR %%%%%%%%%%%%%%%% 
 you need to have already run the lambda of 0 and 1,
 then used linspace to sample between the variances at 0 and 1. Then this
 "var" setting essentially finds you solutions with the variances equally
@@ -205,8 +215,33 @@ for i = 1:nSteps
         'linTransform',1,'M',585, ...
         T_prev{i},V0,V1);
 end
-%}
 
+% Plot how raw and balanced variance and similarity changes across var
+var_idx = 1:nSteps;
+figure();
+subplot(2,2,1);
+plot(var_idx, s_raw_P_var, '-o', 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'white');
+xlabel('var index', 'FontSize', 20); ylabel('similarity', 'FontSize', 20); title('raw', 'FontSize', 25);
+subplot(2,2,2);
+plot(var_idx, s_bal_P_var, '-o', 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'white');
+xlabel('var index', 'FontSize', 20); ylabel('similarity', 'FontSize', 20); title('balanced', 'FontSize', 25);
+subplot(2,2,3);
+plot(var_idx, v_raw_P_var, '-o', 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'white');
+xlabel('var index', 'FontSize', 20); ylabel('variance', 'FontSize', 20); title('raw', 'FontSize', 25);
+subplot(2,2,4);
+plot(var_idx, v_bal_P_var, '-o', 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'white');
+xlabel('var index', 'FontSize', 20); ylabel('variance', 'FontSize', 20); title('balanced', 'FontSize', 25);
+
+figure();
+subplot(1,2,1);
+plot(var_idx, s_raw_P_var + v_raw_P_var, '-o', 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'white');
+xlabel('var index', 'FontSize', 20); ylabel('similarity + variance', 'FontSize', 20); title('raw', 'FontSize', 25);
+subplot(1,2,2);
+plot(var_idx, s_bal_P_var + v_bal_P_var, '-o', 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'white');
+xlabel('var index', 'FontSize', 20); ylabel('similarity + variance', 'FontSize', 20); title('balanced', 'FontSize', 25);
+
+
+%}
 
 
 % Load display 
