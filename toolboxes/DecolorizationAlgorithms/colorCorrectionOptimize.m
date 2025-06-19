@@ -1,35 +1,58 @@
 function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat, renderType,varianceType,similarityType, constraintWL, T_prev, Disp,V0,V1)
-% Optimizes linear transformation of the original cone values
+% Optimizes a linear transformation to enhance color contrast for dichromats
 %
 % Syntax:
-%   [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat, renderType, constraintWL, T_prev, Disp)
+%   [triLMSCalFormatOpt, s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = ...
+%       colorCorrectionOptimize(lambdaOrVar, var, lambda_var, triLMSCalFormat, ...
+%       renderType, varianceType, similarityType, constraintWL, T_prev, Disp, V0, V1)
 %
 % Inputs:
-%   lambdaOrVar:        Optimize using lambda value (between 0 and 1) or var
-%                       which samples linspace between the variances of
-%                       lambda = 0 and lambda = 1
-%                           'lambda'
-%                           'var'
-%   triLMSCalFormat:    original LMS values to be transformed
-%   renderType:         String. Type of dichromat.  Options are:
-%                           'Deuteranopia'
-%                           'Protanopia'
-%                           'Tritanopia'
-%   lambda_var:         Weight for maximizing variance (0 <= lambda_var <= 1)
-%   constraintWL:       Wavelength that forms plane with gray that the
-%                       dichromat image gets projected onto in
-%                       DichromSimulateLinear.m 
-%                           585 for deuteronopes
-%   T_prev:             Initial transformation matrix for the RGB image 
-%                       Start this at T_prev = eye(3,3). Usually this is most
-%                       useful when you are looping over lambdas (see below)
-%                       because you want to use the previous T solution to
-%                       initialize the next optimization. This avoids some
-%                       wonky failures in the fmincon routine. 
-%   Disp:               Display parameters
+%   lambdaOrVar:        String. Optimization mode:
+%                           'lambda'  – vary tradeoff weight λ (0 to 1)
+%                           'var'     – vary based on target contrast variance
+%
+%   var:                Numeric value or vector. If 'lambdaOrVar' = 'var', this specifies
+%                       a contrast variance target. If unused, set to [].
+%
+%   lambda_var:         Scalar (0 ≤ λ ≤ 1). Tradeoff weight balancing contrast maximization
+%                       and similarity to the original image.
+%
+%   triLMSCalFormat:    Nx3 matrix of original LMS-calibrated image data to be transformed.
+%
+%   renderType:         String. Type of color vision deficiency:
+%                           'Deuteranopia' (M-cone missing)
+%                           'Protanopia'   (L-cone missing)
+%                           'Tritanopia'   (S-cone missing)
+%
+%   varianceType:       String. Method used to define perceptual contrast variance.
+%
+%   similarityType:     String. Type of similarity metric to preserve naturalness.
+%                           "squared"   -> sum of squared error
+%                           "luminance" -> keep chromaticity similar only
+%
+%   constraintWL:       Scalar. Wavelength (in nm) used to define the confusion plane
+%                       for dichromat projection (e.g., 585 for Deuteranopia).
+%
+%   T_prev:             3×3 matrix. Initial RGB transformation matrix. Usually start with eye(3).
+%                       Useful for warm-starting optimization across a λ sweep.
+%
+%   Disp:               Struct with display parameters. Must include:
+%                           .M_cones2rgb  – Matrix to convert LMS to RGB
+%                           .T_cones      – Cone fundamentals
+%                           .P_monitor    – Monitor spectral power distribution
+%                           .wls          – Wavelength sampling
+%
+%   V0, V1:             Optional variables for internal optimization bookkeeping (used in
+%                       variance/similarity functions).
 %
 % Outputs:
-%   triLMSCalFormatOpt: Transformed LMS values
+%   triLMSCalFormatOpt: Transformed LMS-calibrated image optimized for colorblind viewing.
+%   s_raw:              Similarity of original image to itself (baseline).
+%   v_raw:              Variance of original image (baseline).
+%   s_bal:              Similarity of optimized image to original.
+%   v_bal:              Variance of optimized image.
+%   transformRGBmatrix_opt:
+%                       3×3 transformation matrix that maps original RGB values to corrected RGB.
 %
 % Constraints:
 %   - RGB values must be between 0 and 1
@@ -44,14 +67,11 @@ function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt]
 %
 % Examples:
 %{
-wls = (400:10:700)';
-d = displayCreate('LCD-Apple');
-P_monitor = SplineSrf(displayGet(d, 'wave'), displayGet(d, 'spd'), wls);
-Disp.T_cones   = T_cones;
-Disp.d         = d;
-Disp.P_monitor = P_monitor;
-Disp.wls       = wls;
-[triLMScalFormatCorrected] = decolorOptimize([],'Deuteranopia',0.5,Disp,0);
+Disp = loadDisplay('gray')
+% Load LMS values for this image
+[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues('gray','Deuteranopia','M',1,585,[],Disp);
+T_prev = eye(3);
+[triLMSOpt, s0, v0, s1, v1, T_opt] = colorCorrectionOptimize('lambda', [], 0.5, triLMSCalFormat,'Deuteranopia', 'LMdifferenceContrast', 'squared', 585, T_prev, Disp,[],[]);
 %}
 
 % Sample data to see how code works
