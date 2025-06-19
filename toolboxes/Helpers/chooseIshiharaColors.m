@@ -1,4 +1,44 @@
 function [insideColors, outsideColors] = chooseIshiharaColors(renderType,plateType,Disp)
+% Chooses inside and outside dot colors for Ishihara-style color vision test plates
+%
+% Syntax:
+%   [insideColors, outsideColors] = chooseIshiharaColors(renderType,plateType,Disp)
+%
+% Inputs:
+%   renderType:     String. Type of dichromat vision to simulate or correct for. Options are:
+%                       'Deuteranopia'  (M-cone missing)
+%                       'Protanopia'    (L-cone missing)
+%                       'Tritanopia'    (S-cone missing)
+%
+%   plateType:      Integer. Determines style of plate used:
+%                       1   - Gray background with inside dots modulated along missing cone axis
+%                       2   - Background is a set of predefined reddish/orange colors
+%                       3   - All backgrounds start from gray and are modulated in different LMS directions
+%                       4   - Randomly generated RGB background colors
+%
+%   Disp:           Struct. Display parameters. Must contain the following fields:
+%                       M_cones2rgb     - Inverse of RGB-to-cone matrix
+%                       grayRGB         - RGB triplet for neutral gray (for use in plateType 3)
+%
+% Outputs:
+%   insideColors:   3×3 matrix of RGB values for "inside" dots (i.e., the number in the plate)
+%   outsideColors:  3×3 matrix of RGB values for "outside" dots (i.e., the background dots)
+%
+%
+% Examples:
+%{
+renderType = 'Deuteranopia';
+plateType = 1;
+Disp = loadDisplay('ishihara')
+[insideColors, outsideColors] = chooseIshiharaColors(renderType, plateType, Disp);
+%%%% Visualize the plate %%%%
+ishiharaRGB = generateIshiharaPlate('74', insideColors,outsideColors,Disp.m);
+figure();imagesc(ishiharaRGB)
+axis square;
+%}
+%
+% History:
+%   06/19/2025  cmd  comments
 
 if plateType == 1 % gray with missing cone mod
     outsideColors = [
