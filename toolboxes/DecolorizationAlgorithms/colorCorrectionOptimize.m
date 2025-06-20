@@ -372,6 +372,13 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         totalSimilarity         = abs(whiteNoiseSimilarity(similarityType,Disp));
         similarity_term_balance = similarity_term/totalSimilarity;
 
+        % Maybe next we normalize by something else:
+        % Compute similarity and variance normalizing constants by taking
+        % the original image, getting the daltonized version (L cone
+        % deficient as well as S cone deficient) then computing the
+        % similarity and variance scores between the original and those.
+        % This could be a good reference point for scale.
+
         %%%%%%%% Loss %%%%%%%%
         % Scale loss so that it is small enough to make fmincon happy but not
         % so small that it is unhappy. How to determine this?
