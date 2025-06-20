@@ -359,11 +359,8 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         var_term_balance = var_term/totalVariance;
         % var_term_balance = var_term;
 
-        % similarityType = 'luminance';
         %%%%%%%% Similarity term %%%%%%%%
-        % bad is high, good is 0
         % SIMILARITY IN CONTRAST OR REGULAR IMAGE??
-        % similarity_term_raw = similarityLMS(similarityType,LMSold',LMSnew');
         similarity_term_raw = similarityLMS(similarityType,LMSCalFormatTran,newLMSCalFormatTran);
         % Weight by lambda
         if strcmp(lambdaOrVar,'lambda')
