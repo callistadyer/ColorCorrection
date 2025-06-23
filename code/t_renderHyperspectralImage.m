@@ -91,7 +91,7 @@ end
 % Create isochromatic plates
 % This is taking in the original hyperspectralImage and then adding the
 % modulation in squares to the it
-[triRGBCalFormat_plate, triLMSCalFormat_plate] = isochromaticPlates(image,renderType,hyperspectralImage,lmsModulationImgFormat,Disp,nSquares, ...
+[triRGBCalFormat_plate, triLMSCalFormat_plate] = isochromaticPlates(hyperspectralImage,lmsModulationImgFormat,Disp,nSquares, ...
     'verbose',true);
 triRGBImgFormat_plate = CalFormatToImage(triRGBCalFormat_plate,Disp.m,Disp.n);
 

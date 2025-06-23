@@ -1,4 +1,4 @@
-function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,renderType,LMSImage,LMSImageModulation,Disp,nSquares,options)
+function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(LMSImage,LMSImageModulation,Disp,nSquares,options)
 
 % function create isochromatic plates for testing dichromacy
 %
@@ -8,8 +8,6 @@ function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,render
 % Description:
 %
 % Inputs:
-%       img:                     Input image - which to create plate with?
-%       renderType:              Type of dichromacy
 %       LMSImageModulation:      LMS plate modulation in img format
 %       Disp:                    Display parameters
 %       nSquares:                Number of squares for modulation
@@ -20,16 +18,12 @@ function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,render
 %
 % Optional key/value pairs:
 %   None
+%
+% See t_renderHyperspectralImage.m to see this used.
 
-% Examples:
-%{
-    [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(img,renderType,LMSImageModulation,Disp,nSquares,options)
-%}
 
 %% Pick up optional arguments
 arguments
-    img
-    renderType
     LMSImage
     LMSImageModulation
     Disp struct
