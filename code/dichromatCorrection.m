@@ -244,6 +244,18 @@ xlabel('var index', 'FontSize', 20); ylabel('similarity + variance', 'FontSize',
 %}
 
 
+
+% Define output directory.
+% The key preference gets set up by the TbTb local hook.
+projectName = 'ColorCorrection';
+myFullPath = mfilename('fullpath');
+[myPath,myName] = fileparts(myFullPath);
+outputDir = getpref(projectName,'outputDir');
+outputSubdir = fullfile(outputDir,myName);
+if (~exist(outputSubdir,"dir"))
+    mkdir(outputSubdir);
+end
+
 % Load display 
 Disp = loadDisplay(img);
 
@@ -340,6 +352,9 @@ nexttile
 imshow(diRGBImgFormatCorrected);
 title('dichromat corrected');
 
+
+% Save the data
+% save(outputSubdir);
 
 end
 
