@@ -2,7 +2,7 @@ function [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,mo
 % loadLMSvalues  Loads or generates an image and converts to LMS for dichromat simulation
 %
 % Syntax:
-%   [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,Disp)
+%   [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,plateType,Disp)
 %
 % Inputs:
 %   img:              Either 'ishihara' or a filename ('.png', '.jpg') or a hyperspectral identifier
@@ -30,6 +30,12 @@ function [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,mo
 %
 % History:
 %   04/14/2025  cmd  Initial draft and structure
+%
+% Examples:
+%{
+Disp = loadDisplay('ishihara');
+loadLMSvalues('ishihara','Deuteranopia','M',[],585,1,Disp)
+%}
 
 if strcmp(img,'ishihara')
 
