@@ -1,7 +1,6 @@
 % ColorCorrection
 %
-% Template for setting preferences and other configuration things, for the
-% PhysFEM_Oxford.
+% Template for setting preferences and other configuration things.
 
 %% Define project
 projectName = 'ColorCorrection';
@@ -12,7 +11,10 @@ if (ispref(projectName))
 end
 
 %% Specify project location
-istsBaseDir = tbLocateProject(projectName);
+%
+% TbTb can tell us where the project lives on the
+% local directory, should we want to know.
+projectBaseDir = tbLocateProject(projectName);
 
 % Figure out where baseDir for other kinds of data files is.
 %
@@ -41,6 +43,12 @@ if (exist('GetComputerInfo','file'))
                     end
             end
     end
+end
+
+% Set up pointer to where we want to write the output.
+setpref(projectName,'outputDir',fullfile(baseDir,'DALT_analysis',projectName));
+if (~exist(getpref(projectName,'outputDir'),'dir'))
+    mkdir(getpref(projectName,'outputDir'));
 end
 
 
