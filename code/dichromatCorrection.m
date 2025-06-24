@@ -98,6 +98,9 @@ function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_b
 %
 % Examples:
 %{
+    disp('Stupid little non-skipped example');
+%}
+%{
 % ETTBSkip
 
 % EXAMPLE INPUTS:

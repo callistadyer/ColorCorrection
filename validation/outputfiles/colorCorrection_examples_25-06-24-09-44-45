@@ -1,0 +1,14 @@
+
+
+Success cases (8)
+1 examples suceeded for dichromatCorrection.
+1 examples suceeded for t_renderHyperspectralImage.
+1 examples suceeded for colorCorrectionHardPCA.
+1 examples suceeded for colorCorrectionOptimize.
+1 examples suceeded for chooseIshiharaColors.
+1 examples suceeded for loadLMSvalues.
+1 examples suceeded for DichromSimulateLinear.
+1 examples suceeded for generateIshiharaPlate.
+
+
+Failure cases (0)
