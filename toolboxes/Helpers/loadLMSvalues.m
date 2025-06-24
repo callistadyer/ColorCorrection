@@ -34,7 +34,12 @@ function [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,mo
 % Examples:
 %{
 Disp = loadDisplay('ishihara');
-loadLMSvalues('ishihara','Deuteranopia','M',[],585,1,Disp)
+testLMS = loadLMSvalues('ishihara','Deuteranopia','M',[],585,1,Disp);
+
+% Check that behavior has not changed since we declared it good.
+if (abs(sum(testLMS(:)) - 525.8024)/525.8024 > 1e-4)
+    error('No longer get same LMS image returned by loadLMSValues');
+end
 %}
 
 if strcmp(img,'ishihara')
