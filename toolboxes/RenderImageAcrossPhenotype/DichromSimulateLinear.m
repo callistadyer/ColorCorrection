@@ -46,6 +46,10 @@ function [calFormatDiLMS,M_triToDi] = DichromSimulateLinear(calFormatLMS, grayLM
 % Examples:
 %{
 
+Disp = loadDisplay('ishihara');
+[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues('ishihara','Deuteranopia','M',[],585,3,Disp);
+[calFormatDiLMS,M_triToDi] = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS,  585, "Deuteranopia", Disp)
+
 %}
 
 % Get some key information out of the passed (enhanced) display structure.

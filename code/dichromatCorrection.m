@@ -101,7 +101,6 @@ function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_b
     disp('Stupid little non-skipped example');
 %}
 %{
-% ETTBSkip
 
 % EXAMPLE INPUTS:
 
@@ -122,9 +121,11 @@ V0 = []; % These are only relavent when youre using var instead of lambda - what
 V1 = []; % These are only relavent when youre using var instead of lambda - what two variance values are you interpolating between? 
 
 % Call using the above inputs:
-[triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T] = dichromatCorrection(lambdaOrVar,var,lambda_var,img,renderType,varianceType,similarityType,plateType,correctionMethod,nSquares,modType,constraintWL,T_prev,V0,V1)
+[triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_bal_P, v_bal_P, T] = dichromatCorrection(lambdaOrVar,var,lambda,img,renderType,varianceType,similarityType,plateType,correctionMethod,nSquares,modType,constraintWL,T_prev,V0,V1)
 
+%}
 
+%{
 %%%%%%%%%%%%%%%% LOOPING THROUGH LAMBDA %%%%%%%%%%%%%%%%
 % TEST: this one has a lambda of 0 so should be no transformation = original image
 [triRGB_0, diRGB_0, s_raw_0, v_raw_0, s_bal_0, v_bal_0, T_0] = ...
@@ -180,9 +181,9 @@ xlabel('lambda', 'FontSize', 20); ylabel('similarity + variance', 'FontSize', 20
 subplot(1,2,2);
 plot(lambda, s_bal_P + v_bal_P, '-o', 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'white');
 xlabel('lambda', 'FontSize', 20); ylabel('similarity + variance', 'FontSize', 20); title('balanced', 'FontSize', 25);
+%}
 
-
-
+%{
 %%%%%%%%%%%%%%%% LOOPING THROUGH VAR %%%%%%%%%%%%%%%% 
 you need to have already run the lambda of 0 and 1,
 then used linspace to sample between the variances at 0 and 1. Then this
@@ -247,13 +248,19 @@ xlabel('var index', 'FontSize', 20); ylabel('similarity + variance', 'FontSize',
 
 %}
 
-
-
 % Define output directory.
 % The key preference gets set up by the TbTb local hook.
 projectName = 'ColorCorrection';
 myFullPath = mfilename('fullpath');
 [myPath,myName] = fileparts(myFullPath);
+
+% Check if the preference group and field exist
+if ~ispref(projectName, 'outputDir')
+    % Set a default output directory
+    defaultOutputDir = fullfile(tempdir, projectName);
+    setpref('ColorCorrection', 'outputDir', fullfile(getenv('HOME'), 'Documents', 'MATLAB', 'projects', 'ColorCorrection', 'outputDichromatCorrection'));
+end
+
 outputDir = getpref(projectName,'outputDir');
 outputSubdir = fullfile(outputDir,myName);
 if (~exist(outputSubdir,"dir"))
