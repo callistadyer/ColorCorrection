@@ -1,23 +1,44 @@
-function [inGamut, rgbImageCalFormat] = checkGamut(LMSimageCalFormat,Disp)
+function [inGamut, rgbImageCalFormat] = checkGamut(LMSimageCalFormat, Disp)
+% checkGamut  Verifies whether LMS image is within RGB monitor gamut
+%
+% Syntax:
+%   [inGamut, rgbImageCalFormat] = checkGamut(LMSimageCalFormat, Disp)
+%
+% Inputs:
+%   LMSimageCalFormat: 3×N matrix of LMS values in calibration format
+%   Disp:              Display struct containing colorimetric transforms
+%
+% Outputs:
+%   inGamut:           Logical flag (1 if all RGB values ∈ [0,1], 0 otherwise)
+%   rgbImageCalFormat: 3×N matrix of linear RGB values (same format as input)
+%
+% Description:
+%   This function converts an LMS-calibrated image into the display's
+%   linear RGB space and checks whether all resulting RGB values lie
+%   within the unit cube [0,1]. Values outside the gamut will result
+%   in `inGamut = 0`. Gamma correction is not applied here.
+%
+% History:
+%   06/24/2025  cmd cleaned up
+%
+% Examples:
+%{
+Disp = loadDisplay('ishihara');
+[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues('ishihara','Deuteranopia','M',[],585,3,Disp);
+[inGamut, rgbOut] = checkGamut(triLMSCalFormat, Disp);
+%}
 
-% Build matrix that goes from cones to monitor linear rgb
-M_rgb2cones = Disp.T_cones*Disp.P_monitor;
-M_cones2rgb = inv(M_rgb2cones);
+% Convert LMS to RGB
+rgbImageCalFormat = LMS2rgbLinCalFormat(LMSimageCalFormat, Disp);
+rgbImage = CalFormatToImage(rgbImageCalFormat, Disp.m, Disp.n);
 
-% Get linear RGB from LMS
-[rgbImageCalFormat] = LMS2rgbLinCalFormat(LMSimageCalFormat,Disp);
-rgbImage = CalFormatToImage(rgbImageCalFormat,Disp.m,Disp.n);
-
-% Truncated version for gamma correction
-rgbImageTruncate = rgbImage;
-% rgbImageTruncate(rgbImageTruncate < 0) = 0;
-
-% Values of rgbImageTruncate should be between 0 and 1... if not, there's
-% gonna be an error in rgb2dac
-if any(rgbImageTruncate(:) > 1 | rgbImageTruncate(:) < 0)
+% Tolerance... maybe out of gamut by small amount. should clip this if so
+tol = 1e-5;
+% Check for out-of-gamut values
+if any(rgbImage(:) < -tol | rgbImage(:) > 1+tol)
     inGamut = 0;
-    % min(rgbImage(:))
-    % max(rgbImage(:))
-else 
+else
     inGamut = 1;
+end
+
 end
