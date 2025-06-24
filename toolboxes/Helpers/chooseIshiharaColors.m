@@ -36,6 +36,7 @@ ishiharaRGB = generateIshiharaPlate('74', insideColors,outsideColors,Disp.m);
 figure();imagesc(ishiharaRGB)
 axis square;
 %}
+
 %
 % History:
 %   06/19/2025  cmd  comments

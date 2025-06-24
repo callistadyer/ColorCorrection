@@ -1,8 +1,8 @@
-function report = colorCorrectionValidate(varargin)
+function report = colorCorrectionValidateTutorials(varargin)
 % Run all tutorials/scripts for a repo and print out which worked and which did not
 %
 % Syntax:
-%    report = colorCorrectionValidate()
+%    report = colorCorrectionValidateTutorials()
 %
 % Description:
 %   Run all of the tutorials/scripts/validations for a specified repo
@@ -22,7 +22,7 @@ function report = colorCorrectionValidate(varargin)
 %   can be skipped.
 %
 % Inputs:
-%   'None'
+%   None.
 %
 %   See below.
 %

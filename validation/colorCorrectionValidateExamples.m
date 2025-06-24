@@ -1,8 +1,8 @@
-function result = ieExamples(repo,varargin)
+function result = colorCorrectionValidateExamples(varargin)
 % Run all the examples in the specified repo
 %
 % Syntax:
-%     result = ieExamples(repo)
+%     result = colorCorrectionValidateExamples()
 %
 % Description:
 %     Run all the examples in the repository tree, excep those that contain
@@ -10,7 +10,7 @@ function result = ieExamples(repo,varargin)
 %          "% ETTBSkip"
 %
 % Inputs:
-%     repo - name of repository, one of {'isetcam','isetbio', 'csfgenerator'}
+%     None.
 %
 % Outputs:
 %    result - describing the outcome
@@ -18,64 +18,30 @@ function result = ieExamples(repo,varargin)
 %      result.status  What happened
 %
 % Optional key/value pairs
-%    'select' - 'all' or 'one' (one not yet implemented).  Default 'all'.
-%    'print'  - Boolean. Print the results to the command line, showing the successes
-%               and failures separately. Default true.
-%
-% Examples:
-%   The source file contains examples.
-%
-% See also:
-%   ieValidate, ieRunTutorialsAll
-
-% Examples: % ETTBSkip
-%{
-    ieExamples('isetbio');
-    ieExamples('csfgenerator');
-%}
-%{
-    ieExamples('isetcam','select','all','print',true);
-%}
+%    'select'      - 'all' or 'one' (one not yet implemented).  Default 'all'.
+%    'print'       - Boolean. Print the results to the command line, showing the successes
+%                    and failures separately. Default true.
+%   'saveprint'    - logical, default true.  Save the report in a sensible
+%                    place.
 
 % History:
-%  07/25/23  dhb      Make header comment consistent with isetbio style.
-%  12/15/23  dhb, fh  Add ISETBioCSFGenerator option
+%   06/24/25  dhb, cmd  Wrote the repo specific version.
 
+% Parse
 p = inputParser;
-p.addRequired('repo',@(x)(ismember(ieParamFormat(x),{'isetcam','isetbio','csfgenerator','psych221'})));
 p.addParameter('select','all',@ischar);
 p.addParameter('print',true,@islogical);
 p.addParameter('saveprint',true,@islogical);
+p.parse(varargin{:});
 
-p.parse(repo,varargin{:});
-select = p.Results.select;
-
-switch repo
-    case 'isetbio'
-        disp(select)
-        [result.names, result.status ] = ExecuteExamplesInDirectory(isetbioRootPath,'verbose',false);
-        outputBaseName = 'isetbioExamplesOutput';
-    case 'isetcam'
-        disp(select)
-        [result.names, result.status ] = ExecuteExamplesInDirectory(isetRootPath,'verbose',false);
-        outputBaseName = 'isetcamExamplesOutput';
-    case 'csfgenerator'
-        disp(select)
-        [result.names, result.status ] = ExecuteExamplesInDirectory(csfGeneratorRootPath,'verbose',false);
-        outputBaseName = 'isetcamExamplesOutput';
-    case 'psych221'
-        % No examples yet.  But some day.
-        disp(select)
-        [result.names, result.status ] = ExecuteExamplesInDirectory(psych221RootPath,'verbose',false);
-        outputBaseName = 'psych221ExamplesOutput';
-    otherwise
-        error('Not yet supported %s\n',repo);
-end
+%% Run all the examples
+[result.names, result.status ] = ExecuteExamplesInDirectory(ColorCorrectionRootPath,'verbose',false);
+outputBaseName = 'colorCorrection_examples';
 
 if (p.Results.print)
     % Make sure save directory exists and set up save filenme, if saving
     if (p.Results.saveprint)
-        outputDir = fullfile(isetvalidateRootPath,'outputfiles');
+        outputDir = fullfile(ColorCorrectionRootPath,'validation','outputfiles');
         if (~exist(outputDir,'dir'))
             mkdir(outputDir);
         end

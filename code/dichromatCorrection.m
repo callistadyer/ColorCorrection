@@ -98,6 +98,7 @@ function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P, v_raw_P, s_b
 %
 % Examples:
 %{
+% ETTBSkip
 
 % EXAMPLE INPUTS:
 

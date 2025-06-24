@@ -29,7 +29,7 @@ img = generateIshiharaPlate('74', insideColors, outsideColors, 128);
 figure();
 imagesc(img)
 axis equal;
-title(['Isochromatic plate', textStr]);
+title('Isochromatic plate');
 %}
 
 % Random seed for reproducibility
