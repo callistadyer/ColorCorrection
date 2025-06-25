@@ -1,4 +1,4 @@
-function [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,plateType,Disp)
+function [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,setParams,Disp)
 % loadLMSvalues  Loads or generates an image and converts to LMS for dichromat simulation
 %
 % Syntax:
@@ -8,11 +8,6 @@ function [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,mo
 %   img:              Either 'ishihara' or a filename ('.png', '.jpg') or a hyperspectral identifier
 %   renderType:       Type of dichromacy to simulate
 %                         'Deuteranopia', 'Protanopia', or 'Tritanopia'
-%   modType:          Type of cone modulation for hyperspectral cases
-%                         'L', 'M', 'S', or 'rand'
-%   nSquares:         Number of tiles (used only in hyperspectral generation)
-%   constraintWL:     Wavelength that defines projection plane for dichromat simulation
-%                         Typically 575 for Deuteranopia
 %   Disp:             Structure containing display calibration, cone sensitivities, and image dimensions
 %
 % Outputs:
@@ -128,7 +123,22 @@ else
     % I think t_renderHyperspectralImage is only used in order to create
     % LMS values for the gray image with square isochromatic plates added
     % on. Maybe you can simplify this? Not sure. 
-    [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate] = t_renderHyperspectralImage(img,renderType,constraintWL,nSquares,modType,Disp);
+
+    %   modType:       Type of cone modulation for hyperspectral cases
+    %                  'L', 'M', 'S', or 'rand'
+    switch (renderType)
+        case 'Deuteranopia'
+            modType = 'M';
+            constraintWL = 585;
+        case 'Protanopia'
+            modType = 'L';   
+            error('ERROR: you need to set up constraint wavelength for Protanopia case')
+        case 'Tritanopia'
+            modType = 'S';   
+            error('ERROR: you need to set up constraint wavelength for Tritanopia case')
+    end
+
+    [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate] = t_renderHyperspectralImage(img,renderType,nSquares,modType,Disp);
     clear triLMSCalFormat;
     clear diLMSCalFormat;
     triLMSCalFormat = triLMSCalFormat_plate; % do this when you just want to see the isochromatic plate square version (other is just gray)

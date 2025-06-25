@@ -254,13 +254,6 @@ projectName = 'ColorCorrection';
 myFullPath = mfilename('fullpath');
 [myPath,myName] = fileparts(myFullPath);
 
-% Check if the preference group and field exist
-if ~ispref(projectName, 'outputDir')
-    % Set a default output directory
-    defaultOutputDir = fullfile(tempdir, projectName);
-    setpref('ColorCorrection', 'outputDir', fullfile(getenv('HOME'), 'Documents', 'MATLAB', 'projects', 'ColorCorrection', 'outputDichromatCorrection'));
-end
-
 outputDir = getpref(projectName,'outputDir');
 outputSubdir = fullfile(outputDir,myName);
 if (~exist(outputSubdir,"dir"))
@@ -271,7 +264,7 @@ end
 Disp = loadDisplay(img);
 
 % Load LMS values for this image
-[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,plateType,Disp);
+[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,nSquares,plateType,Disp);
 
 % Color Correction Algorithm
 switch (correctionMethod)
