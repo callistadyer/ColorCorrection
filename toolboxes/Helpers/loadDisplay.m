@@ -31,6 +31,14 @@ function Disp = loadDisplay(img)
 %
 % History:
 %   06/17/2025  cmd commented 
+%
+% Examples:
+%{
+Disp = loadDisplay('gray')
+%}
+%{
+Disp = loadDisplay('ishihara')
+%}
 
 if strcmp(img,'gray')
     Disp.m         = 32;

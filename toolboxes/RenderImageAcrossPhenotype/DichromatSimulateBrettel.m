@@ -1,6 +1,6 @@
 function [diXYZ] = DichromatSimulateBrettel(xyzImage, cbTypes, rgbImage)
 % Simulates color vision for dichromatic viewers using the Brettel, Vienot, Mollon (1997) method.
-%
+% 
 % Syntax:
 %   [diXYZ] = DichromatSimulateBrettel(xyzImage, cbTypes,rgbImage)
 %
@@ -26,13 +26,11 @@ function [diXYZ] = DichromatSimulateBrettel(xyzImage, cbTypes, rgbImage)
 % Examples:
 %{
 % ETTBSkip
-%
-% Simulate Protanopia and Deuteranopia:
-[srgb_dichromat, lmsDichromat, lmsTrichromat] = Brettel([], [1, 2]);
-
 % Simulate all three types:
-[srgb_dichromat, lmsDichromat, lmsTrichromat] = Brettel([], [1, 2, 3]);
+[diXYZ] = DichromatSimulateBrettel([], [1, 2, 3],[]);
 %}
+
+disp('Note: DichromatSimulateBrettel is outdated. We typically use DichromSimulateLinear to simulate dichromacy now. Brettel version here is messy and needs some work.')
 
 %% Input Handling and Setup
 % Basically, if xyz values are provided, make sure to use that instead of rgb 

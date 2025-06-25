@@ -13,13 +13,15 @@ function [diLMSCalFormat] = tri2dichromatLMSCalFormat(triLMSCalFormat,renderType
 %                        Deuteranopia
 %                        Protanopia
 %                        Tritanopia
-%
+% 
 % Outputs:
 %   diLMSCalFormat     LMS values for dichromat type specified by renderType
 %
 % Optional key/value pairs:
 %   None
 
+error('Warning! tri2dichromatLMSCalFormat is outdated and uses DichromatSimulateBrettel. We have most recently been using DichromSimulateLinear.m')
+ 
 switch (renderType)
     case 'Deuteranopia' % m cone deficiency
         cbType = 2;
