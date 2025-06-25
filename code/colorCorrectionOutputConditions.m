@@ -10,9 +10,9 @@ myFullPath = mfilename('fullpath');
 % [myPath, myName] = fileparts(myFullPath);
 
 
-imageType = 'ishihara';
-setType   = 'set1';
-dichromatType = 'deuteranope';
+imageType = 'gray';
+setType   = 'gray1';
+dichromatType = 'Deuteranopia';
 
 outputDir = getpref(projectName,'outputDir');
 outputSubdir = fullfile(outputDir,'testImages',imageType,setType,dichromatType);
@@ -27,10 +27,7 @@ img = imageType;
 renderType = dichromatType;
 
 % make function that determines set variables
-
-% setParams.nSquares
-% setParams.nSquares
-% setParams.plateType
+[setParams] = buildSetParameters(img,setType);
 
 % Load display 
 Disp = loadDisplay(img);
@@ -38,7 +35,7 @@ Disp = loadDisplay(img);
 % Load LMS values for this image
 [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,setParams,Disp);
 
-% save(fullfile(outputSubdir, 'triRGBImgFormatCorrected.mat'), 'triRGBImgFormatCorrected');
+save(fullfile(outputSubdir, 'triLMSCalFormat.mat'), 'triLMSCalFormat');
 
 
 %%

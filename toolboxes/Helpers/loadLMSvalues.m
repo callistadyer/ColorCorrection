@@ -37,6 +37,21 @@ if (abs(sum(testLMS(:)) - 525.8024)/525.8024 > 1e-4)
 end
 %}
 
+
+%   modType:       Type of cone modulation for hyperspectral cases
+%                  'L', 'M', 'S', or 'rand'
+switch (renderType)
+    case 'Deuteranopia'
+        modType = 'M';
+        constraintWL = 585;
+    case 'Protanopia'
+        modType = 'L';
+        error('ERROR: you need to set up constraint wavelength for Protanopia case')
+    case 'Tritanopia'
+        modType = 'S';
+        error('ERROR: you need to set up constraint wavelength for Tritanopia case')
+end
+
 if strcmp(img,'ishihara')
 
     % 1 -> gray with missing cone mod
@@ -45,7 +60,7 @@ if strcmp(img,'ishihara')
     % 4 -> like 2 but constrained between .3 and .7 colors so more room for
     %      modulation
 
-    [insideColors, outsideColors] = chooseIshiharaColors(renderType,plateType,Disp);
+    [insideColors, outsideColors] = chooseIshiharaColors(renderType,setParams.plateType,Disp);
 
     % Generate plate now that you have the correct colors
     ishiharaRGB = generateIshiharaPlate('74', insideColors, outsideColors,Disp.m);
@@ -124,21 +139,7 @@ else
     % LMS values for the gray image with square isochromatic plates added
     % on. Maybe you can simplify this? Not sure. 
 
-    %   modType:       Type of cone modulation for hyperspectral cases
-    %                  'L', 'M', 'S', or 'rand'
-    switch (renderType)
-        case 'Deuteranopia'
-            modType = 'M';
-            constraintWL = 585;
-        case 'Protanopia'
-            modType = 'L';   
-            error('ERROR: you need to set up constraint wavelength for Protanopia case')
-        case 'Tritanopia'
-            modType = 'S';   
-            error('ERROR: you need to set up constraint wavelength for Tritanopia case')
-    end
-
-    [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate] = t_renderHyperspectralImage(img,renderType,nSquares,modType,Disp);
+    [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate] = t_renderHyperspectralImage(img,renderType,constraintWL,setParams.nSquares,modType,Disp);
     clear triLMSCalFormat;
     clear diLMSCalFormat;
     triLMSCalFormat = triLMSCalFormat_plate; % do this when you just want to see the isochromatic plate square version (other is just gray)
