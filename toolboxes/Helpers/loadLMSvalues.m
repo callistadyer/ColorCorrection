@@ -1,4 +1,4 @@
-function [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,setParams,Disp)
+function [triLMSCalFormat,triRGBCalFormat,Disp] = loadLMSvalues(img,renderType,setParams,Disp)
 % loadLMSvalues  Loads or generates an image and converts to LMS for dichromat simulation
 %
 % Syntax:
@@ -12,7 +12,7 @@ function [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,se
 %
 % Outputs:
 %   triLMSCalFormat:  LMS image in calibration format for trichromatic viewer
-%   diLMSCalFormat:   LMS image simulated for dichromatic viewer (same format)
+%   triRGBCalFormat:  RGB image 
 %   Disp:             Updated display struct with possibly new dimensions
 %
 % Description:
@@ -92,12 +92,12 @@ if strcmp(img,'ishihara')
 
 
     % Run the modulated image through the linear dichromat simulation
-    [diLMSCalFormat,M_triToDi]       = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS,  constraintWL, renderType, Disp);
+    % [diLMSCalFormat,M_triToDi]       = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS,  constraintWL, renderType, Disp);
 
     % Check
-    rgb1 = inv(Disp.M_rgb2cones) * diLMSCalFormat;
-    image = CalFormatToImage(rgb1,Disp.m,Disp.n);
-    figure();imagesc(image); axis square;
+    % rgb1 = inv(Disp.M_rgb2cones) * diLMSCalFormat;
+    % image = CalFormatToImage(rgb1,Disp.m,Disp.n);
+    % figure();imagesc(image); axis square;
     
 elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'IgnoreCase', true)
 
@@ -123,12 +123,12 @@ elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'Ignor
     % Convert to LMS 
     triLMSCalFormat = Disp.M_rgb2cones * triRGBCalFormat;
 
-    [diLMSCalFormat,M_triToDi]       = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS,  constraintWL, renderType, Disp);
+    % [diLMSCalFormat,M_triToDi]       = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS,  constraintWL, renderType, Disp);
     
     % check
-    rgb1 = inv(Disp.M_rgb2cones) * diLMSCalFormat;
-    imageDi = CalFormatToImage(rgb1, Disp.m, Disp.n);
-    figure();imagesc(imageDi);
+    % rgb1 = inv(Disp.M_rgb2cones) * diLMSCalFormat;
+    % imageDi = CalFormatToImage(rgb1, Disp.m, Disp.n);
+    % figure();imagesc(imageDi);
 
 else
     % Get trichromatic (LMS) image
@@ -140,10 +140,11 @@ else
     % on. Maybe you can simplify this? Not sure. 
 
     [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate] = t_renderHyperspectralImage(img,renderType,constraintWL,setParams.nSquares,modType,Disp);
-    clear triLMSCalFormat;
-    clear diLMSCalFormat;
+    % clear triLMSCalFormat;
+    % clear diLMSCalFormat;
     triLMSCalFormat = triLMSCalFormat_plate; % do this when you just want to see the isochromatic plate square version (other is just gray)
-    diLMSCalFormat  = diLMSCalFormat_plate;
+    triRGBCalFormat = Disp.M_cones2rgb * triLMSCalFormat;
+    % diLMSCalFormat  = diLMSCalFormat_plate;
 end
 
 

@@ -1,7 +1,15 @@
 
-% Script for running colorCorrection project code
+%% Script for running colorCorrection project code
 
-% Define output directory.
+% Parameters to set. This will determine file location as well
+imageTypes = {'gray','ishihara','flower1.png','flower2.png'};
+imageType = imageTypes{4};
+setType   = 1;
+dichromatType = 'Deuteranopia';
+
+%%%% you might want to do image size somewhere? maybe another subfolder? 
+
+%% Define output directory.
 % The key preference gets set up by the TbTb local hook.
 projectName = 'ColorCorrection';
 myFullPath = mfilename('fullpath');
@@ -9,33 +17,58 @@ myFullPath = mfilename('fullpath');
 % myFullPath = matlab.desktop.editor.getActiveFilename();
 % [myPath, myName] = fileparts(myFullPath);
 
-
-imageType = 'gray';
-setType   = 'gray1';
-dichromatType = 'Deuteranopia';
-
 outputDir = getpref(projectName,'outputDir');
-outputSubdir = fullfile(outputDir,'testImages',imageType,setType,dichromatType);
+if endsWith(imageType, {'.png', '.jpg'}, 'IgnoreCase', true)
+    outputSubdir = fullfile(outputDir, 'testImages', dichromatType, imageType);
+else
+    outputSubdir = fullfile(outputDir, 'testImages', dichromatType, imageType, num2str(setType));
+end
 if (~exist(outputSubdir,"dir"))
     mkdir(outputSubdir);
 end
 
 
-%% Loading in images. Want this to be completely separate from correction routine
+% Check if image already saved; if so, load it and skip processing
+if endsWith(imageType, {'.png', '.jpg'}, 'IgnoreCase', true)
+    imageBaseName = imageType;
+else
+    imageBaseName = [imageType, '.png'];
+end
 
-img = imageType;
-renderType = dichromatType;
+imageOutputPath = fullfile(outputSubdir, imageBaseName);
 
-% make function that determines set variables
-[setParams] = buildSetParameters(img,setType);
+if exist(imageOutputPath, 'file')
+    fprintf('Found precomputed image: %s\n', imageOutputPath);
+    triRGBImage = im2double(imread(imageOutputPath));
 
-% Load display 
-Disp = loadDisplay(img);
+    % Optionally, load other saved .mat files
+    triLMSPath = fullfile(outputSubdir, 'triLMSCalFormat.mat');
+    triRGBPath = fullfile(outputSubdir, 'triRGBCalFormat.mat');
+    dispPath   = fullfile(outputSubdir, 'Disp.mat');
+    
+    if exist(triLMSPath, 'file'), load(triLMSPath, 'triLMSCalFormat'); end
+    if exist(triRGBPath, 'file'), load(triRGBPath, 'triRGBCalFormat'); end
+    if exist(dispPath,   'file'), load(dispPath, 'Disp'); end
+else
+    % Type of image
+    img         = imageType;
+    % Type of dichromat
+    renderType  = dichromatType;
+    % Make function that determines set variables
+    [setParams] = buildSetParameters(img,setType);
 
-% Load LMS values for this image
-[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,setParams,Disp);
+    % Load display
+    Disp = loadDisplay(img);
 
-save(fullfile(outputSubdir, 'triLMSCalFormat.mat'), 'triLMSCalFormat');
+    % Load LMS values for this image
+    [triLMSCalFormat,triRGBCalFormat,Disp] = loadLMSvalues(img,renderType,setParams,Disp);
+    triRGBImage = CalFormatToImage(triRGBCalFormat,Disp.m,Disp.n);
 
+    % Save out the values
+    save(fullfile(outputSubdir, 'triLMSCalFormat.mat'), 'triLMSCalFormat');
+    save(fullfile(outputSubdir, 'triRGBCalFormat.mat'), 'triRGBCalFormat');
+    save(fullfile(outputSubdir, 'Disp.mat'), 'Disp');
 
-%%
+    % Save out the image
+    imwrite(triRGBImage, imageOutputPath);
+end

@@ -264,7 +264,8 @@ end
 Disp = loadDisplay(img);
 
 % Load LMS values for this image
-[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,nSquares,plateType,Disp);
+[triLMSCalFormat,triRGBCalFormat,Disp] = loadLMSvalues(img,renderType,nSquares,plateType,Disp);
+[diLMSCalFormat,M_triToDi]             = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS,  constraintWL, renderType, Disp);
 
 % Color Correction Algorithm
 switch (correctionMethod)

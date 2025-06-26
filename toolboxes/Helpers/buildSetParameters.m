@@ -4,9 +4,9 @@ setParams = struct();
 
 if strcmp(img, 'gray')
     switch setType
-        case 'gray1'
+        case 1
             setParams.nSquares = 1;
-        case 'gray2'
+        case 2
             setParams.nSquares = 2;
         otherwise
             error('ERROR: undefined setType. Make sure your setType is compatible with the img type')
@@ -14,11 +14,17 @@ if strcmp(img, 'gray')
 
 elseif strcmp(img, 'ishihara')
     switch setType
-        case 'ishihara1'
+        case 1
             setParams.plateType = 1;
-        case 'ishihara2'
+        case 2
             setParams.plateType = 2;    
+        case 3
+            setParams.plateType = 3; 
+        case 4
+            setParams.plateType = 4;  
         otherwise
             error('ERROR: undefined setType. Make sure your setType is compatible with the img type')
     end
+elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'IgnoreCase', true)
+
 end
