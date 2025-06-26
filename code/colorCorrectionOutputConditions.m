@@ -5,6 +5,15 @@
 imageTypes = {'gray','ishihara','flower1.png','flower2.png'};
 imageType = imageTypes{4};
 setType   = 1;
+% Set types depend on the image type
+%       gray
+%           number of squares
+%       ishihara
+%           plate type
+%       .png
+%           none so far?
+%           maybe could do size of the image. consider downsampling 
+
 dichromatType = 'Deuteranopia';
 
 %%%% you might want to do image size somewhere? maybe another subfolder? 
