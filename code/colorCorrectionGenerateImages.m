@@ -12,16 +12,39 @@
 % Available image options: gray, Ishihara plate, or external images
 imageTypes = {'gray','ishihara','flower1.png','flower2.png','flower3.png', ...
               'fruit.png','map.png','painting.png','pool.png','tree.png'};
-imageType  = imageTypes{10};  % Select image type here (e.g., 1 for 'gray', 10 for 'tree.png')
-setType    = 1;               % Set type controls parameters depending on image type
+img  = imageTypes{10};  % Select image type here (e.g., 1 for 'gray', 10 for 'tree.png')
 
 % Types of 'setType' usage:
 %   gray      - number of squares
 %   ishihara  - plate type
 %   .png/.jpg - currently unused, but could support e.g. downsampling
+setType    = 1;          
 
-dichromatType = 'Deuteranopia';  % Choose dichromat type: 'Deuteranopia', 'Protanopia', 'Tritanopia'
+% Choose dichromat type: 'Deuteranopia', 'Protanopia', 'Tritanopia'
+renderType = 'Deuteranopia';  
 
+%% Load display calibration
+Disp = loadDisplay(img);
+
+%% Generate LMS/RGB calibration data for the image
+[triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(img, renderType, setType, Disp);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%% OLD CODE... NOW MOST OF THIS IS DONE INSIDE OF loadLMSvalues
 %% DEFINE OUTPUT DIRECTORY
 % projectName = 'ColorCorrection';
 % myFullPath  = mfilename('fullpath');
@@ -65,9 +88,6 @@ dichromatType = 'Deuteranopia';  % Choose dichromat type: 'Deuteranopia', 'Prota
     %% GENERATE AND SAVE NEW IMAGE
     img        = imageType;          % Input image type
     renderType = dichromatType;      % Dichromat simulation type
-
-    % Build set-specific parameters
-    % setParams = buildSetParameters(img, setType);
 
     % Load display calibration
     Disp = loadDisplay(img);
