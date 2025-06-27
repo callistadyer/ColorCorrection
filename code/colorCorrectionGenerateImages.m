@@ -30,9 +30,24 @@ Disp = loadDisplay(img);
 [triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(img, renderType, setType, Disp);
 
 
+%% Loop through each image and generate all:
 
-
-
+%% Loop through each image type
+for idx = 1:length(imageTypes)
+    img = imageTypes{idx};
+    
+    fprintf('Processing image: %s\n', img);
+    
+    % Load display calibration
+    Disp = loadDisplay(img);
+    
+    % Generate LMS/RGB calibration data for the image
+    [triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(img, renderType, setType, Disp);
+    
+    % imshow(CalFormatToImage(triRGBCalFormat, Disp.m, Disp.n)); % quick display
+    
+    fprintf('Finished processing %s\n\n', img);
+end
 
 
 
