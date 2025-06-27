@@ -1,15 +1,13 @@
-function [calFormatDiLMS,M_triToDi] = DichromSimulateLinear(calFormatLMS, grayLMS,  constraintWl, cbType, Disp)
+function [calFormatDiLMS,M_triToDi] = DichromSimulateLinear(calFormatLMS, grayLMS, cbType, Disp)
 % Simulates color vision for dichromatic viewers by projecting onto a plane
 % in LMS space
 %
 % Syntax:
-%    [calFormatDiLMS] = DichromSimulateLinear(calFormatLMS, grayLMS,  constraintWl, cbType, Disp)
+%    [calFormatDiLMS] = DichromSimulateLinear(calFormatLMS, grayLMS, cbType, Disp)
 %
 % Inputs:
 %   calFormatLMS:   Input LMS image
 %   grayLMS:        gray point in LMS
-%   constraintWl:   which wavelength defines the projection plane for
-%                   dichromats.
 %   cbType:         which type of dichromacy
 %                       "Protanopia"
 %                       "Deuteranopia"
@@ -52,6 +50,34 @@ Disp = loadDisplay('ishihara');
 
 %}
 
+%% MAYBE YOU CAN STORE THIS SOMEWHERE SO YOU DONT NEED TO KEEP WRITING IT - THIS IS THE SAME AS IN loadLMSvalues
+projectName = 'ColorCorrection';
+outputDir   = getpref(projectName, 'outputDir');
+% Build set-specific parameters
+setParams = buildSetParameters(Disp.img, Disp.setType);
+
+%%%%%%% Check to see if the image already exists %%%%%%%
+% Determine output subdirectory
+if endsWith(Disp.img, {'.png', '.jpg'}, 'IgnoreCase', true)
+    outputSubdir = fullfile(outputDir, 'testImages', cbType, Disp.img);
+else
+    outputSubdir = fullfile(outputDir, 'testImages', cbType, Disp.img, num2str(Disp.setType));
+end
+if ~exist(outputSubdir, "dir")
+    mkdir(outputSubdir);
+end
+
+
+
+switch (cbType)
+    case 'Deuteranopia'
+        constraintWL = 585;
+    case 'Protanopia'
+        error('ERROR: you need to set up constraint wavelength for Protanopia case')
+    case 'Tritanopia'
+        error('ERROR: you need to set up constraint wavelength for Tritanopia case')
+end
+
 % Get some key information out of the passed (enhanced) display structure.
 wls = Disp.wls;
 T_cones = Disp.T_cones;
@@ -61,7 +87,7 @@ P_monitor = Disp.P_monitor;
 calFormatLMSContrast = (calFormatLMS - grayLMS)./grayLMS;
 
 % Define monochromatic constraint vector
-[~,index] = min(abs(wls-constraintWl));
+[~,index] = min(abs(wls-constraintWL));
 index = index(1);
 constraint2LMS = T_cones(:,index);
 
@@ -118,5 +144,43 @@ calFormatDiRGB(calFormatDiRGB>1) = 1;
 calFormatDiRGB(calFormatDiRGB<0) = 0;
 
 calFormatDiLMS = Disp.M_rgb2cones * calFormatDiRGB;
+
+
+% =================== CHECK AND SAVE/LOAD DICHROMAT OUTPUTS ===================
+% Build dichromat-specific file paths in the same directory as trichromat outputs
+diLMSPath = fullfile(outputSubdir, 'diLMSCalFormat.mat');
+diRGBPath = fullfile(outputSubdir, 'diRGBCalFormat.mat');
+
+% Derive base image filename for saving PNG
+[~, baseName, ext] = fileparts(Disp.img);
+if isempty(ext)
+    ext = '.png'; % default to .png if no extension in img
+end
+diImageName = ['di', baseName, ext];
+diImagePath = fullfile(outputSubdir, diImageName);
+
+if exist(diLMSPath, 'file') && exist(diRGBPath, 'file') && exist(diImagePath, 'file')
+    fprintf('Found existing dichromat outputs for %s. Loading instead of recomputing.\n', Disp.img);
+    load(diLMSPath, 'calFormatDiLMS');
+    load(diRGBPath, 'calFormatDiRGB');
+else
+    % Save dichromat LMS calibration data
+    save(diLMSPath, 'calFormatDiLMS');
+
+    % Convert dichromat LMS back to RGB
+    calFormatDiRGB = inv(Disp.M_rgb2cones) * calFormatDiLMS;
+    calFormatDiRGB(calFormatDiRGB > 1) = 1;
+    calFormatDiRGB(calFormatDiRGB < 0) = 0;
+
+    % Save dichromat RGB calibration data
+    save(diRGBPath, 'calFormatDiRGB');
+
+    % Convert dichromat RGB to image format for viewing and save PNG
+    diRGBImage = CalFormatToImage(calFormatDiRGB, Disp.m, Disp.n);
+    imwrite(diRGBImage, diImagePath);
+
+    fprintf('Computed and saved dichromat LMS, RGB, and image to %s\n', outputSubdir);
+end
+% ============================================================================
 
 end

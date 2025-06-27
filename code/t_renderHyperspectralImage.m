@@ -96,7 +96,7 @@ end
 triRGBImgFormat_plate = CalFormatToImage(triRGBCalFormat_plate,Disp.m,Disp.n);
 
 % Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)
-[diLMScalFormat,M_triToDi]       = DichromSimulateLinear(triLMScalFormat, Disp.grayLMS,  constraintWl, renderType, Disp);
-[diLMScalFormat_plate,M_triToDi] = DichromSimulateLinear(triLMSCalFormat_plate, Disp.grayLMS,  constraintWl, renderType, Disp);
+[diLMScalFormat,M_triToDi]       = DichromSimulateLinear(triLMScalFormat, Disp.grayLMS, renderType, Disp);
+[diLMScalFormat_plate,M_triToDi] = DichromSimulateLinear(triLMSCalFormat_plate, Disp.grayLMS, renderType, Disp);
 
 end

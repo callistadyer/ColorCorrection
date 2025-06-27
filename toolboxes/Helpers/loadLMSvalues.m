@@ -1,4 +1,4 @@
-function [triLMSCalFormat,triRGBCalFormat,Disp] = loadLMSvalues(img,renderType,setType,Disp)
+function [triLMSCalFormat,triRGBCalFormat,Disp] = loadLMSvalues(img,renderType,Disp)
 % loadLMSvalues  Loads or generates an image and converts to LMS for dichromat simulation
 %
 % Syntax:
@@ -39,15 +39,14 @@ end
 
 projectName = 'ColorCorrection';
 outputDir   = getpref(projectName, 'outputDir');
-% Build set-specific parameters
-setParams = buildSetParameters(img, setType);
+
 
 %%%%%%% Check to see if the image already exists %%%%%%%
 % Determine output subdirectory
 if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
     outputSubdir = fullfile(outputDir, 'testImages', renderType, img);
 else
-    outputSubdir = fullfile(outputDir, 'testImages', renderType, img, num2str(setType));
+    outputSubdir = fullfile(outputDir, 'testImages', renderType, img, num2str(Disp.setType));
 end
 if ~exist(outputSubdir, "dir")
     mkdir(outputSubdir);
@@ -87,6 +86,7 @@ switch (renderType)
         modType = 'S';
         error('ERROR: you need to set up constraint wavelength for Tritanopia case')
 end
+setParams = Disp.setParams;
 
 if strcmp(img,'ishihara')
 
@@ -174,7 +174,7 @@ else
     % I think t_renderHyperspectralImage is only used in order to create
     % LMS values for the gray image with square isochromatic plates added
     % on. Maybe you can simplify this? Not sure. 
-
+    
     [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate] = t_renderHyperspectralImage(img,renderType,constraintWL,setParams.nSquares,modType,Disp);
     % clear triLMSCalFormat;
     % clear diLMSCalFormat;

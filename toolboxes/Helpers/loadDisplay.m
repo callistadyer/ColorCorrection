@@ -1,4 +1,4 @@
-function Disp = loadDisplay(img)
+function Disp = loadDisplay(img,setType)
 
 % loadDisplay  Sets display parameters and color space transforms
 %
@@ -73,5 +73,10 @@ Disp.M_cones2rgb = inv(M_rgb2cones);
 Disp.grayRGB     = [0.5 0.5 0.5]';
 Disp.grayLMS     = M_rgb2cones*Disp.grayRGB;
 
+Disp.img     = img;
+Disp.setType = setType;
 
+% Build set-specific parameters
+setParams = buildSetParameters(img, setType);
+Disp.setParams = setParams;
 end

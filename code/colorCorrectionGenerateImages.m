@@ -9,6 +9,10 @@
 %   06/27/2025  cmd  cleaned up script 
 
 %% PARAMETERS TO SET
+clc
+clear
+close all
+
 % Available image options: gray, Ishihara plate, or external images
 imageTypes = {'gray','ishihara','flower1.png','flower2.png','flower3.png', ...
               'fruit.png','map.png','painting.png','pool.png','tree.png'};
@@ -24,33 +28,33 @@ setType    = 1;
 renderType = 'Deuteranopia';  
 
 %% Load display calibration
-Disp = loadDisplay(img);
+Disp = loadDisplay(img,setType);
 
 %% Generate LMS/RGB calibration data for the image
-[triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(img, renderType, setType, Disp);
+[triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(img, renderType, Disp);
+
+%% Now save the dichromat version of that image
+[diLMSCalFormat]             = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS, renderType, Disp);
+
+
 
 
 %% Loop through each image and generate all:
-
-%% Loop through each image type
 for idx = 1:length(imageTypes)
     img = imageTypes{idx};
     
     fprintf('Processing image: %s\n', img);
     
     % Load display calibration
-    Disp = loadDisplay(img);
+    Disp = loadDisplay(img,setType);
     
     % Generate LMS/RGB calibration data for the image
-    [triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(img, renderType, setType, Disp);
+    [triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(img, renderType, Disp);
     
     % imshow(CalFormatToImage(triRGBCalFormat, Disp.m, Disp.n)); % quick display
     
     fprintf('Finished processing %s\n\n', img);
 end
-
-
-
 
 
 
@@ -101,14 +105,14 @@ end
 %     if exist(dispPath,   'file'), load(dispPath, 'Disp'); end
 % else
     %% GENERATE AND SAVE NEW IMAGE
-    img        = imageType;          % Input image type
-    renderType = dichromatType;      % Dichromat simulation type
-
-    % Load display calibration
-    Disp = loadDisplay(img);
-
-    % Generate LMS/RGB calibration data for the image
-    [triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(img, renderType, setType, Disp);
+    % img        = imageType;          % Input image type
+    % renderType = dichromatType;      % Dichromat simulation type
+    % 
+    % % Load display calibration
+    % Disp = loadDisplay(img);
+    % 
+    % % Generate LMS/RGB calibration data for the image
+    % [triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(img, renderType, setType, Disp);
 
     % Convert RGB calibration data to image
     % triRGBImage = CalFormatToImage(triRGBCalFormat, Disp.m, Disp.n);
