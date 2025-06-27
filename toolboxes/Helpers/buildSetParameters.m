@@ -13,6 +13,12 @@ if strcmp(img, 'gray')
     end
 
 elseif strcmp(img, 'ishihara')
+    %   plateType:    - Double. Only relevant for ishihara plates. 
+%                        1 -> gray with missing cone mod
+%                        2 -> background random inside with missing cone mod
+%                        3 -> LS background, M inside
+%                        4 -> like 2 but constrained between .3 and .7 colors so more room for modulation
+
     switch setType
         case 1
             setParams.plateType = 1;
