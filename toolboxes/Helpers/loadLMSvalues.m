@@ -1,4 +1,4 @@
-function [triLMSCalFormat,triRGBCalFormat,Disp] = loadLMSvalues(img,renderType,setParams,Disp)
+function [triLMSCalFormat,triRGBCalFormat,Disp] = loadLMSvalues(img,renderType,setType,Disp)
 % loadLMSvalues  Loads or generates an image and converts to LMS for dichromat simulation
 %
 % Syntax:
@@ -37,7 +37,43 @@ if (abs(sum(testLMS(:)) - 525.8024)/525.8024 > 1e-4)
 end
 %}
 
+projectName = 'ColorCorrection';
+outputDir   = getpref(projectName, 'outputDir');
+% Build set-specific parameters
+setParams = buildSetParameters(img, setType);
 
+%%%%%%% Check to see if the image already exists %%%%%%%
+% Determine output subdirectory
+if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
+    outputSubdir = fullfile(outputDir, 'testImages', renderType, img);
+else
+    outputSubdir = fullfile(outputDir, 'testImages', renderType, img, num2str(setType));
+end
+if ~exist(outputSubdir, "dir")
+    mkdir(outputSubdir);
+end
+
+% Determine expected output file paths
+triLMSPath = fullfile(outputSubdir, 'triLMSCalFormat.mat');
+triRGBPath = fullfile(outputSubdir, 'triRGBCalFormat.mat');
+dispPath   = fullfile(outputSubdir, 'Disp.mat');
+if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
+    imageBaseName = img;
+else
+    imageBaseName = [img, '.png'];
+end
+imageOutputPath = fullfile(outputSubdir, imageBaseName);
+
+% If all outputs exist, load them and return
+if exist(triLMSPath, 'file') && exist(triRGBPath, 'file') && exist(dispPath, 'file') && exist(imageOutputPath, 'file')
+    fprintf('Found precomputed LMS data for %s', img);
+    load(triLMSPath, 'triLMSCalFormat');
+    load(triRGBPath, 'triRGBCalFormat');
+    load(dispPath,   'Disp');
+    return;
+end
+
+%%%%%%% If the image doesn't exist, do this: %%%%%%%
 %   modType:       Type of cone modulation for hyperspectral cases
 %                  'L', 'M', 'S', or 'rand'
 switch (renderType)
@@ -146,6 +182,17 @@ else
     triRGBCalFormat = Disp.M_cones2rgb * triLMSCalFormat;
     % diLMSCalFormat  = diLMSCalFormat_plate;
 end
+
+% Convert and save image
+triRGBImage = CalFormatToImage(triRGBCalFormat, Disp.m, Disp.n);
+imwrite(triRGBImage, imageOutputPath);
+
+% Save calibration data
+save(triLMSPath, 'triLMSCalFormat');
+save(triRGBPath, 'triRGBCalFormat');
+save(dispPath,   'Disp');
+
+fprintf('Generated and saved LMS data for %s\n', img);
 
 
 end

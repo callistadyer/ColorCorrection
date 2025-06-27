@@ -1,83 +1,87 @@
+%% SCRIPT FOR RUNNING COLOR CORRECTION PROJECT
+%
+% This script prepares, loads, or generates images for the ColorCorrection
+% project. It determines the output directory structure, checks if precomputed
+% images exist, loads them if available, or generates new images and saves them.
+% The script supports gray w square,  Ishihara plates, and external .png/.jpg images.
+%
+% HISTORY:
+%   06/27/2025  cmd  cleaned up script 
+%
 
-%% Script for running colorCorrection project code
+%% PARAMETERS TO SET
+% Available image options: gray, Ishihara plate, or external images
+imageTypes = {'gray','ishihara','flower1.png','flower2.png','flower3.png', ...
+              'fruit.png','map.png','painting.png','pool.png','tree.png'};
+imageType  = imageTypes{10};  % Select image type here (e.g., 1 for 'gray', 10 for 'tree.png')
+setType    = 1;               % Set type controls parameters depending on image type
 
-% Parameters to set. This will determine file location as well
-imageTypes = {'gray','ishihara','flower1.png','flower2.png'};
-imageType = imageTypes{4};
-setType   = 1;
-% Set types depend on the image type
-%       gray
-%           number of squares
-%       ishihara
-%           plate type
-%       .png
-%           none so far?
-%           maybe could do size of the image. consider downsampling 
+% Types of 'setType' usage:
+%   gray      - number of squares
+%   ishihara  - plate type
+%   .png/.jpg - currently unused, but could support e.g. downsampling
 
-dichromatType = 'Deuteranopia';
+dichromatType = 'Deuteranopia';  % Choose dichromat type: 'Deuteranopia', 'Protanopia', 'Tritanopia'
 
-%%%% you might want to do image size somewhere? maybe another subfolder? 
-
-%% Define output directory.
-% The key preference gets set up by the TbTb local hook.
-projectName = 'ColorCorrection';
-myFullPath = mfilename('fullpath');
-[myPath,myName] = fileparts(myFullPath);
-% myFullPath = matlab.desktop.editor.getActiveFilename();
+%% DEFINE OUTPUT DIRECTORY
+% projectName = 'ColorCorrection';
+% myFullPath  = mfilename('fullpath');
 % [myPath, myName] = fileparts(myFullPath);
+% 
+% outputDir = getpref(projectName, 'outputDir');
+% 
+% % Determine output subfolder: skip setType folder for png/jpg images
+% if endsWith(imageType, {'.png', '.jpg'}, 'IgnoreCase', true)
+%     outputSubdir = fullfile(outputDir, 'testImages', dichromatType, imageType);
+% else
+%     outputSubdir = fullfile(outputDir, 'testImages', dichromatType, imageType, num2str(setType));
+% end
+% 
+% % Create output subfolder if it does not exist
+% if ~exist(outputSubdir, "dir")
+%     mkdir(outputSubdir);
+% end
 
-outputDir = getpref(projectName,'outputDir');
-if endsWith(imageType, {'.png', '.jpg'}, 'IgnoreCase', true)
-    outputSubdir = fullfile(outputDir, 'testImages', dichromatType, imageType);
-else
-    outputSubdir = fullfile(outputDir, 'testImages', dichromatType, imageType, num2str(setType));
-end
-if (~exist(outputSubdir,"dir"))
-    mkdir(outputSubdir);
-end
+%% CHECK FOR EXISTING IMAGE FILE
+% if endsWith(imageType, {'.png', '.jpg'}, 'IgnoreCase', true)
+%     imageBaseName = imageType;
+% else
+%     imageBaseName = [imageType, '.png'];
+% end
+% imageOutputPath = fullfile(outputSubdir, imageBaseName);
+% 
+% if exist(imageOutputPath, 'file')
+%     fprintf('Found precomputed image: %s\n', imageOutputPath);
+%     triRGBImage = im2double(imread(imageOutputPath));
+% 
+%     % Optionally load saved calibration data
+%     triLMSPath = fullfile(outputSubdir, 'triLMSCalFormat.mat');
+%     triRGBPath = fullfile(outputSubdir, 'triRGBCalFormat.mat');
+%     dispPath   = fullfile(outputSubdir, 'Disp.mat');
+% 
+%     if exist(triLMSPath, 'file'), load(triLMSPath, 'triLMSCalFormat'); end
+%     if exist(triRGBPath, 'file'), load(triRGBPath, 'triRGBCalFormat'); end
+%     if exist(dispPath,   'file'), load(dispPath, 'Disp'); end
+% else
+    %% GENERATE AND SAVE NEW IMAGE
+    img        = imageType;          % Input image type
+    renderType = dichromatType;      % Dichromat simulation type
 
+    % Build set-specific parameters
+    % setParams = buildSetParameters(img, setType);
 
-% Check if image already saved; if so, load it and skip processing
-if endsWith(imageType, {'.png', '.jpg'}, 'IgnoreCase', true)
-    imageBaseName = imageType;
-else
-    imageBaseName = [imageType, '.png'];
-end
-
-imageOutputPath = fullfile(outputSubdir, imageBaseName);
-
-if exist(imageOutputPath, 'file')
-    fprintf('Found precomputed image: %s\n', imageOutputPath);
-    triRGBImage = im2double(imread(imageOutputPath));
-
-    % Optionally, load other saved .mat files
-    triLMSPath = fullfile(outputSubdir, 'triLMSCalFormat.mat');
-    triRGBPath = fullfile(outputSubdir, 'triRGBCalFormat.mat');
-    dispPath   = fullfile(outputSubdir, 'Disp.mat');
-    
-    if exist(triLMSPath, 'file'), load(triLMSPath, 'triLMSCalFormat'); end
-    if exist(triRGBPath, 'file'), load(triRGBPath, 'triRGBCalFormat'); end
-    if exist(dispPath,   'file'), load(dispPath, 'Disp'); end
-else
-    % Type of image
-    img         = imageType;
-    % Type of dichromat
-    renderType  = dichromatType;
-    % Make function that determines set variables
-    [setParams] = buildSetParameters(img,setType);
-
-    % Load display
+    % Load display calibration
     Disp = loadDisplay(img);
 
-    % Load LMS values for this image
-    [triLMSCalFormat,triRGBCalFormat,Disp] = loadLMSvalues(img,renderType,setParams,Disp);
-    triRGBImage = CalFormatToImage(triRGBCalFormat,Disp.m,Disp.n);
+    % Generate LMS/RGB calibration data for the image
+    [triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(img, renderType, setType, Disp);
 
-    % Save out the values
-    save(fullfile(outputSubdir, 'triLMSCalFormat.mat'), 'triLMSCalFormat');
-    save(fullfile(outputSubdir, 'triRGBCalFormat.mat'), 'triRGBCalFormat');
-    save(fullfile(outputSubdir, 'Disp.mat'), 'Disp');
-
-    % Save out the image
-    imwrite(triRGBImage, imageOutputPath);
-end
+    % Convert RGB calibration data to image
+    % triRGBImage = CalFormatToImage(triRGBCalFormat, Disp.m, Disp.n);
+    % 
+    % % Save calibration data and image
+    % save(fullfile(outputSubdir, 'triLMSCalFormat.mat'), 'triLMSCalFormat');
+    % save(fullfile(outputSubdir, 'triRGBCalFormat.mat'), 'triRGBCalFormat');
+    % save(fullfile(outputSubdir, 'Disp.mat'), 'Disp');
+    % imwrite(triRGBImage, imageOutputPath);
+% end
