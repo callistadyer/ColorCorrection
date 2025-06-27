@@ -69,7 +69,7 @@ function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt]
 %{
 Disp = loadDisplay('gray')
 % Load LMS values for this image
-[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues('gray','Deuteranopia','M',1,585,[],Disp);
+[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues('gray','Deuteranopia',1,Disp);
 T_prev = eye(3);
 [triLMSOpt, s0, v0, s1, v1, T_opt] = colorCorrectionOptimize('lambda', [], 0.5, triLMSCalFormat,'Deuteranopia', 'LMdifferenceContrast', 'squared', 585, T_prev, Disp,[],[]);
 %}

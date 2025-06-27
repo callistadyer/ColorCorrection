@@ -7,7 +7,6 @@
 %
 % HISTORY:
 %   06/27/2025  cmd  cleaned up script 
-%
 
 %% PARAMETERS TO SET
 % Available image options: gray, Ishihara plate, or external images

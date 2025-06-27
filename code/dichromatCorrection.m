@@ -59,7 +59,7 @@ function [triRGBImgFormatCorrected,diRGBImgFormatCorrected,s_raw_P,v_raw_P,s_bal
       'similarityType', 'squared');
 %}
 %{
-% Dichromat Correction Lambda Sweep - Key/Value Version
+%% Dichromat Correction Lambda Sweep - Key/Value Version
 % TEST: lambda=0 → should give no transformation (original image)
 [triRGB_0, diRGB_0, s_raw_0, v_raw_0, s_bal_0, v_bal_0, T_0] = ...
     dichromatCorrection( ...
@@ -113,7 +113,7 @@ for i = 1:nSteps
             'T_prev', T_prev{i});
 end
 
-% Plot how similarity and variance change across lambdas
+%% Plot how similarity and variance change across lambdas
 figure();
 subplot(2,2,1);
 plot(lambda_vals, s_raw_P, '-o', 'LineWidth', 2, 'MarkerSize', 10, 'MarkerFaceColor', 'white');
@@ -142,7 +142,7 @@ xlabel('\lambda', 'FontSize', 20); ylabel('Similarity + Variance', 'FontSize', 2
 
 %}
 %{
-% Dichromat Correction VAR Sweep - Key/Value Version
+%% Dichromat Correction VAR Sweep - Key/Value Version
 % Compute V0: run dichromatCorrection at lambda=0
 [~, ~, ~, v_raw_0, ~, ~, ~] = ...
     dichromatCorrection( ...
@@ -228,12 +228,10 @@ xlabel('var index', 'FontSize', 20); ylabel('Similarity + Variance', 'FontSize',
 
 %}
 
-
-
 % See also: colorCorrectionOptimize, DichromSimulateLinear
 %
 % Examples are included within the code
-
+%
 % History
 %   09/05/2024  cmd  Initial go.
 %   06/27/2025  cmd  using key/value pairs

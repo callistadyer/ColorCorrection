@@ -24,7 +24,7 @@ function [inGamut, rgbImageCalFormat] = checkGamut(LMSimageCalFormat, Disp)
 % Examples:
 %{
 Disp = loadDisplay('ishihara');
-[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues('ishihara','Deuteranopia','M',[],585,3,Disp);
+[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues('ishihara','Deuteranopia',1,Disp);
 [inGamut, rgbOut] = checkGamut(triLMSCalFormat, Disp);
 %}
 
