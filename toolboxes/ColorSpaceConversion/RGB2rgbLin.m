@@ -1,4 +1,4 @@
-function rgbLin = RGB2rgbLin(RGBImage, Disp)
+function rgbLinCalFormat = RGB2rgbLin(RGBImage, Disp,imgParams)
 % RGB2rgbLin  Convert sRGB DAC image to linear RGB using display gamma table.
 %   rgbLin = RGB2rgbLin(RGBImage, Disp)
 %
@@ -11,12 +11,10 @@ function rgbLin = RGB2rgbLin(RGBImage, Disp)
 %     rgbLin   - linear RGB image (MxNx3), range [0,1]
 
 % Get display parameters
-gammaTable = displayGet(Disp.d, 'gammatable');
-dacSize    = displayGet(Disp.d, 'dacsize');
+% Reverse the gamma correction
+gammaTable = displayGet(Disp.d,'gammatable');
+rgbLinImage = dac2rgb(RGBImage, gammaTable)*(2^displayGet(Disp.d,'dacsize')-1);
 
-% Convert normalized 0-1 → DAC
-dacValues = RGBImage * (2^dacSize - 1);
+rgbLinCalFormat = ImageToCalFormat(rgbLinImage);
 
-% Convert DAC → linear RGB using gamma table
-rgbLin = dac2rgb(dacValues, gammaTable);
 end

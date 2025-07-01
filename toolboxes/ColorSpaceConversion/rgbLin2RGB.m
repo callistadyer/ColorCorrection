@@ -10,13 +10,8 @@ function RGBImage = rgbLin2RGB(rgbLinImage, Disp)
 %   Outputs:
 %     RGBImage    - gamma-corrected sRGB image in normalized 0-1 range (MxNx3)
 
-% Get display parameters
-inverseGtable = displayGet(Disp.d, 'inversegamma');
-dacSize       = displayGet(Disp.d, 'dacsize');
 
-% Convert linear RGB → DAC using inverse gamma table
-dacValues = rgb2dac(rgbLinImage, inverseGtable);
+iGtable  = displayGet(Disp.d,'inversegamma');
+RGBImage = rgb2dac(rgbLinImage,iGtable)/(2^displayGet(Disp.d,'dacsize')-1);
 
-% Normalize DAC to 0-1 sRGB
-RGBImage = dacValues / (2^dacSize - 1);
 end

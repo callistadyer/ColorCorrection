@@ -39,11 +39,14 @@ if (abs(sum(testLMS(:)) - 525.8024)/525.8024 > 1e-4)
 end
 %}
 
+
+
+%%%%%%%%%%%%%%%%%%%%%% Dealing with save directory %%%%%%%%%%%%%%%%%%%%%%
 projectName = 'ColorCorrection';
 outputDir   = getpref(projectName, 'outputDir');
 
 
-%%%%%%% Check to see if the image already exists %%%%%%%
+% Check to see if the image already exists
 % Determine output subdirectory
 if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
     outputSubdir = fullfile(outputDir, 'testImages', renderType, img);
@@ -81,7 +84,9 @@ if exist(triLMSPath, 'file') && exist(triRGBPath, 'file') && exist(dispPath, 'fi
     return;
 end
 
-%%%%%%% If the image doesn't exist, do this: %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%% If the image doesn't exist, continue %%%%%%%
 %   modType:       Type of cone modulation for hyperspectral cases
 %                  'L', 'M', 'S', or 'rand'
 switch (renderType)
@@ -109,16 +114,15 @@ if strcmp(img,'ishihara')
     % Generate plate now that you have the correct colors
     ishiharaRGB = generateIshiharaPlate('74', insideColors, outsideColors,imgParams.m);
     ishiharaRGB = im2double(ishiharaRGB);
-
+    triRGBImage = ishiharaRGB;
     % Get linear rgb from gamma corrected RGB
-    ishiharargbLin = RGB2rgbLin(ishiharaRGB,Disp);
+    trirgbLinCalFormat = RGB2rgbLin(ishiharaRGB,Disp,imgParams);
 
     % Plot modified RGB Image 
     % figure();imagesc(ishiharaRGB)
     % axis square;
 
     % Put modified image into LMS 
-    trirgbLinCalFormat   = ImageToCalFormat(ishiharargbLin);
     triLMSCalFormat      = Disp.M_rgb2cones * trirgbLinCalFormat;
     
 elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'IgnoreCase', true)
@@ -154,7 +158,6 @@ else
 end
 
 % Convert and save image
-triRGBImage = CalFormatToImage(trirgbLinCalFormat, imgParams.m, imgParams.n);
 imwrite(triRGBImage, imageOutputPath);
 
 % Save trichromat values
