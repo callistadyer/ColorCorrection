@@ -29,8 +29,9 @@ function [triLMSCalFormat,trirgbLinCalFormat,pathName] = loadLMSvalues(img,rende
 %
 % Examples:
 %{
-Disp = loadDisplay('ishihara');
-testLMS = loadLMSvalues('ishihara','Deuteranopia',1,Disp);
+Disp = loadDisplay();
+imgParams = buildSetParameters('ishihara',1,128,128)
+testLMS = loadLMSvalues('ishihara','Deuteranopia',Disp,imgParams);
 
 % Check that behavior has not changed since we declared it good.
 if (abs(sum(testLMS(:)) - 525.8024)/525.8024 > 1e-4)
@@ -48,11 +49,16 @@ if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
     outputSubdir = fullfile(outputDir, 'testImages', renderType, img);
     pathName = outputSubdir;
 else
-    outputSubdir = fullfile(outputDir, 'testImages', renderType, img, num2str(Disp.setType));
+    outputSubdir = fullfile(outputDir, 'testImages', renderType, img, num2str(imgParams.setType));
 end
 if ~exist(outputSubdir, "dir")
     mkdir(outputSubdir);
 end
+
+% Save path after testImages. Can use this later when creating parallel
+% file structure as the original images... for the transformed images
+idx = strfind(outputSubdir, ['testImages' filesep]);
+pathName = outputSubdir(idx + length('testImages') + 1 : end);
 
 % Determine expected output file paths
 triLMSPath = fullfile(outputSubdir, 'triLMSCalFormat.mat');
@@ -63,6 +69,7 @@ if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
 else
     imageBaseName = [img, '.png'];
 end
+
 imageOutputPath = fullfile(outputSubdir, imageBaseName);
 
 % If all outputs exist, load them and return
@@ -88,7 +95,6 @@ switch (renderType)
         modType = 'S';
         error('ERROR: you need to set up constraint wavelength for Tritanopia case')
 end
-setParams = Disp.setParams;
 
 if strcmp(img,'ishihara')
 
@@ -98,10 +104,10 @@ if strcmp(img,'ishihara')
     % 4 -> like 2 but constrained between .3 and .7 colors so more room for
     %      modulation
 
-    [insideColors, outsideColors] = chooseIshiharaColors(renderType,setParams.plateType,Disp);
+    [insideColors, outsideColors] = chooseIshiharaColors(renderType,imgParams.plateType,Disp);
 
     % Generate plate now that you have the correct colors
-    ishiharaRGB = generateIshiharaPlate('74', insideColors, outsideColors,Disp.m);
+    ishiharaRGB = generateIshiharaPlate('74', insideColors, outsideColors,imgParams.m);
     ishiharaRGB = im2double(ishiharaRGB);
 
     % Get linear rgb from gamma corrected RGB
@@ -114,31 +120,6 @@ if strcmp(img,'ishihara')
     % Put modified image into LMS 
     trirgbLinCalFormat   = ImageToCalFormat(ishiharargbLin);
     triLMSCalFormat      = Disp.M_rgb2cones * trirgbLinCalFormat;
-    % 
-    % M_plane = triLMSCalFormat(2,:);
-    % % Assuming M_plane is 1 x N
-    % N = length(M_plane);
-    % 
-    % % Fill in L and S planes with mean of M (or another estimate)
-    % L_plane = mean(M_plane) * zeros(1, N);
-    % S_plane = mean(M_plane) * zeros(1, N);
-    % LMS_full = [L_plane; M_plane; S_plane];
-    % M_cones2rgb = inv(Disp.M_rgb2cones);
-    % RGB = M_cones2rgb * LMS_full;
-    % 
-    % rgbImage = reshape(RGB', Disp.m, Disp.n, 3);
-    % figure();
-    % imshow(rgbImage);
-
-
-
-    % Run the modulated image through the linear dichromat simulation
-    % [diLMSCalFormat,M_triToDi]       = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS,  constraintWL, renderType, Disp);
-
-    % Check
-    % rgb1 = inv(Disp.M_rgb2cones) * diLMSCalFormat;
-    % image = CalFormatToImage(rgb1,Disp.m,Disp.n);
-    % figure();imagesc(image); axis square;
     
 elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'IgnoreCase', true)
 
@@ -173,7 +154,7 @@ else
 end
 
 % Convert and save image
-triRGBImage = CalFormatToImage(trirgbLinCalFormat, Disp.m, Disp.n);
+triRGBImage = CalFormatToImage(trirgbLinCalFormat, imgParams.m, imgParams.n);
 imwrite(triRGBImage, imageOutputPath);
 
 % Save trichromat values
