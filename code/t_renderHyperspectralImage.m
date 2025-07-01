@@ -1,4 +1,4 @@
-function [triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate] = t_renderHyperspectralImage(image,renderType,constraintWl,nSquares,modType,Disp)    
+function [triLMScalFormat,triLMSCalFormat_plate] = t_renderHyperspectralImage(image,nSquares,modType,Disp)    
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
@@ -96,7 +96,7 @@ end
 triRGBImgFormat_plate = CalFormatToImage(triRGBCalFormat_plate,Disp.m,Disp.n);
 
 % Dichromat manipulation (push trichromat LMS image into this function to get out LMS of dichromat)
-[diLMScalFormat,M_triToDi]       = DichromSimulateLinear(triLMScalFormat, Disp.grayLMS, renderType, Disp);
-[diLMScalFormat_plate,M_triToDi] = DichromSimulateLinear(triLMSCalFormat_plate, Disp.grayLMS, renderType, Disp);
+% [diLMScalFormat,M_triToDi]       = DichromSimulateLinear(triLMScalFormat, Disp.grayLMS, renderType, Disp);
+% [diLMScalFormat_plate,M_triToDi] = DichromSimulateLinear(triLMSCalFormat_plate, Disp.grayLMS, renderType, Disp);
 
 end
