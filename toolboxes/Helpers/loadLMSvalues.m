@@ -1,11 +1,11 @@
-function [triLMSCalFormat,triRGBCalFormat,Disp] = loadLMSvalues(img,renderType,Disp)
+function [triLMSCalFormat,triRGBCalFormat] = loadLMSvalues(imageType,renderType,Disp)
 % loadLMSvalues  Loads or generates an image and converts to LMS for dichromat simulation
 %
 % Syntax:
 %   [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,plateType,Disp)
 %
 % Inputs:
-%   img:              Either 'ishihara' or a filename ('.png', '.jpg') or a hyperspectral identifier
+%   imageType:        Either 'ishihara' or a filename ('.png', '.jpg') or a hyperspectral identifier
 %   renderType:       Type of dichromacy to simulate
 %                         'Deuteranopia', 'Protanopia', or 'Tritanopia'
 %   Disp:             Structure containing display calibration, cone sensitivities, and image dimensions
@@ -13,7 +13,6 @@ function [triLMSCalFormat,triRGBCalFormat,Disp] = loadLMSvalues(img,renderType,D
 % Outputs:
 %   triLMSCalFormat:  LMS image in calibration format for trichromatic viewer
 %   triRGBCalFormat:  RGB image 
-%   Disp:             Updated display struct with possibly new dimensions
 %
 % Description:
 %   Depending on the input image, this function performs one of several operations:
@@ -43,10 +42,10 @@ outputDir   = getpref(projectName, 'outputDir');
 
 %%%%%%% Check to see if the image already exists %%%%%%%
 % Determine output subdirectory
-if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
-    outputSubdir = fullfile(outputDir, 'testImages', renderType, img);
+if endsWith(imageType, {'.png', '.jpg'}, 'IgnoreCase', true)
+    outputSubdir = fullfile(outputDir, 'testImages', renderType, imageType);
 else
-    outputSubdir = fullfile(outputDir, 'testImages', renderType, img, num2str(Disp.setType));
+    outputSubdir = fullfile(outputDir, 'testImages', renderType, imageType, num2str(Disp.setType));
 end
 if ~exist(outputSubdir, "dir")
     mkdir(outputSubdir);
@@ -56,16 +55,16 @@ end
 triLMSPath = fullfile(outputSubdir, 'triLMSCalFormat.mat');
 triRGBPath = fullfile(outputSubdir, 'triRGBCalFormat.mat');
 dispPath   = fullfile(outputSubdir, 'Disp.mat');
-if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
-    imageBaseName = img;
+if endsWith(imageType, {'.png', '.jpg'}, 'IgnoreCase', true)
+    imageBaseName = imageType;
 else
-    imageBaseName = [img, '.png'];
+    imageBaseName = [imageType, '.png'];
 end
 imageOutputPath = fullfile(outputSubdir, imageBaseName);
 
 % If all outputs exist, load them and return
 if exist(triLMSPath, 'file') && exist(triRGBPath, 'file') && exist(dispPath, 'file') && exist(imageOutputPath, 'file')
-    fprintf('Found precomputed LMS data for %s', img);
+    fprintf('Found precomputed LMS data for %s', imageType);
     load(triLMSPath, 'triLMSCalFormat');
     load(triRGBPath, 'triRGBCalFormat');
     load(dispPath,   'Disp');
@@ -88,7 +87,7 @@ switch (renderType)
 end
 setParams = Disp.setParams;
 
-if strcmp(img,'ishihara')
+if strcmp(imageType,'ishihara')
 
     % 1 -> gray with missing cone mod
     % 2 -> background random inside with missing cone mod
@@ -135,7 +134,7 @@ if strcmp(img,'ishihara')
     % image = CalFormatToImage(rgb1,Disp.m,Disp.n);
     % figure();imagesc(image); axis square;
     
-elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'IgnoreCase', true)
+elseif endsWith(imageType, '.png', 'IgnoreCase', true) || endsWith(imageType, '.jpg', 'IgnoreCase', true)
 
     % img_rgb = im2double(imread(img));           % Load and convert image to double
     % if Disp.m > 128 || Disp.n > 128
@@ -145,7 +144,7 @@ elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'Ignor
     %     Disp.m         = cols;
     %     Disp.n         = rows;
 
-    img_rgb = im2double(imread(img));                % Load and convert image to double
+    img_rgb = im2double(imread(imageType));                % Load and convert image to double
     img_rgb = imresize(img_rgb, [128*2, 128*2]);         % Resize to 128x128 pixels
 
     [rows, cols, ~] = size(img_rgb);
@@ -175,7 +174,7 @@ else
     % LMS values for the gray image with square isochromatic plates added
     % on. Maybe you can simplify this? Not sure. 
     
-    [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate] = t_renderHyperspectralImage(img,renderType,constraintWL,setParams.nSquares,modType,Disp);
+    [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate] = t_renderHyperspectralImage(imageType,renderType,constraintWL,setParams.nSquares,modType,Disp);
     % clear triLMSCalFormat;
     % clear diLMSCalFormat;
     triLMSCalFormat = triLMSCalFormat_plate; % do this when you just want to see the isochromatic plate square version (other is just gray)
@@ -192,7 +191,7 @@ save(triLMSPath, 'triLMSCalFormat');
 save(triRGBPath, 'triRGBCalFormat');
 save(dispPath,   'Disp');
 
-fprintf('Generated and saved LMS data for %s\n', img);
+fprintf('Generated and saved LMS data for %s\n', imageType);
 
 
 end
