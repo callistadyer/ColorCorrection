@@ -1,7 +1,10 @@
 function lmsImage = RGB2LMSimg(RGBImage,Disp,scaleFactor,bScale)
-
-% function takes in RGB image in image format, and outputs LMS image in image format 
+% Function takes in RGB image in image format, and outputs LMS image in image format 
 % also calls function rgb2LMSimg.m
+%
+% This expects a gamma corrected (ready to display) RGB image, and undoes
+% the gamma correction (aka linearizes) the image before applying the
+% transformation to LMS.
 %
 % Syntax:
 %   lmsImage = RGB2LMSimg(RGBImage,d,T_cones,P_monitor,scaleFactor,m,n,bScale)
@@ -9,7 +12,7 @@ function lmsImage = RGB2LMSimg(RGBImage,Disp,scaleFactor,bScale)
 % Description:
 %
 % Inputs:
-%   RGBImage              - RGB image
+%   RGBImage              - RGB image, gamma corrected.
 %   d                     - Struct.  Contains display information, displayCreate('LCD-Apple'); 
 %   T_cones               - [3xnWl]. Cone spectral sensitivities
 %   P_monitor             - [nWlx3]. Display primaries
@@ -28,9 +31,9 @@ function lmsImage = RGB2LMSimg(RGBImage,Disp,scaleFactor,bScale)
 
 % Reverse the gamma correction
 gammaTable = displayGet(Disp.d,'gammatable');
-rgbImage = dac2rgb(RGBImage, gammaTable)*(2^displayGet(Disp.d,'dacsize')-1);
+rgbLinImage = dac2rgb(RGBImage, gammaTable)*(2^displayGet(Disp.d,'dacsize')-1);
 
 % Undo scaling and convert to LMS
-lmsImage = rgbLin2LMSimg(rgbImage,Disp.T_cones,Disp.P_monitor,scaleFactor,Disp.m,Disp.n,bScale);
+lmsImage = rgbLin2LMSimg(rgbLinImage,Disp.T_cones,Disp.P_monitor,scaleFactor,Disp.m,Disp.n,bScale);
 
 end
