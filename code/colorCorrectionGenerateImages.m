@@ -16,7 +16,7 @@ close all
 % Available image options: gray, Ishihara plate, or external images
 imageTypes = {'gray','ishihara','flower1.png','flower2.png','flower3.png', ...
     'fruit.png','map.png','painting.png','pool.png','tree.png'};
-whichTypesToDo = [1 3 8];
+img  = imageTypes{10};  % Select image type here (e.g., 1 for 'gray', 10 for 'tree.png')
 
 % Types of 'setType' usage:
 %   gray      - number of squares
@@ -28,23 +28,32 @@ setType    = 1;
 renderType = 'Deuteranopia';
 
 %% Load display calibration
-Disp = loadDisplay(imageType,setType);
+Disp = loadDisplay();
 
-% %% Generate LMS/RGB calibration data for the imaget
-% [triLMSCalFormat, triRGBCalFormat] = loadLMSvalues(imageType, renderType, Disp);
-% 
-% %% Now save the dichromat version of that image
-% [diLMSCalFormat]             = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS, renderType, Disp);
+%% Load image parameters
+m = 128;
+n = 128;
+imgParams = buildSetParameters(img,setType,m,n);
+
+%% Generate LMS/RGB calibration data for the image
+[triLMSCalFormat, triRGBCalFormat, pathName] = loadLMSvalues(img, renderType, Disp, imgParams);
+
+%% Now save the dichromat version of that image
+[diLMSCalFormat]             = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS, renderType, Disp);
 
 
 %% Loop through each image and generate all:
-for idx = 1:length(whichTypesToDo)
-    imageType = imageTypes{idx};
-    fprintf('Processing image type %s, set %d: \n', imageTypes(whichTypesToDo(idx)),setType);
+for idx = 1:length(imageTypes)
+    img = imageTypes{idx};
+
+    fprintf('Processing image: %s\n', img);
+
+    % Load display calibration
+    Disp = loadDisplay(img,setType);
 
     % Generate LMS/RGB calibration data for the image
-    [triLMSCalFormat, triRGBCalFormat, imagePath] = loadLMSvalues(imageTypes(whichTypesToDo(idx)), renderType, Disp);
-    %[diLMSCalFormat]             = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS, renderType, Disp);
+    [triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(img, renderType, Disp);
+    [diLMSCalFormat]             = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS, renderType, Disp);
 
     % imshow(CalFormatToImage(triRGBCalFormat, Disp.m, Disp.n)); % quick display
 end

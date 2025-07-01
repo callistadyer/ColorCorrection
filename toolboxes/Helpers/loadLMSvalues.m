@@ -1,18 +1,20 @@
-function [triLMSCalFormat,triRGBCalFormat] = loadLMSvalues(imageType,renderType,Disp)
+function [triLMSCalFormat,trirgbLinCalFormat,pathName] = loadLMSvalues(img,renderType,Disp,imgParams)
 % loadLMSvalues  Loads or generates an image and converts to LMS for dichromat simulation
 %
 % Syntax:
-%   [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,plateType,Disp)
+%   [triLMSCalFormat,diLMSCalFormat] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,plateType,Disp)
 %
 % Inputs:
-%   imageType:        Either 'ishihara' or a filename ('.png', '.jpg') or a hyperspectral identifier
+%   img:              Either 'ishihara' or a filename ('.png', '.jpg') or a hyperspectral identifier
 %   renderType:       Type of dichromacy to simulate
 %                         'Deuteranopia', 'Protanopia', or 'Tritanopia'
+%   imgParams
 %   Disp:             Structure containing display calibration, cone sensitivities, and image dimensions
 %
 % Outputs:
 %   triLMSCalFormat:  LMS image in calibration format for trichromatic viewer
 %   triRGBCalFormat:  RGB image 
+%   Disp:             Updated display struct with possibly new dimensions
 %
 % Description:
 %   Depending on the input image, this function performs one of several operations:
@@ -27,8 +29,9 @@ function [triLMSCalFormat,triRGBCalFormat] = loadLMSvalues(imageType,renderType,
 %
 % Examples:
 %{
-Disp = loadDisplay('ishihara');
-testLMS = loadLMSvalues('ishihara','Deuteranopia',1,Disp);
+Disp = loadDisplay();
+imgParams = buildSetParameters('ishihara',1,128,128)
+testLMS = loadLMSvalues('ishihara','Deuteranopia',Disp,imgParams);
 
 % Check that behavior has not changed since we declared it good.
 if (abs(sum(testLMS(:)) - 525.8024)/525.8024 > 1e-4)
@@ -42,31 +45,38 @@ outputDir   = getpref(projectName, 'outputDir');
 
 %%%%%%% Check to see if the image already exists %%%%%%%
 % Determine output subdirectory
-if endsWith(imageType, {'.png', '.jpg'}, 'IgnoreCase', true)
-    outputSubdir = fullfile(outputDir, 'testImages', renderType, imageType);
+if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
+    outputSubdir = fullfile(outputDir, 'testImages', renderType, img);
+    pathName = outputSubdir;
 else
-    outputSubdir = fullfile(outputDir, 'testImages', renderType, imageType, num2str(Disp.setType));
+    outputSubdir = fullfile(outputDir, 'testImages', renderType, img, num2str(imgParams.setType));
 end
 if ~exist(outputSubdir, "dir")
     mkdir(outputSubdir);
 end
 
+% Save path after testImages. Can use this later when creating parallel
+% file structure as the original images... for the transformed images
+idx = strfind(outputSubdir, ['testImages' filesep]);
+pathName = outputSubdir(idx + length('testImages') + 1 : end);
+
 % Determine expected output file paths
 triLMSPath = fullfile(outputSubdir, 'triLMSCalFormat.mat');
 triRGBPath = fullfile(outputSubdir, 'triRGBCalFormat.mat');
 dispPath   = fullfile(outputSubdir, 'Disp.mat');
-if endsWith(imageType, {'.png', '.jpg'}, 'IgnoreCase', true)
-    imageBaseName = imageType;
+if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
+    imageBaseName = img;
 else
-    imageBaseName = [imageType, '.png'];
+    imageBaseName = [img, '.png'];
 end
+
 imageOutputPath = fullfile(outputSubdir, imageBaseName);
 
 % If all outputs exist, load them and return
 if exist(triLMSPath, 'file') && exist(triRGBPath, 'file') && exist(dispPath, 'file') && exist(imageOutputPath, 'file')
-    fprintf('Found precomputed LMS data for %s', imageType);
+    fprintf('Found precomputed LMS data for %s', img);
     load(triLMSPath, 'triLMSCalFormat');
-    load(triRGBPath, 'triRGBCalFormat');
+    load(triRGBPath, 'trirgbLinCalFormat');
     load(dispPath,   'Disp');
     return;
 end
@@ -85,9 +95,8 @@ switch (renderType)
         modType = 'S';
         error('ERROR: you need to set up constraint wavelength for Tritanopia case')
 end
-setParams = Disp.setParams;
 
-if strcmp(imageType,'ishihara')
+if strcmp(img,'ishihara')
 
     % 1 -> gray with missing cone mod
     % 2 -> background random inside with missing cone mod
@@ -95,68 +104,36 @@ if strcmp(imageType,'ishihara')
     % 4 -> like 2 but constrained between .3 and .7 colors so more room for
     %      modulation
 
-    [insideColors, outsideColors] = chooseIshiharaColors(renderType,setParams.plateType,Disp);
+    [insideColors, outsideColors] = chooseIshiharaColors(renderType,imgParams.plateType,Disp);
 
     % Generate plate now that you have the correct colors
-    ishiharaRGB = generateIshiharaPlate('74', insideColors, outsideColors,Disp.m);
+    ishiharaRGB = generateIshiharaPlate('74', insideColors, outsideColors,imgParams.m);
     ishiharaRGB = im2double(ishiharaRGB);
 
+    % Get linear rgb from gamma corrected RGB
+    ishiharargbLin = RGB2rgbLin(ishiharaRGB,Disp);
+
     % Plot modified RGB Image 
-    figure();imagesc(ishiharaRGB)
-    axis square;
+    % figure();imagesc(ishiharaRGB)
+    % axis square;
 
     % Put modified image into LMS 
-    triRGBCalFormat    = ImageToCalFormat(ishiharaRGB);
-    triLMSCalFormat    = Disp.M_rgb2cones * triRGBCalFormat;
-    % 
-    % M_plane = triLMSCalFormat(2,:);
-    % % Assuming M_plane is 1 x N
-    % N = length(M_plane);
-    % 
-    % % Fill in L and S planes with mean of M (or another estimate)
-    % L_plane = mean(M_plane) * zeros(1, N);
-    % S_plane = mean(M_plane) * zeros(1, N);
-    % LMS_full = [L_plane; M_plane; S_plane];
-    % M_cones2rgb = inv(Disp.M_rgb2cones);
-    % RGB = M_cones2rgb * LMS_full;
-    % 
-    % rgbImage = reshape(RGB', Disp.m, Disp.n, 3);
-    % figure();
-    % imshow(rgbImage);
-
-
-
-    % Run the modulated image through the linear dichromat simulation
-    % [diLMSCalFormat,M_triToDi]       = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS,  constraintWL, renderType, Disp);
-
-    % Check
-    % rgb1 = inv(Disp.M_rgb2cones) * diLMSCalFormat;
-    % image = CalFormatToImage(rgb1,Disp.m,Disp.n);
-    % figure();imagesc(image); axis square;
+    trirgbLinCalFormat   = ImageToCalFormat(ishiharargbLin);
+    triLMSCalFormat      = Disp.M_rgb2cones * trirgbLinCalFormat;
     
-elseif endsWith(imageType, '.png', 'IgnoreCase', true) || endsWith(imageType, '.jpg', 'IgnoreCase', true)
+elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'IgnoreCase', true)
 
-    % img_rgb = im2double(imread(img));           % Load and convert image to double
-    % if Disp.m > 128 || Disp.n > 128
-    %     scaleFactor = 0.6;                      % Downsample
-    %     img_rgb = imresize(img_rgb, scaleFactor);
-    %     [rows, cols, ~] = size(img_rgb);
-    %     Disp.m         = cols;
-    %     Disp.n         = rows;
+    imgRGB = im2double(imread(img));           
+    imgRGB = imresize(imgRGB, [imgParams.m, imgParams.n]);       
 
-    img_rgb = im2double(imread(imageType));                % Load and convert image to double
-    img_rgb = imresize(img_rgb, [128*2, 128*2]);         % Resize to 128x128 pixels
-
-    [rows, cols, ~] = size(img_rgb);
-    Disp.m = cols;
-    Disp.n = rows;
+    imgrgbLin = RGB2rgbLin(imgRGB,Disp);
 
     % Cal format RGB 
-    triRGBCalFormat = ImageToCalFormat(img_rgb); 
-    triRGBCalFormat(triRGBCalFormat>1) = 1;
-    triRGBCalFormat(triRGBCalFormat<0) = 0;
+    trirgbLinCalFormat = ImageToCalFormat(imgrgbLin); 
+    trirgbLinCalFormat(trirgbLinCalFormat>1) = 1;
+    trirgbLinCalFormat(trirgbLinCalFormat<0) = 0;
     % Convert to LMS 
-    triLMSCalFormat = Disp.M_rgb2cones * triRGBCalFormat;
+    triLMSCalFormat = Disp.M_rgb2cones * trirgbLinCalFormat;
 
     % [diLMSCalFormat,M_triToDi]       = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS,  constraintWL, renderType, Disp);
     
@@ -166,32 +143,31 @@ elseif endsWith(imageType, '.png', 'IgnoreCase', true) || endsWith(imageType, '.
     % figure();imagesc(imageDi);
 
 else
-    % Get trichromatic (LMS) image
-    Disp.m = 32;
-    Disp.n = 32;
-
     % I think t_renderHyperspectralImage is only used in order to create
     % LMS values for the gray image with square isochromatic plates added
     % on. Maybe you can simplify this? Not sure. 
     
-    [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate] = t_renderHyperspectralImage(imageType,renderType,constraintWL,setParams.nSquares,modType,Disp);
-    % clear triLMSCalFormat;
-    % clear diLMSCalFormat;
+    [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate] = t_renderHyperspectralImage(img,setParams.nSquares,modType,Disp);
     triLMSCalFormat = triLMSCalFormat_plate; % do this when you just want to see the isochromatic plate square version (other is just gray)
-    triRGBCalFormat = Disp.M_cones2rgb * triLMSCalFormat;
+    trirgbLinCalFormat = Disp.M_cones2rgb * triLMSCalFormat;
     % diLMSCalFormat  = diLMSCalFormat_plate;
 end
 
 % Convert and save image
-triRGBImage = CalFormatToImage(triRGBCalFormat, Disp.m, Disp.n);
+triRGBImage = CalFormatToImage(trirgbLinCalFormat, imgParams.m, imgParams.n);
 imwrite(triRGBImage, imageOutputPath);
 
-% Save calibration data
+% Save trichromat values
 save(triLMSPath, 'triLMSCalFormat');
-save(triRGBPath, 'triRGBCalFormat');
+save(triRGBPath, 'trirgbLinCalFormat');
 save(dispPath,   'Disp');
 
-fprintf('Generated and saved LMS data for %s\n', imageType);
+% Save dichromat values
+%
+%
+
+
+fprintf('Generated and saved LMS data for %s\n', img);
 
 
 end

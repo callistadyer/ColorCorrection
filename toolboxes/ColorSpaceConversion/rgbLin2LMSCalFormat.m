@@ -1,4 +1,4 @@
-function lmsCalFormat = rgbLin2LMSCalFormat(rgbLinCalFormat,Disp,scaleFactor)
+function lmsCalFormat = rgbLin2LMSCalFormat(rgbLinCalFormat,Disp)
 
 % function takes rgb in cal format and outputs LMS image in cal format 
 %
@@ -14,7 +14,6 @@ function lmsCalFormat = rgbLin2LMSCalFormat(rgbLinCalFormat,Disp,scaleFactor)
 %       Disp.P_monitor             - [nWlx3]. Display primaries
 %       Disp.m                     - Scalar.  Row dimension of image     
 %       Disp.n                     - Scalar.  Column dimension of image  
-%   scaleFactor           - scale factor used to scale img values   
 %
 % Outputs:
 %   lmsCalFormat          - LMS image
