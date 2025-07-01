@@ -1,8 +1,8 @@
-function [triLMSCalFormat,trirgbLinCalFormat] = loadLMSvalues(img,renderType,Disp)
+function [triLMSCalFormat,trirgbLinCalFormat] = loadLMSvalues(img,renderType,Disp,imgParams)
 % loadLMSvalues  Loads or generates an image and converts to LMS for dichromat simulation
 %
 % Syntax:
-%   [triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,plateType,Disp)
+%   [triLMSCalFormat,diLMSCalFormat] = loadLMSvalues(img,renderType,modType,nSquares,constraintWL,plateType,Disp)
 %
 % Inputs:
 %   img:              Either 'ishihara' or a filename ('.png', '.jpg') or a hyperspectral identifier
@@ -141,11 +141,7 @@ if strcmp(img,'ishihara')
 elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'IgnoreCase', true)
 
     imgRGB = im2double(imread(img));           
-    imgRGB = imresize(imgRGB, [128, 128]);         % Resize to 128x128 pixels
-
-    [rows, cols, ~] = size(imgRGB);
-    Disp.m = cols;
-    Disp.n = rows;
+    imgRGB = imresize(imgRGB, [imgParams.m, imgParams.n]);       
 
     imgrgbLin = RGB2rgbLin(imgRGB,Disp);
 
@@ -164,10 +160,6 @@ elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'Ignor
     % figure();imagesc(imageDi);
 
 else
-    % Get trichromatic (LMS) image
-    % Disp.m = 32;
-    % Disp.n = 32;
-
     % I think t_renderHyperspectralImage is only used in order to create
     % LMS values for the gray image with square isochromatic plates added
     % on. Maybe you can simplify this? Not sure. 
