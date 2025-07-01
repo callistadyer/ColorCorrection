@@ -140,16 +140,8 @@ if strcmp(img,'ishihara')
     
 elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'IgnoreCase', true)
 
-    % img_rgb = im2double(imread(img));           % Load and convert image to double
-    % if Disp.m > 128 || Disp.n > 128
-    %     scaleFactor = 0.6;                      % Downsample
-    %     img_rgb = imresize(img_rgb, scaleFactor);
-    %     [rows, cols, ~] = size(img_rgb);
-    %     Disp.m         = cols;
-    %     Disp.n         = rows;
-
-    imgRGB = im2double(imread(img));                % Load and convert image to double
-    imgRGB = imresize(imgRGB, [128*2, 128*2]);         % Resize to 128x128 pixels
+    imgRGB = im2double(imread(img));           
+    imgRGB = imresize(imgRGB, [128, 128]);         % Resize to 128x128 pixels
 
     [rows, cols, ~] = size(imgRGB);
     Disp.m = cols;
@@ -173,16 +165,14 @@ elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'Ignor
 
 else
     % Get trichromatic (LMS) image
-    Disp.m = 32;
-    Disp.n = 32;
+    % Disp.m = 32;
+    % Disp.n = 32;
 
     % I think t_renderHyperspectralImage is only used in order to create
     % LMS values for the gray image with square isochromatic plates added
     % on. Maybe you can simplify this? Not sure. 
     
     [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate] = t_renderHyperspectralImage(img,setParams.nSquares,modType,Disp);
-    % clear triLMSCalFormat;
-    % clear diLMSCalFormat;
     triLMSCalFormat = triLMSCalFormat_plate; % do this when you just want to see the isochromatic plate square version (other is just gray)
     trirgbLinCalFormat = Disp.M_cones2rgb * triLMSCalFormat;
     % diLMSCalFormat  = diLMSCalFormat_plate;
@@ -192,10 +182,15 @@ end
 triRGBImage = CalFormatToImage(trirgbLinCalFormat, Disp.m, Disp.n);
 imwrite(triRGBImage, imageOutputPath);
 
-% Save calibration data
+% Save trichromat values
 save(triLMSPath, 'triLMSCalFormat');
 save(triRGBPath, 'trirgbLinCalFormat');
 save(dispPath,   'Disp');
+
+% Save dichromat values
+%
+%
+
 
 fprintf('Generated and saved LMS data for %s\n', img);
 

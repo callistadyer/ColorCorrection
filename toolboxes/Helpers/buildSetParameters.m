@@ -1,36 +1,96 @@
-function [setParams] = buildSetParameters(img,setType)
+function imgParams = buildSetParameters(img,setType,m,n)
 
-setParams = struct();
+% buildSetParameters  Define stimulus-specific parameters, including image size, based on image type and setType.
+%
+% Syntax:
+%   setParams = buildSetParameters(img, setType, m, n)
+%
+% Inputs:
+%   img:      String specifying image type or filename. Can be:
+%               - 'gray'      : gray squares stimulus
+%               - 'ishihara'  : Ishihara plates
+%               - filename    : external image file (.png, .jpg)
+%
+%   setType:  Numeric identifier specifying the stimulus variation, e.g.:
+%               - Number of squares for 'gray'
+%               - Plate type for 'ishihara'
+%
+%   m:        Numeric. Desired image height in pixels. If empty or not provided, defaults to 128.
+%
+%   n:        Numeric. Desired image width in pixels. If empty or not provided, defaults to 128.
+%
+% Outputs:
+%   setParams: Struct with stimulus-specific parameters:
+%                - nSquares  : number of squares (for 'gray')
+%                - plateType : Ishihara plate type (for 'ishihara')
+%                - m, n      : image size (height & width in pixels)
+%
+% Examples:
+%{
+    % Gray squares with 2 squares, default size 128×128
+    setParams = buildSetParameters('gray', 2, [], []);
+    
+    % Ishihara plate 3, custom size 256×256
+    setParams = buildSetParameters('ishihara', 3, 256, 256);
+    
+    % External image 'flower.png', default size 128×128
+    setParams = buildSetParameters('flower.png', [], [], []);
+%}
 
-if strcmp(img, 'gray')
+% Initialize empty struct
+imgParams = struct();
+
+if isempty(m)
+    m = 128;
+end
+
+if isempty(n)
+    n = 128;
+end
+
+if strcmpi(img, 'gray')
+    % For gray stimuli
+    if isempty(setType), setType = 1; end
     switch setType
-        case 1
-            setParams.nSquares = 1;
-        case 2
-            setParams.nSquares = 2;
+        case {1, 2, 3, 4, 5}
+            imgParams.nSquares = setType;
         otherwise
-            error('ERROR: undefined setType. Make sure your setType is compatible with the img type')
+            error('ERROR: undefined setType for gray. Choose setType between 1–5.');
     end
 
-elseif strcmp(img, 'ishihara')
-    %   plateType:    - Double. Only relevant for ishihara plates. 
-%                        1 -> gray with missing cone mod
-%                        2 -> background random inside with missing cone mod
-%                        3 -> LS background, M inside
-%                        4 -> like 2 but constrained between .3 and .7 colors so more room for modulation
+elseif strcmpi(img, 'ishihara')
+    % For Ishihara plates
+    if isempty(setType), setType = 1; end
+    switch setType
+        case {1, 2, 3, 4}
+            imgParams.plateType = setType;
+        otherwise
+            error('ERROR: undefined setType for ishihara. Choose setType between 1–4.');
+    end
 
+
+elseif endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
+    % For external images
+    if isempty(setType), setType = 1; end
     switch setType
         case 1
-            setParams.plateType = 1;
+            imgParams.plateType = setType;
         case 2
-            setParams.plateType = 2;    
-        case 3
-            setParams.plateType = 3; 
-        case 4
-            setParams.plateType = 4;  
+            imgParams.plateType = setType;
         otherwise
-            error('ERROR: undefined setType. Make sure your setType is compatible with the img type')
+            error('ERROR: undefined setType for ishihara. Choose setType between 1–4.');
     end
-elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'IgnoreCase', true)
+
+else
+    error('ERROR: Unrecognized img type "%s".', img);
+end
+
+% Size of image
+imgParams.m = m;
+imgParams.n = n;
+
+imgParams.img = img;
+imgParams.setType = setType;
+
 
 end
