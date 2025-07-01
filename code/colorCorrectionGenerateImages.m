@@ -28,10 +28,15 @@ setType    = 1;
 renderType = 'Deuteranopia';
 
 %% Load display calibration
-Disp = loadDisplay(img,setType);
+Disp = loadDisplay();
+
+%% Load image parameters
+m = 128;
+n = 128;
+imgParams = buildSetParameters(img,setType,m,n);
 
 %% Generate LMS/RGB calibration data for the image
-[triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(img, renderType, Disp);
+[triLMSCalFormat, triRGBCalFormat, pathName] = loadLMSvalues(img, renderType, Disp, imgParams);
 
 %% Now save the dichromat version of that image
 [diLMSCalFormat]             = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS, renderType, Disp);

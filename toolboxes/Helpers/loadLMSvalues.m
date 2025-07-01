@@ -1,4 +1,4 @@
-function [triLMSCalFormat,trirgbLinCalFormat] = loadLMSvalues(img,renderType,Disp,imgParams)
+function [triLMSCalFormat,trirgbLinCalFormat,pathName] = loadLMSvalues(img,renderType,Disp,imgParams)
 % loadLMSvalues  Loads or generates an image and converts to LMS for dichromat simulation
 %
 % Syntax:
@@ -8,6 +8,7 @@ function [triLMSCalFormat,trirgbLinCalFormat] = loadLMSvalues(img,renderType,Dis
 %   img:              Either 'ishihara' or a filename ('.png', '.jpg') or a hyperspectral identifier
 %   renderType:       Type of dichromacy to simulate
 %                         'Deuteranopia', 'Protanopia', or 'Tritanopia'
+%   imgParams
 %   Disp:             Structure containing display calibration, cone sensitivities, and image dimensions
 %
 % Outputs:
@@ -45,6 +46,7 @@ outputDir   = getpref(projectName, 'outputDir');
 % Determine output subdirectory
 if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
     outputSubdir = fullfile(outputDir, 'testImages', renderType, img);
+    pathName = outputSubdir;
 else
     outputSubdir = fullfile(outputDir, 'testImages', renderType, img, num2str(Disp.setType));
 end
