@@ -16,7 +16,7 @@ close all
 % Available image options: gray, Ishihara plate, or external images
 imageTypes = {'gray','ishihara','flower1.png','flower2.png','flower3.png', ...
     'fruit.png','map.png','painting.png','pool.png','tree.png'};
-imgType  = imageTypes{10};  % Select image type here (e.g., 1 for 'gray', 10 for 'tree.png')
+whichType  = [1 3 4]; 
 
 % Types of 'setType' usage:
 %   gray      - number of squares
@@ -36,8 +36,9 @@ n = 128;
 imgParams = buildSetParameters(imgType,setType,m,n);
 
 %% Loop through each image and generate all:
-for idx = 1:length(imageTypes)
-    imgType = imageTypes{idx};
+for idx = 1:length(whichType)
+    typeIdx = whichType{idx};
+    imgType = imageTypes{typeIdx};
 
     fprintf('Processing image: %s\n', imgType);
 

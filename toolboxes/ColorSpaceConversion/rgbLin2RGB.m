@@ -1,14 +1,14 @@
 function RGBCalFormat = rgbLin2RGB(rgbLinCalFormat, Disp, imgParams)
 % rgbLin2RGB  Convert linear rgb image to gamma corrected rgb
-%   RGBImage = rgbLin2RGB(rgbLinImage, Disp)
+%   RGBImage = rgbLin2RGB(rgbLinImage, Disp, imgParams)
 %
 %   Inputs:
-%     rgbLinImage - linear RGB image (MxNx3), range [0,1]
+%     rgbLinImage - linear rgb image 
 %     Disp        - Struct containing:
 %         Disp.d - display object with inverse gamma info
 %
 %   Outputs:
-%     RGBImage    - gamma-corrected RGB image in normalized 0-1 range (MxNx3)
+%     RGBImage    - gamma-corrected RGB image 
 
 % Image format for gamma correction
 rgbLinImage = CalFormatToImage(rgbLinCalFormat, imgParams.m,imgParams.n);

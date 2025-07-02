@@ -178,20 +178,27 @@ elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'Ignor
     triLMSCalFormat = Disp.M_rgb2cones * trirgbLinCalFormat;    
 
 else
-    % I think t_renderHyperspectralImage is only used in order to create
-    % LMS values for the gray image with square isochromatic plates added
-    % on. Maybe you can simplify this? Not sure. 
     
-    [triLMSCalFormat,triLMSCalFormat_plate,diLMSCalFormat,diLMSCalFormat_plate] = t_renderHyperspectralImage(img,setParams.nSquares,modType,Disp);
+    % Generate gray image with squares
+    [triLMSCalFormat,triLMSCalFormat_plate] = generateGrayImage(img,setParams.nSquares,modType,Disp);
+
+    % Just grab the version with the isochromatic plate
     triLMSCalFormat = triLMSCalFormat_plate; % do this when you just want to see the isochromatic plate square version (other is just gray)
+
+    % Convert from LMS to linear rgb
     trirgbLinCalFormat = Disp.M_cones2rgb * triLMSCalFormat;
-    % diLMSCalFormat  = diLMSCalFormat_plate;
+    triRGBCalFormat    = rgbLin2RGB(trirgbLinCalFormat,Disp,imgParams);
+
+    % Gamma corrected image (for visualization)
+    triRGBImage        = CalFormatToImage(triRGBCalFormat,imgParams.m,imgParams.n);
+
 end
 
 % Create dichromat simulation
 [diLMSCalFormat,  dirgbLinCalFormat] = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
+
 % Get dichromat gamma corrected image (for visualization)
-diRGBCalFormat = rgbLin2RGB(dirgbLinCalFormat,Disp);
+diRGBCalFormat = rgbLin2RGB(dirgbLinCalFormat,Disp,imgParams);
 diRGBImage = CalFormatToImage(diRGBCalFormat,imgParams.m,imgParams.n);
 
 % Convert and save image
@@ -218,7 +225,7 @@ fprintf('Generated and saved LMS data for %s\n', img);
 % Show image pair of original and dichromat simulation
 figure();
 subplot(1,2,1)
-imagesc(cl);
+imagesc(triRGBImage);
 axis square
 title(sprintf('%s | %s | %dx%d', img, renderType, imgParams.m, imgParams.n));
 subtitle('Trichromat RGB image');
