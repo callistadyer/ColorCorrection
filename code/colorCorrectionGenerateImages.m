@@ -46,8 +46,9 @@ for idx = 1:length(whichType)
     Disp = loadDisplay(imgType,setType);
 
     % Generate LMS/RGB calibration data for the image
-    [triLMSCalFormat, triRGBCalFormat, pathName] = loadLMSvalues(imgType, renderType, Disp);
-    [diLMSCalFormat,  diRGBCalFormat]            = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
+    % loadLMSvalues computes and saves trichromat and dichromat LMS and RGB values
+    [triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = loadLMSvalues(imgType, renderType, Disp);
+    % [diLMSCalFormat,  diRGBCalFormat]            = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
 
 end
 

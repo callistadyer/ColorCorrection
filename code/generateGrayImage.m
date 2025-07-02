@@ -39,6 +39,7 @@ function [triLMScalFormat,triLMSCalFormat_plate] = generateGrayImage(nSquares,mo
 
 % Create gray hyperspectral image
 [grayImgCalFormat,m,n] = ImageToCalFormat(ones(Disp.m,Disp.n));
+
 % Gray 0.5 rgb at each pixel in image
 grayImgCalFormat       = (0.5.*(repmat(grayImgCalFormat,3,1)));
 
