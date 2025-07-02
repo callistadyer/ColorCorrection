@@ -45,12 +45,14 @@ end
 projectName = 'ColorCorrection';
 outputDir   = getpref(projectName, 'outputDir');
 
+
+% Make this a key value pair
 clearTestImages = true;  
 % Clear 'testImages' folder if requested
 if exist('clearTestImages', 'var') && clearTestImages
     if exist(testImagesDir, 'dir')
         fprintf('Clearing entire folder: %s\n', testImagesDir);
-        rmdir(testImagesDir, 's');  % 's' for recursive delete
+        rmdir(testImagesDir, 's');  
     end
     mkdir(testImagesDir);  % recreate empty testImages folder
 end
