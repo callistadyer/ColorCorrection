@@ -1,6 +1,6 @@
 function rgbLinCalFormat = RGB2rgbLin(RGBCalFormat, Disp, imgParams)
 % RGB2rgbLin  Convert RGB to linear rgb
-%   rgbLin = RGB2rgbLin(RGBImage, Disp, imgParams)
+%   rgbLinCalFormat = RGB2rgbLin(RGBCalFormat, Disp, imgParams)
 %
 %   Inputs:
 %     RGBCalFormat      - gamma corrected RGB image
