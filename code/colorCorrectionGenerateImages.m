@@ -16,7 +16,7 @@ close all
 % Available image options: gray, Ishihara plate, or external images
 imageTypes = {'gray','ishihara','flower1.png','flower2.png','flower3.png', ...
     'fruit.png','map.png','painting.png','pool.png','tree.png'};
-img  = imageTypes{10};  % Select image type here (e.g., 1 for 'gray', 10 for 'tree.png')
+imgType  = imageTypes{10};  % Select image type here (e.g., 1 for 'gray', 10 for 'tree.png')
 
 % Types of 'setType' usage:
 %   gray      - number of squares
@@ -33,10 +33,10 @@ Disp = loadDisplay();
 %% Load image parameters
 m = 128;
 n = 128;
-imgParams = buildSetParameters(img,setType,m,n);
+imgParams = buildSetParameters(imgType,setType,m,n);
 
 %% Generate LMS/RGB calibration data for the image
-[triLMSCalFormat, triRGBCalFormat, pathName] = loadLMSvalues(img, renderType, Disp, imgParams);
+[triLMSCalFormat, triRGBCalFormat, pathName] = loadLMSvalues(imgType, renderType, Disp, imgParams);
 
 %% Now save the dichromat version of that image
 [diLMSCalFormat]             = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS, renderType, Disp);
@@ -44,18 +44,17 @@ imgParams = buildSetParameters(img,setType,m,n);
 
 %% Loop through each image and generate all:
 for idx = 1:length(imageTypes)
-    img = imageTypes{idx};
+    imgType = imageTypes{idx};
 
-    fprintf('Processing image: %s\n', img);
+    fprintf('Processing image: %s\n', imgType);
 
     % Load display calibration
-    Disp = loadDisplay(img,setType);
+    Disp = loadDisplay(imgType,setType);
 
     % Generate LMS/RGB calibration data for the image
-    [triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(img, renderType, Disp);
-    [diLMSCalFormat]             = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS, renderType, Disp);
+    [triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(imgType, renderType, Disp);
+    [diLMSCalFormat]             = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
 
-    % imshow(CalFormatToImage(triRGBCalFormat, Disp.m, Disp.n)); % quick display
 end
 
 

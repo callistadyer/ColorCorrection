@@ -45,7 +45,6 @@ end
 projectName = 'ColorCorrection';
 outputDir   = getpref(projectName, 'outputDir');
 
-
 % Check to see if the image already exists
 % Determine output subdirectory
 if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
@@ -172,5 +171,9 @@ save(dispPath,   'Disp');
 
 fprintf('Generated and saved LMS data for %s\n', img);
 
+
+% Show image pair of original and dichromat simulation
+%
+%
 
 end

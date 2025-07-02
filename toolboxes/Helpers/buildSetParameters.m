@@ -10,14 +10,11 @@ function imgParams = buildSetParameters(img,setType,m,n)
 %               - 'gray'      : gray squares stimulus
 %               - 'ishihara'  : Ishihara plates
 %               - filename    : external image file (.png, .jpg)
-%
 %   setType:  Numeric identifier specifying the stimulus variation, e.g.:
 %               - Number of squares for 'gray'
 %               - Plate type for 'ishihara'
-%
-%   m:        Numeric. Desired image height in pixels. If empty or not provided, defaults to 128.
-%
-%   n:        Numeric. Desired image width in pixels. If empty or not provided, defaults to 128.
+%   m:        Image dimension 1
+%   n:        Image dimension 2
 %
 % Outputs:
 %   setParams: Struct with stimulus-specific parameters:
