@@ -45,11 +45,21 @@ end
 projectName = 'ColorCorrection';
 outputDir   = getpref(projectName, 'outputDir');
 
+clearTestImages = true;  
+% Clear 'testImages' folder if requested
+if exist('clearTestImages', 'var') && clearTestImages
+    if exist(testImagesDir, 'dir')
+        fprintf('Clearing entire folder: %s\n', testImagesDir);
+        rmdir(testImagesDir, 's');  % 's' for recursive delete
+    end
+    mkdir(testImagesDir);  % recreate empty testImages folder
+end
+
+
 % Check to see if the image already exists
 % Determine output subdirectory
 if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
     outputSubdir = fullfile(outputDir, 'testImages', renderType, img);
-    pathName = outputSubdir;
 else
     outputSubdir = fullfile(outputDir, 'testImages', renderType, img, num2str(imgParams.setType));
 end

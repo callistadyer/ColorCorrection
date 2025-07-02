@@ -3,10 +3,10 @@ function rgbLinCalFormat = RGB2rgbLin(RGBCalFormat, Disp, imgParams)
 %   rgbLin = RGB2rgbLin(RGBImage, Disp, imgParams)
 %
 %   Inputs:
-%     RGBCalFormat - RGB image in normalized 0-1 range 
-%     Disp         
+%     RGBCalFormat      - gamma corrected RGB image
+%     Disp              - Display structure
 %   Outputs:
-%     rgbLin   - linear RGB image (MxNx3), range [0,1]
+%     rgbLinCalFormat   - linear RGB image (MxNx3), range [0,1]
 
 % Image format for reverse gamma correction
 RGBImage = CalFormatToImage(RGBCalFormat,imgParams.m,imgParams.n);
