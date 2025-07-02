@@ -10,7 +10,6 @@ function Disp = loadDisplay()
 %
 % Outputs:
 %   Disp: Struct with display parameters including:
-%         - Disp.m, Disp.n           : Image width and height
 %         - Disp.wls                 : Wavelength sampling (400–700 nm)
 %         - Disp.d                   : Display structure (from ISET)
 %         - Disp.P_monitor           : Monitor spectral power distribution
@@ -35,15 +34,21 @@ function Disp = loadDisplay()
 Disp = loadDisplay()
 %}
 
-% Universal display parameters
+% Display parameters
+
+% Wavelengths to be used for display
 wls = (400:10:700)';
+% Display
 d = displayCreate('LCD-Apple');
+% Monitor primaries
 P_monitor = SplineSrf(displayGet(d, 'wave'), displayGet(d, 'spd'), wls);
+% Spectral sensitivities (cone fundamentals)
 load T_cones_ss2;
 T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
+% Conversions from rgb to cones 
 M_rgb2cones = T_cones*P_monitor;
-M_cones2rgb = inv(M_rgb2cones);
 
+% Put parameters into Disp structure
 Disp.wls       = wls;
 Disp.d         = d;
 Disp.P_monitor = P_monitor;
