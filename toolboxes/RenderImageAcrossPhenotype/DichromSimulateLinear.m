@@ -1,4 +1,4 @@
-function [calFormatDiLMS,M_triToDi] = DichromSimulateLinear(calFormatLMS, cbType, Disp)
+function [calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(calFormatLMS, cbType, Disp)
 % Simulates color vision for dichromatic viewers by projecting onto a plane
 % in LMS space
 %
@@ -114,10 +114,11 @@ calFormatDiLMSContast = M_triToDi * calFormatLMSContrast;
 % Convert back to LMS excitations
 calFormatDiLMS = (calFormatDiLMSContast .* Disp.grayLMS) + Disp.grayLMS;
 
-calFormatDiRGB = inv(Disp.M_rgb2cones) * calFormatDiLMS;
-calFormatDiRGB(calFormatDiRGB>1) = 1;
-calFormatDiRGB(calFormatDiRGB<0) = 0;
+% Get linear rgb 
+calFormatDirgbLin = inv(Disp.M_rgb2cones) * calFormatDiLMS;
+calFormatDirgbLin(calFormatDirgbLin>1) = 1;
+calFormatDirgbLin(calFormatDirgbLin<0) = 0;
 
-calFormatDiLMS = Disp.M_rgb2cones * calFormatDiRGB;
+calFormatDiLMS = Disp.M_rgb2cones * calFormatDirgbLin;
 
 end

@@ -1,5 +1,5 @@
-function RGBImage = rgbLin2RGB(rgbLinImage, Disp)
-% rgbLin2RGB  Convert linear RGB image to sRGB DAC image using display inverse gamma.
+function RGBCalFormat = rgbLin2RGB(rgbLinCalFormat, Disp, imgParams)
+% rgbLin2RGB  Convert linear rgb image to gamma corrected rgb
 %   RGBImage = rgbLin2RGB(rgbLinImage, Disp)
 %
 %   Inputs:
@@ -8,10 +8,16 @@ function RGBImage = rgbLin2RGB(rgbLinImage, Disp)
 %         Disp.d - display object with inverse gamma info
 %
 %   Outputs:
-%     RGBImage    - gamma-corrected sRGB image in normalized 0-1 range (MxNx3)
+%     RGBImage    - gamma-corrected RGB image in normalized 0-1 range (MxNx3)
 
+% Image format for gamma correction
+rgbLinImage = CalFormatToImage(rgbLinCalFormat, imgParams.m,imgParams.n);
 
-iGtable  = displayGet(Disp.d,'inversegamma');
-RGBImage = rgb2dac(rgbLinImage,iGtable)/(2^displayGet(Disp.d,'dacsize')-1);
+% Gamma correction
+gammaTable = displayGet(Disp.d,'gammatable');
+RGBImage = dac2rgb(rgbLinImage, gammaTable)*(2^displayGet(Disp.d,'dacsize')-1);
+
+% Cal format for output
+RGBCalFormat = ImageToCalFormat(RGBImage);
 
 end

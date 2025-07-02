@@ -35,13 +35,6 @@ m = 128;
 n = 128;
 imgParams = buildSetParameters(imgType,setType,m,n);
 
-%% Generate LMS/RGB calibration data for the image
-[triLMSCalFormat, triRGBCalFormat, pathName] = loadLMSvalues(imgType, renderType, Disp, imgParams);
-
-%% Now save the dichromat version of that image
-[diLMSCalFormat]             = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS, renderType, Disp);
-
-
 %% Loop through each image and generate all:
 for idx = 1:length(imageTypes)
     imgType = imageTypes{idx};
@@ -52,8 +45,8 @@ for idx = 1:length(imageTypes)
     Disp = loadDisplay(imgType,setType);
 
     % Generate LMS/RGB calibration data for the image
-    [triLMSCalFormat, triRGBCalFormat, Disp] = loadLMSvalues(imgType, renderType, Disp);
-    [diLMSCalFormat]             = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
+    [triLMSCalFormat, triRGBCalFormat, pathName] = loadLMSvalues(imgType, renderType, Disp);
+    [diLMSCalFormat,  diRGBCalFormat]            = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
 
 end
 

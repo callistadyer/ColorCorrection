@@ -1,4 +1,4 @@
-function [triLMSCalFormat,trirgbLinCalFormat,pathName] = loadLMSvalues(img,renderType,Disp,imgParams)
+function [triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = loadLMSvalues(img,renderType,Disp,imgParams)
 % loadLMSvalues  Loads or generates an image and converts to LMS for dichromat simulation
 %
 % Syntax:
@@ -30,8 +30,8 @@ function [triLMSCalFormat,trirgbLinCalFormat,pathName] = loadLMSvalues(img,rende
 % Examples:
 %{
 Disp = loadDisplay();
-imgParams = buildSetParameters('ishihara',1,128,128)
-testLMS = loadLMSvalues('ishihara','Deuteranopia',Disp,imgParams);
+imgParams = buildSetParameters('ishihara',1,128,128);
+[triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = loadLMSvalues('ishihara','Deuteranopia',Disp,imgParams);
 
 % Check that behavior has not changed since we declared it good.
 if (abs(sum(testLMS(:)) - 525.8024)/525.8024 > 1e-4)
@@ -63,9 +63,16 @@ idx = strfind(outputSubdir, ['testImages' filesep]);
 pathName = outputSubdir(idx + length('testImages') + 1 : end);
 
 % Determine expected output file paths
-triLMSPath = fullfile(outputSubdir, 'triLMSCalFormat.mat');
-triRGBPath = fullfile(outputSubdir, 'triRGBCalFormat.mat');
-dispPath   = fullfile(outputSubdir, 'Disp.mat');
+triLMSPath    = fullfile(outputSubdir, 'triLMSCalFormat.mat');
+trirgbLinPath = fullfile(outputSubdir, 'trirgbLinCalFormat.mat');
+triRGBPath    = fullfile(outputSubdir, 'triRGBCalFormat.mat');
+
+diLMSPath    = fullfile(outputSubdir, 'diLMSCalFormat.mat');
+dirgbLinPath = fullfile(outputSubdir, 'dirgbLinCalFormat.mat');
+diRGBPath    = fullfile(outputSubdir, 'diRGBCalFormat.mat');
+
+dispPath      = fullfile(outputSubdir, 'Disp.mat');
+imgParamsPath = fullfile(outputSubdir, 'imgParams.mat');
 if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
     imageBaseName = img;
 else
@@ -75,11 +82,36 @@ end
 imageOutputPath = fullfile(outputSubdir, imageBaseName);
 
 % If all outputs exist, load them and return
-if exist(triLMSPath, 'file') && exist(triRGBPath, 'file') && exist(dispPath, 'file') && exist(imageOutputPath, 'file')
+if exist(triLMSPath, 'file') && exist(trirgbLinPath, 'file') && exist(triRGBPath, 'file')...
+        && exist(diLMSPath, 'file') && exist(dirgbLinPath, 'file') && exist(diRGBPath, 'file')...
+        && exist(dispPath, 'file') && exist(imgParamsPath, 'file')
     fprintf('Found precomputed LMS data for %s', img);
-    load(triLMSPath, 'triLMSCalFormat');
-    load(triRGBPath, 'trirgbLinCalFormat');
-    load(dispPath,   'Disp');
+    load(triLMSPath,    'triLMSCalFormat');
+    load(trirgbLinPath, 'trirgbLinCalFormat');
+    load(triRGBPath,    'triRGBImage');
+
+    load(diLMSPath,     'diLMSCalFormat');
+    load(dirgbLinPath,  'dirgbLinCalFormat');
+    load(diRGBPath,     'diRGBImage');
+
+    load(dispPath,      'Disp');
+    load(imgParamsPath, 'imgParams');
+
+    % Show image pair of original and dichromat simulation
+    figure();
+    subplot(1,2,1)
+    imagesc(triRGBImage);
+    axis square
+    title(sprintf('%s | %s | %dx%d', img, renderType, imgParams.m, imgParams.n));
+    subtitle('Trichromat RGB image');
+
+    subplot(1,2,2)
+    imagesc(diRGBImage);
+    axis square
+    title(sprintf('%s | %s | %dx%d', img, renderType, imgParams.m, imgParams.n));
+    subtitle('Dichromat RGB image')
+
+
     return;
 end
 
@@ -102,48 +134,48 @@ end
 
 if strcmp(img,'ishihara')
 
-    % 1 -> gray with missing cone mod
-    % 2 -> background random inside with missing cone mod
-    % 3 -> LS background, M inside
-    % 4 -> like 2 but constrained between .3 and .7 colors so more room for
-    %      modulation
-
     [insideColors, outsideColors] = chooseIshiharaColors(renderType,imgParams.plateType,Disp);
+        % 1 -> gray with missing cone mod
+        % 2 -> background random inside with missing cone mod
+        % 3 -> LS background, M inside
+        % 4 -> like 2 but constrained between .3 and .7 colors so more room for
+        %      modulation
 
     % Generate plate now that you have the correct colors
     ishiharaRGB = generateIshiharaPlate('74', insideColors, outsideColors,imgParams.m);
-    ishiharaRGB = im2double(ishiharaRGB);
-    triRGBImage = ishiharaRGB;
-    % Get linear rgb from gamma corrected RGB
-    trirgbLinCalFormat = RGB2rgbLin(ishiharaRGB,Disp,imgParams);
 
-    % Plot modified RGB Image 
-    % figure();imagesc(ishiharaRGB)
-    % axis square;
+    % Gamma corrected image (for visualization)
+    triRGBImage = im2double(ishiharaRGB);
+
+    triRGBCalFormat = ImageToCalFormat(triRGBImage);
+     
+    % Get linear rgb from gamma corrected RGB
+    trirgbLinCalFormat = RGB2rgbLin(triRGBCalFormat,Disp,imgParams);
 
     % Put modified image into LMS 
     triLMSCalFormat      = Disp.M_rgb2cones * trirgbLinCalFormat;
     
 elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'IgnoreCase', true)
 
-    imgRGB = im2double(imread(img));           
-    imgRGB = imresize(imgRGB, [imgParams.m, imgParams.n]);       
+    % Load in the image 
+    imgRGB = im2double(imread(img));   
 
-    imgrgbLin = RGB2rgbLin(imgRGB,Disp);
+    % Resize the image according to m and n (see buildSetParameters.m)
+    % Gamma corrected image (for visualization)
+    triRGBImage = imresize(imgRGB, [imgParams.m, imgParams.n]);       
 
-    % Cal format RGB 
+    % Get linear rgb from gamma corrected RGB
+    imgrgbLin = RGB2rgbLin(triRGBImage,Disp);
+
+    % Cal format linear rgb 
     trirgbLinCalFormat = ImageToCalFormat(imgrgbLin); 
+
+    % Clip ends to ensure in gamut before we process the image
     trirgbLinCalFormat(trirgbLinCalFormat>1) = 1;
     trirgbLinCalFormat(trirgbLinCalFormat<0) = 0;
-    % Convert to LMS 
-    triLMSCalFormat = Disp.M_rgb2cones * trirgbLinCalFormat;
 
-    % [diLMSCalFormat,M_triToDi]       = DichromSimulateLinear(triLMSCalFormat, Disp.grayLMS,  constraintWL, renderType, Disp);
-    
-    % check
-    % rgb1 = inv(Disp.M_rgb2cones) * diLMSCalFormat;
-    % imageDi = CalFormatToImage(rgb1, Disp.m, Disp.n);
-    % figure();imagesc(imageDi);
+    % Convert to LMS 
+    triLMSCalFormat = Disp.M_rgb2cones * trirgbLinCalFormat;    
 
 else
     % I think t_renderHyperspectralImage is only used in order to create
@@ -156,24 +188,45 @@ else
     % diLMSCalFormat  = diLMSCalFormat_plate;
 end
 
+% Create dichromat simulation
+[diLMSCalFormat,  dirgbLinCalFormat] = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
+% Get dichromat gamma corrected image (for visualization)
+diRGBCalFormat = rgbLin2RGB(dirgbLinCalFormat,Disp);
+diRGBImage = CalFormatToImage(diRGBCalFormat,imgParams.m,imgParams.n);
+
 % Convert and save image
 imwrite(triRGBImage, imageOutputPath);
 
 % Save trichromat values
 save(triLMSPath, 'triLMSCalFormat');
-save(triRGBPath, 'trirgbLinCalFormat');
-save(dispPath,   'Disp');
+save(trirgbLinPath, 'trirgbLinCalFormat');
+save(triRGBPath, 'triRGBImage') % should this be cal format or image?
 
 % Save dichromat values
-%
-%
+save(diLMSPath, 'diLMSCalFormat');
+save(dirgbLinPath, 'dirgbLinCalFormat');
+save(diRGBPath, 'diRGBImage') % should this be cal format or image?
 
+% Save Display parameters
+save(dispPath,  'Disp');
+
+% Save image parameters
+save(imgParamsPath,  'imgParams');
 
 fprintf('Generated and saved LMS data for %s\n', img);
 
-
 % Show image pair of original and dichromat simulation
-%
-%
+figure();
+subplot(1,2,1)
+imagesc(cl);
+axis square
+title(sprintf('%s | %s | %dx%d', img, renderType, imgParams.m, imgParams.n));
+subtitle('Trichromat RGB image');
+
+subplot(1,2,2)
+imagesc(diRGBImage);
+axis square
+title(sprintf('%s | %s | %dx%d', img, renderType, imgParams.m, imgParams.n));
+subtitle('Dichromat RGB image')
 
 end
