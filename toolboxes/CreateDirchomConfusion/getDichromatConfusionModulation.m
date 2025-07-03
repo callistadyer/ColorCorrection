@@ -1,4 +1,4 @@
-function [modulationLMSimage] = getDichromatConfusionModulation(rgbImageCalFormat,modType,Disp,scaleFactor)
+function [modulationLMSimage] = getDichromatConfusionModulation(rgbImageCalFormat,modType,Disp,imgParams)
 
 % function that calculates the modulation in the L M or S cone based on the
 % input image and the gamut limitations
@@ -15,8 +15,6 @@ function [modulationLMSimage] = getDichromatConfusionModulation(rgbImageCalForma
 % Disp includes:
 %   Disp.T_cones:           spectral sensitivities
 %   Disp.P_monitor:         monitor primaries
-%   Disp.m:                 dimension 1 of img
-%   Disp.n:                 dimension 2 of img
 % scaleFactor:       how much to scale the rgbImage values (or undo it)
 
  
@@ -59,12 +57,7 @@ scaleFactor_rgb = toleranceFactor*scaleFactor_rgb;
 % Scale modulation direction by scale factor to get modulation
 modulation_rgb = scaleFactor_rgb.*modulationDirection_rgb;
 
-% If there is more than 1 value for the modulation (ie. different for each pixel) 
-% if size(modulation_rgb,2) > 1 
-%     modulation_rgb_img = CalFormatToImage(modulation_rgb,Disp.m,Disp.n);
-% end
-
 % Convert modulation from rgb to LMS format for output
-modulationLMSCalFormat = rgbLin2LMSCalFormat(modulation_rgb,Disp,scaleFactor);
-modulationLMSimage = CalFormatToImage(modulationLMSCalFormat,Disp.m,Disp.n);
+modulationLMSCalFormat = rgbLin2LMSCalFormat(modulation_rgb,Disp);
+modulationLMSimage = CalFormatToImage(modulationLMSCalFormat,imgParams.m,imgParams.n);
 end

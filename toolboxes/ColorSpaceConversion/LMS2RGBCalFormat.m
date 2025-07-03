@@ -1,4 +1,4 @@
-function [RGBCalFormat,rgbLinCalFormat] = LMS2RGBCalFormat(lmsImageCalFormat,Disp)
+function [RGBCalFormat,rgbLinCalFormat] = LMS2RGBCalFormat(lmsImageCalFormat,Disp,imgParams)
 
 % Converts LMS cone images to RGB images. Outputs both linear and gamma
 % corrected rgb/RGB values
@@ -31,7 +31,7 @@ M_cones2rgb = inv(M_rgb2cones);
 
 % Get linear RGB from LMS
 [rgbImageCalFormat] = LMS2rgbLinCalFormat(lmsImageCalFormat,Disp);
-rgbImage = CalFormatToImage(rgbImageCalFormat,Disp.m,Disp.n);
+rgbImage = CalFormatToImage(rgbImageCalFormat,imgParams.m,imgParams.n);
 
 % Linear rgb values make sure not below 0
 rgbLinImage = rgbImage; 

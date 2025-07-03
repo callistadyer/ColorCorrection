@@ -1,4 +1,4 @@
-function [triLMScalFormat,triLMSCalFormat_plate] = generateGrayImage(nSquares,modType,Disp)    
+function [triLMScalFormat,triLMSCalFormat_plate] = generateGrayImage(nSquares,modType,Disp,imgParams)    
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
@@ -38,7 +38,7 @@ function [triLMScalFormat,triLMSCalFormat_plate] = generateGrayImage(nSquares,mo
 %}
 
 % Create gray hyperspectral image
-[grayImgCalFormat,m,n] = ImageToCalFormat(ones(Disp.m,Disp.n));
+[grayImgCalFormat,m,n] = ImageToCalFormat(ones(imgParams.m,imgParams.n));
 
 % Gray 0.5 rgb at each pixel in image
 grayImgCalFormat       = (0.5.*(repmat(grayImgCalFormat,3,1)));
@@ -48,7 +48,7 @@ grayImgCalFormat       = (0.5.*(repmat(grayImgCalFormat,3,1)));
 hyperspecGrayCalFormat = Disp.P_monitor * grayImgCalFormat;
 
 % Image format
-hyperspectralImage     = CalFormatToImage(hyperspecGrayCalFormat,m,n);
+hyperspectralImage     = CalFormatToImage(hyperspecGrayCalFormat,imgParams.m,imgParams.n);
 
 % Get cone responses for every pixel of the hyperspectral image
 [hyperspectralImageCalFormat] = ImageToCalFormat(hyperspectralImage);
@@ -61,13 +61,13 @@ triRGBCalFormat = Disp.M_cones2rgb * triLMScalFormat;
 % This function is taking triRGBCalFormat and using MaximizeGamutContrast to determine how much we can move
 % in a given cone direction (if specified, the direction of the missing cone) without going out of gamut
 for i = 1:nSquares
-    [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(triRGBCalFormat,modType,Disp,0);
+    [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(triRGBCalFormat,modType,Disp,imgParams);
 end
 
 % Create isochromatic plates
 % This is taking in the original hyperspectralImage and then adding the
 % modulation in squares to the it
-[~, triLMSCalFormat_plate] = isochromaticPlates(hyperspectralImage,lmsModulationImgFormat,Disp,nSquares, ...
+[~, triLMSCalFormat_plate] = isochromaticPlates(hyperspectralImage,lmsModulationImgFormat,Disp,imgParams, ...
     'verbose',true);
 
 

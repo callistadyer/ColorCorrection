@@ -193,7 +193,7 @@ elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'Ignor
 else
     
     % Generate gray image with squares
-    [triLMSCalFormat,triLMSCalFormat_plate] = generateGrayImage(img,setParams.nSquares,modType,Disp);
+    [triLMSCalFormat,triLMSCalFormat_plate] = generateGrayImage(imgParams.nSquares,modType,Disp,imgParams);
 
     % Just grab the version with the isochromatic plate
     triLMSCalFormat = triLMSCalFormat_plate; % do this when you just want to see the isochromatic plate square version (other is just gray)

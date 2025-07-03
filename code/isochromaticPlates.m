@@ -1,4 +1,4 @@
-function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(LMSImage,LMSImageModulation,Disp,nSquares,options)
+function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(LMSImage,LMSImageModulation,Disp,imgParams,options)
 
 % function create isochromatic plates for testing dichromacy
 %
@@ -10,7 +10,7 @@ function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(LMSImage,L
 % Inputs:
 %       LMSImageModulation:      LMS plate modulation in img format
 %       Disp:                    Display parameters
-%       nSquares:                Number of squares for modulation
+%       imgParams:               Image parameters
 %
 % Outputs:
 %       RGBCalFormat_plate      Gamma corrected RGB image with cone modulation included  
@@ -27,7 +27,7 @@ arguments
     LMSImage
     LMSImageModulation
     Disp struct
-    nSquares
+    imgParams struct
     options.verbose (1,1) logical = false;
 end
 
@@ -35,21 +35,17 @@ if (options.verbose)
     fprintf('Starting execution of isochromaticPlates\n');
 end
 
-disp('Callista come back to this - make it so this func takes in LMS image')
-% Load hyperspectral image
-% [hyperspectralImage] = loadImage(img);
-
 % Get LMS values
 [hyperspectralImageCalFormat,m,n] = ImageToCalFormat(LMSImage);
 LMSCalFormat = Disp.T_cones*hyperspectralImageCalFormat;
-LMSImage     = CalFormatToImage(LMSCalFormat,Disp.m,Disp.n);
+LMSImage     = CalFormatToImage(LMSCalFormat,imgParams.m,imgParams.n);
 
 % Get original RGB image
-[RGBCalFormat rgbLinCalFormat]  = LMS2RGBCalFormat(LMSCalFormat,Disp);
-RGBimage                        = CalFormatToImage(RGBCalFormat,Disp.m,Disp.n);
+[RGBCalFormat rgbLinCalFormat]  = LMS2RGBCalFormat(LMSCalFormat,Disp,imgParams);
+RGBimage                        = CalFormatToImage(RGBCalFormat,imgParams.m,imgParams.n);
 
 % Create square modulations
-deltaLMS = plateSquare(size(LMSImage),LMSImageModulation,nSquares);
+deltaLMS = plateSquare(size(LMSImage),LMSImageModulation,imgParams.nSquares);
 
 % Add the delta to the L M S values to modulate cones (original LMS + modulation) 
 lmsImage_mod = LMSImage + deltaLMS;
@@ -57,7 +53,7 @@ lmsImage_mod = LMSImage + deltaLMS;
 % CHECK IF MODULATED LMS IS IN GAMUT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lmsImage_modCalFormat = ImageToCalFormat(lmsImage_mod);
-inGamut = checkGamut(lmsImage_modCalFormat,Disp);
+inGamut = checkGamut(lmsImage_modCalFormat,Disp,imgParams);
 if inGamut == 0
     error(['isochromaticPlates: WARNING! rgb values are out of gamut... lmsImage_mod values outside of the range [0 1]']);
 end
@@ -75,7 +71,7 @@ RGBCalFormat_plate = M_cones2rgb * LMSCalFormat_plate;
 % RGBCalFormat_plate2 = LMS2RGBCalFormat(LMSCalFormat_plate,Disp);
 
 % convert to image for viewing
-RGBimageModulated = CalFormatToImage(RGBCalFormat_plate,m,n);
+RGBimageModulated = CalFormatToImage(RGBCalFormat_plate,imgParams.m,imgParams.n);
 
 % figure('position',[927         886        1245         367]);
 % subplot(1,2,1)

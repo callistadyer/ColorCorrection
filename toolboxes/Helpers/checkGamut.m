@@ -1,4 +1,4 @@
-function [inGamut, rgbImageCalFormat] = checkGamut(LMSimageCalFormat, Disp)
+function [inGamut, rgbImageCalFormat] = checkGamut(LMSimageCalFormat, Disp, imgParams)
 % checkGamut  Verifies whether LMS image is within RGB monitor gamut
 %
 % Syntax:
@@ -23,14 +23,15 @@ function [inGamut, rgbImageCalFormat] = checkGamut(LMSimageCalFormat, Disp)
 %
 % Examples:
 %{
-Disp = loadDisplay('ishihara');
-[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues('ishihara','Deuteranopia',1,Disp);
-[inGamut, rgbOut] = checkGamut(triLMSCalFormat, Disp);
+Disp = loadDisplay();
+imgParams = buildSetParameters('ishihara',1,128,128);
+[triLMSCalFormat] = loadLMSvalues('ishihara','Deuteranopia',Disp,imgParams);
+[inGamut, rgbOut] = checkGamut(triLMSCalFormat, Disp,imgParams);
 %}
 
 % Convert LMS to RGB
 rgbImageCalFormat = LMS2rgbLinCalFormat(LMSimageCalFormat, Disp);
-rgbImage = CalFormatToImage(rgbImageCalFormat, Disp.m, Disp.n);
+rgbImage = CalFormatToImage(rgbImageCalFormat, imgParams.m, imgParams.n);
 
 % Tolerance... maybe out of gamut by small amount. should clip this if so
 tol = 1e-5;

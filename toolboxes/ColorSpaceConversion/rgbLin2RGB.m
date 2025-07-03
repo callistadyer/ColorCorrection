@@ -19,7 +19,8 @@ invgammaTable = displayGet(Disp.d,'inverse gamma');
 
 RGBImage = rgb2dac(rgbLinImage, invgammaTable); 
 % Put in range [0 1]
-RGBImage = double(RGBImage) / (2^displayGet(Disp.d,'dacsize') - 1);
+% RGBImage = double(RGBImage) / (2^displayGet(Disp.d,'dacsize') - 1);
+RGBImage = double(RGBImage - 1) / (2^displayGet(Disp.d,'dacsize') - 1);
 
 % Cal format for output
 RGBCalFormat = ImageToCalFormat(RGBImage);
