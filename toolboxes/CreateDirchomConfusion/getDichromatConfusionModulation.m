@@ -5,7 +5,7 @@ function [modulationLMSimage] = getDichromatConfusionModulation(rgbImageCalForma
 %
 % inputs
 % rgbImageCalFormat: rgb in cal format
-% renderType    - String. Type of dichromat.  Options are:
+% renderType         String. Type of dichromat.  Options are:
 %                       'Deuteranopia'
 %                       'Protanopia'
 %                       'Tritanopia'
@@ -59,5 +59,5 @@ modulation_rgb = scaleFactor_rgb.*modulationDirection_rgb;
 
 % Convert modulation from rgb to LMS format for output
 modulationLMSCalFormat = rgbLin2LMSCalFormat(modulation_rgb,Disp);
-modulationLMSimage = CalFormatToImage(modulationLMSCalFormat,imgParams.m,imgParams.n);
+modulationLMSimage     = CalFormatToImage(modulationLMSCalFormat,imgParams.m,imgParams.n);
 end
