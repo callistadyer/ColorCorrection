@@ -40,14 +40,14 @@ ishiharaRGB = generateIshiharaPlate('74', insideColors, outsideColors,imgParams.
 RGBImage     = im2double(ishiharaRGB); % this transforms from [0 255] to [0 1]
 RGBCalFormat = ImageToCalFormat(RGBImage);
 
-%% Load in the gamma tables
-gammaTable      = displayGet(Disp.d,'gamma table');
-invGammaTable   = displayGet(Disp.d,'inverse gamma');
-% invGammaTable is not in the right format, so we normalize to get it into
-% [0 1] range.
-dacSize = displayGet(Disp.d, 'dacsize');   % should return 10 for 10-bit
-maxDAC  = 2^dacSize - 1;                   % 1023 for 10-bit
-invGammaTable = invGammaTable / maxDAC;
+% Load in the gamma tables
+% gammaTable      = displayGet(Disp.d,'gamma table');
+% invGammaTable   = displayGet(Disp.d,'inverse gamma');
+% % invGammaTable is not in the right format, so we normalize to get it into
+% % [0 1] range.
+% dacSize = displayGet(Disp.d, 'dacsize');   % should return 10 for 10-bit
+% maxDAC  = 2^dacSize - 1;                   % 1023 for 10-bit
+% invGammaTable = invGammaTable / maxDAC;
 
 %% Do the gamma stuff
 % RGB gamma corrected -> linear rgb

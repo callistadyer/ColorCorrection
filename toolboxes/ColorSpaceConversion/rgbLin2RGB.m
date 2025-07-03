@@ -34,6 +34,7 @@ invGammaTable = invGammaTable / maxDAC;
 
 % Number of levels in the inverse gamma table
 nLevels = size(invGammaTable, 1);
+xvals = linspace(0,1,nLevels); 
 
 % Compute lookup indices 
 indices = round(rgbLinCalFormat * (nLevels - 1)) + 1;
