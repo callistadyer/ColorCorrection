@@ -10,10 +10,8 @@ function lmsCalFormat = rgbLin2LMSCalFormat(rgbLinCalFormat,Disp)
 % Inputs:
 %   rgbLinCalFormat       - linear rgb image
 %   Disp includes:
-%       Disp.T_cones               - [3xnWl]. Cone spectral sensitivities
-%       Disp.P_monitor             - [nWlx3]. Display primaries
-%       Disp.m                     - Scalar.  Row dimension of image     
-%       Disp.n                     - Scalar.  Column dimension of image  
+%       Disp.T_cones      - [3xnWl]. Cone spectral sensitivities
+%       Disp.P_monitor    - [nWlx3]. Display primaries
 %
 % Outputs:
 %   lmsCalFormat          - LMS image
