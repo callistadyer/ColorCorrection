@@ -55,13 +55,13 @@ hyperspectralImage     = CalFormatToImage(hyperspecGrayCalFormat,imgParams.m,img
 
 % Render lms image that a trichromat sees
 triLMScalFormat = Disp.T_cones*hyperspectralImageCalFormat;
-triRGBCalFormat = Disp.M_cones2rgb * triLMScalFormat;
+trirgbLinCalFormat = Disp.M_cones2rgb * triLMScalFormat;
 
 % Get modulation for isochromatic plate modulation.
 % This function is taking triRGBCalFormat and using MaximizeGamutContrast to determine how much we can move
 % in a given cone direction (if specified, the direction of the missing cone) without going out of gamut
 for i = 1:nSquares
-    [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(triRGBCalFormat,modType,Disp,imgParams);
+    [lmsModulationImgFormat(:,:,:,i)] = getDichromatConfusionModulation(trirgbLinCalFormat,modType,Disp,imgParams);
 end
 
 % Create isochromatic plates

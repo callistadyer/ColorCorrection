@@ -210,6 +210,12 @@ end
 % Create dichromat simulation
 [diLMSCalFormat,  dirgbLinCalFormat] = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
 
+% What if you use im2double on the gamma corrected version? this actually
+% seems to create a gray image, unlike when we perform it on the
+% uncorrected linear version
+% [diLMSCalFormat,  dirgbLinCalFormat] = DichromSimulateLinear(Disp.M_rgb2cones * im2double(triRGBCalFormat), renderType, Disp);
+% figure(); imagesc(CalFormatToImage(dirgbLinCalFormat,imgParams.m,imgParams.n))
+
 % Get dichromat gamma corrected image (for visualization)
 diRGBCalFormat = rgbLin2RGB(dirgbLinCalFormat,Disp,imgParams);
 diRGBImage = CalFormatToImage(diRGBCalFormat,imgParams.m,imgParams.n);
