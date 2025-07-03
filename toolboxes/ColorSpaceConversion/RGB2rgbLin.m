@@ -10,18 +10,32 @@ function rgbLinCalFormat = RGB2rgbLin(RGBCalFormat, Disp, imgParams)
 
 % Image format for reverse gamma correction
 RGBImage = CalFormatToImage(RGBCalFormat,imgParams.m,imgParams.n);
-RGB_norm = double(RGBImage) / 255;
 
-% dac is gamma corrected RGB values
-% Use gamma table to do inverse gamma correction
-% Use inverse gamma table to do gamma correction
+% Get gamma table from display (should be normalized to [0,1] already)
+gammaTable = displayGet(Disp.d, 'gamma table');
+nLevels = size(gammaTable, 1);
+
+% Compute indices for mapping
+indices = round(RGBCalFormat * (nLevels - 1)) + 1;
+
+% Make sure indices are all good and no numerical junk...
+indices(indices < 1)       = 1;
+indices(indices > nLevels) = nLevels;
+
+% Initialize
+rgbLinCalFormat = zeros(size(RGBCalFormat));
+
+% Loop over RGB
+for ch = 1:3
+    rgbLinCalFormat(ch, :) = gammaTable(indices(ch, :), ch)';
+end
+
+%% Alternatively, use the dac2rgb. Less sure about how this works.
 % Reverse the gamma correction
-gammaTable      = displayGet(Disp.d,'gamma table');
-rgbLinImage = dac2rgb(RGB_norm, gammaTable);  % leave as [0,1] linear
-% rgbLinImage = dac2rgb(RGBImage, gammaTable);
-% rgbLinImage     = dac2rgb(RGB_norm,gammaTable)/(2^displayGet(Disp.d,'dacsize')-1);
+% gammaTable      = displayGet(Disp.d,'gamma table');
+% rgbLinImage     = dac2rgb(RGBImage,gammaTable); %/(2^displayGet(Disp.d,'dacsize')-1);
 
 % Cal format for output
-rgbLinCalFormat = ImageToCalFormat(rgbLinImage);
+% rgbLinCalFormat = ImageToCalFormat(rgbLinImage);
 
 end

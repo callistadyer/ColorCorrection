@@ -12,6 +12,7 @@ function imgRGB = generateIshiharaPlate(textStr, insideColors, outsideColors, ou
 %
 % Output:
 %   imgRGB        - outputSize x outputSize x 3 RGB IMAGE. Final rendered Ishihara plate
+%                   BEWARE: these are gamma corrected RGB not linear RGB
 %
 % Example:
 %{ 

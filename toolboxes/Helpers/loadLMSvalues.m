@@ -140,10 +140,10 @@ if strcmp(img,'ishihara')
         %      modulation
 
     % Generate plate now that you have the correct colors
-    triRGBImage = generateIshiharaPlate('74', insideColors, outsideColors,imgParams.m);
+    ishiharaRGB = generateIshiharaPlate('74', insideColors, outsideColors,imgParams.m);
 
     % Gamma corrected image (for visualization)
-    % triRGBImage = im2double(ishiharaRGB);
+    triRGBImage = im2double(ishiharaRGB);
 
     triRGBCalFormat = ImageToCalFormat(triRGBImage);
      
