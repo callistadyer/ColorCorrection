@@ -48,6 +48,7 @@ outputDir   = getpref(projectName, 'outputDir');
 
 % Make this a key value pair
 clearTestImages = true;  
+testImagesDir = fullfile(outputDir, 'testImages');
 % Clear 'testImages' folder if requested
 if exist('clearTestImages', 'var') && clearTestImages
     if exist(testImagesDir, 'dir')
@@ -154,10 +155,10 @@ if strcmp(img,'ishihara')
         %      modulation
 
     % Generate plate now that you have the correct colors
-    ishiharaRGB = generateIshiharaPlate('74', insideColors, outsideColors,imgParams.m);
+    triRGBImage = generateIshiharaPlate('74', insideColors, outsideColors,imgParams.m);
 
     % Gamma corrected image (for visualization)
-    triRGBImage = im2double(ishiharaRGB);
+    % triRGBImage = im2double(ishiharaRGB);
 
     triRGBCalFormat = ImageToCalFormat(triRGBImage);
      
