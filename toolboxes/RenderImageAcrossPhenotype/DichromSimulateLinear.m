@@ -51,11 +51,11 @@ Disp = loadDisplay();
 
 switch (cbType)
     case 'Deuteranopia'
-        constraintWL = 585;
+        constraintWL = 575; % or 475 (blue)
     case 'Protanopia'
-        error('ERROR: you need to set up constraint wavelength for Protanopia case')
+        constraintWL = 575; % or 475 (blue)
     case 'Tritanopia'
-        error('ERROR: you need to set up constraint wavelength for Tritanopia case')
+        constraintWL = 660; % or 485 (blue-green)
 end
  
 % Convert cone excitations to cone contrast

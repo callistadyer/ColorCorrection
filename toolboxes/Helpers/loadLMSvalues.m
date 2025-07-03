@@ -130,21 +130,6 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%%%%% If the image doesn't exist, continue %%%%%%%
-%   modType:       Type of cone modulation for hyperspectral cases
-%                  'L', 'M', 'S', or 'rand'
-switch (renderType)
-    case 'Deuteranopia'
-        modType = 'M';
-        constraintWL = 585;
-    case 'Protanopia'
-        modType = 'L';
-        error('ERROR: you need to set up constraint wavelength for Protanopia case')
-    case 'Tritanopia'
-        modType = 'S';
-        error('ERROR: you need to set up constraint wavelength for Tritanopia case')
-end
-
 if strcmp(img,'ishihara')
 
     [insideColors, outsideColors] = chooseIshiharaColors(renderType,imgParams.plateType,Disp);
@@ -191,9 +176,20 @@ elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'Ignor
     triLMSCalFormat = Disp.M_rgb2cones * trirgbLinCalFormat;    
 
 else
-    
+
+    %   modType:       Type of cone modulation for hyperspectral cases
+    %                  'L', 'M', 'S', or 'rand'
+    switch (renderType)
+        case 'Deuteranopia'
+            modType = 'M';
+        case 'Protanopia'
+            modType = 'L';
+        case 'Tritanopia'
+            modType = 'S';
+    end
+
     % Generate gray image with squares
-    [triLMSCalFormat,triLMSCalFormat_plate] = generateGrayImage(imgParams.nSquares,modType,Disp,imgParams);
+    [~,triLMSCalFormat_plate] = generateGrayImage(imgParams.nSquares,modType,Disp,imgParams);
 
     % Just grab the version with the isochromatic plate
     triLMSCalFormat = triLMSCalFormat_plate; % do this when you just want to see the isochromatic plate square version (other is just gray)
