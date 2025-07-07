@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat, renderType,varianceType,similarityType, constraintWL, T_prev, Disp,V0,V1)
+function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat, renderType,varianceType,similarityType, T_prev, Disp, imgParams, V0,V1)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
 % Syntax:
@@ -67,11 +67,12 @@ function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt]
 %
 % Examples:
 %{
-Disp = loadDisplay('gray')
+Disp = loadDisplay()
 % Load LMS values for this image
-[triLMSCalFormat,diLMSCalFormat,Disp] = loadLMSvalues('gray','Deuteranopia',1,Disp);
+imgParams = buildSetParameters('gray',1,128,128);
+[triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = loadLMSvalues('gray','Deuteranopia',Disp,imgParams);
 T_prev = eye(3);
-[triLMSOpt, s0, v0, s1, v1, T_opt] = colorCorrectionOptimize('lambda', [], 0.5, triLMSCalFormat,'Deuteranopia', 'LMdifferenceContrast', 'squared', 585, T_prev, Disp,[],[]);
+[triLMSOpt, s0, v0, s1, v1, T_opt] = colorCorrectionOptimize('lambda', [], 0.5, triLMSCalFormat,'Deuteranopia', 'LMdifferenceContrast', 'squared', T_prev, Disp,imgParams,[],[]);
 %}
 
 % Sample data to see how code works
@@ -163,7 +164,7 @@ b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is ba
 % Matrix that transforms contrast RGB trichromat input into contrast RGB
 % dichromat output --> this also needs to be in gamut
 % Contrast RGB, dichromat
-[calFormatDiLMS,M_triToDi] = DichromSimulateLinear(triLMSCalFormat, grayLMS,  constraintWL, renderType, Disp);
+[calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
 
 %%% Gamut check %%%
 % dirgb = inv(M_rgb2cones) * calFormatDiLMS;
@@ -217,20 +218,20 @@ disp('Just reached optimization')
 % Optimization - start with identity transformation matrix
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
-[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType,varianceType,similarityType, Disp,V0,V1), ...
+[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType,varianceType,similarityType, Disp,imgParams,V0,V1), ...
     T_I(:), A_total, b_total, [], [], [], [], [], options);
 % Test loss function with final transformation matrix values
-[fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var,lambda_var,transformRGB_opt_TI, triLMSCalFormat, M_cones2rgb,renderType,varianceType,similarityType, Disp,V0,V1);
+[fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var,lambda_var,transformRGB_opt_TI, triLMSCalFormat, M_cones2rgb,renderType,varianceType,similarityType, Disp,imgParams,V0,V1);
 
 % If previous transformation is the identity, then skip this step
 if (~isequal(T_prev,T_I)) && (~isequal(T_prev,eye(3,3)))
     % Optimization - start with previous transformation matrix
     options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
     % fmincon
-    [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType,varianceType,similarityType, Disp,V0,V1), ...
+    [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, M_cones2rgb, renderType,varianceType,similarityType, Disp,imgParams,V0,V1), ...
         T_prev(:), A_total, b_total, [], [], [], [], [], options);
     % Test loss function with final transformation matrix values
-    [fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var, lambda_var, transformRGB_opt_Tprev, triLMSCalFormat, M_cones2rgb,renderType,varianceType,similarityType, Disp,V0,V1);
+    [fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var, lambda_var, transformRGB_opt_Tprev, triLMSCalFormat, M_cones2rgb,renderType,varianceType,similarityType, Disp,imgParams,V0,V1);
     % Choose the transformation that gets a lower loss
     if fValOpt_TI <= fValOpt_Tprev
         % transformRGB_opt = transformRGB_opt_TI;
@@ -276,7 +277,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
 %% Functions
 
 % OBJECTIVE FUNCTION
-    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var,lambda,t_vec, LMSCalFormat, M_cones2rgb, renderType,varianceType, similarityType, Disp,V0,V1)
+    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var,lambda,t_vec, LMSCalFormat, M_cones2rgb, renderType,varianceType, similarityType, Disp,imgParams,V0,V1)
         T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
 
         % I - LMS
@@ -354,7 +355,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
             var_term = var_term_raw;
         end
         % Normalize via total variance in white noise image
-        totalVariance = whiteNoiseVariance(varianceType,renderType,0.5*eye(3,3),Disp);
+        totalVariance = whiteNoiseVariance(varianceType,renderType,0.5*eye(3,3),Disp,imgParams);
         % Normalize by whiteNoiseVariance
         var_term_balance = var_term/totalVariance;
         % var_term_balance = var_term;
@@ -369,7 +370,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
             similarity_term = similarity_term_raw;
         end
         % Normalize by whiteNoiseSimilarity
-        totalSimilarity         = abs(whiteNoiseSimilarity(similarityType,Disp));
+        totalSimilarity         = abs(whiteNoiseSimilarity(similarityType,Disp,imgParams));
         similarity_term_balance = similarity_term/totalSimilarity;
 
         % Maybe next we normalize by something else:

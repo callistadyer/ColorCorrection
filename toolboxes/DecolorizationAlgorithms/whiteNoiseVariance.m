@@ -1,5 +1,5 @@
 
-function totalVariance = whiteNoiseVariance(varianceType,renderType,T,Disp)
+function totalVariance = whiteNoiseVariance(varianceType,renderType,T,Disp,imgParams)
 % Calculates total variance to normalize variance of given image size 
 %
 % Syntax:
@@ -20,7 +20,7 @@ function totalVariance = whiteNoiseVariance(varianceType,renderType,T,Disp)
 rng(2);
 
 % Create a white noise image of size mxn
-whiteNoiseImage = rand(Disp.m, Disp.n, 3);
+whiteNoiseImage = rand(imgParams.m, imgParams.n, 3);
 whiteNoiseCalFormat = ImageToCalFormat(whiteNoiseImage);
 
 % 1... MANUAL

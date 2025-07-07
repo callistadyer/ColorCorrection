@@ -1,9 +1,9 @@
 
-function totalSimilarity = whiteNoiseSimilarity(similarityType,Disp)
+function totalSimilarity = whiteNoiseSimilarity(similarityType,Disp,imgParams)
 % Calculates total similarity metric to normalize squared error similarity of given image size 
 %
 % Syntax:
-%   totalSimilarity = whiteNoiseSimilarity(similarityType,Disp)
+%   totalSimilarity = whiteNoiseSimilarity(similarityType,Disp,imgParams)
 %
 % Inputs:
 %   similarityType:  Type of similarity computation
@@ -20,11 +20,11 @@ function totalSimilarity = whiteNoiseSimilarity(similarityType,Disp)
 % Random seed to calculate total variance 
 rng(2);
 % Create a white noise image of size mxn
-whiteNoiseImage = rand(Disp.m, Disp.n, 3);
+whiteNoiseImage = rand(imgParams.m, imgParams.n, 3);
 whiteNoiseCalFormat = ImageToCalFormat(whiteNoiseImage);
 
 rng(3);
-whiteNoiseImage2 = rand(Disp.m, Disp.n, 3);
+whiteNoiseImage2 = rand(imgParams.m, imgParams.n, 3);
 whiteNoiseCalFormat2 = ImageToCalFormat(whiteNoiseImage2);
 
 
