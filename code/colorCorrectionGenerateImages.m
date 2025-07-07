@@ -16,7 +16,7 @@ close all
 % Available image options: gray, Ishihara plate, or external images
 imageTypes = {'gray','ishihara','flower1.png','flower2.png','flower3.png', ...
     'fruit.png','map.png','painting.png','pool.png','tree.png'};
-whichType  = [1 3 4]; 
+whichType  = [1:10]; 
 
 % Types of 'setType' usage:
 %   gray      - number of squares
@@ -33,21 +33,21 @@ Disp = loadDisplay();
 %% Load image parameters
 m = 128;
 n = 128;
-imgParams = buildSetParameters(imgType,setType,m,n);
 
 %% Loop through each image and generate all:
 for idx = 1:length(whichType)
-    typeIdx = whichType{idx};
+
+    typeIdx = whichType(idx);
     imgType = imageTypes{typeIdx};
+
+    imgParams = buildSetParameters(imgType,setType,m,n);
 
     fprintf('Processing image: %s\n', imgType);
 
-    % Load display calibration
-    Disp = loadDisplay(imgType,setType);
 
     % Generate LMS/RGB calibration data for the image
     % loadLMSvalues computes and saves trichromat and dichromat LMS and RGB values
-    [triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = loadLMSvalues(imgType, renderType, Disp);
+    [triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = loadLMSvalues(imgType, renderType, Disp, imgParams,'clearTestImages', true);
     % [diLMSCalFormat,  diRGBCalFormat]            = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
 
 end
