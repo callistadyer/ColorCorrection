@@ -35,6 +35,6 @@ M_cones2rgb = inv(M_rgb2cones);
 % Gamma correct
 % iGtable  = displayGet(Disp.d,'inversegamma');
 % RGBImage = rgb2dac(rgbLinImage,iGtable)/(2^displayGet(Disp.d,'dacsize')-1);
-RGBCalFormat = rgbLin2RGB(rgbLinCalFormat, Disp, imgParams);
+RGBCalFormat = rgbLin2RGB(rgbLinCalFormat, Disp);
 
 end

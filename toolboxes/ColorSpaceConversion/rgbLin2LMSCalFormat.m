@@ -1,6 +1,6 @@
 function lmsCalFormat = rgbLin2LMSCalFormat(rgbLinCalFormat,Disp)
 
-% function takes rgb in cal format and outputs LMS image in cal format 
+% function takes linear rgb in cal format and outputs LMS image in cal format 
 %
 % Syntax:
 %   lmsCalFormat = rgbLin2LMSCalFormat(rgbLinCalFormat,Disp,scaleFactor,bScale)

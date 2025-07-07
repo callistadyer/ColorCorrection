@@ -1,10 +1,13 @@
-function rgbLinCalFormat = RGB2rgbLin(RGBCalFormat, Disp, imgParams)
+function rgbLinCalFormat = RGB2rgbLin(RGBCalFormat, Disp)
 % RGB2rgbLin  Convert RGB to linear rgb
-%   rgbLinCalFormat = RGB2rgbLin(RGBCalFormat, Disp, imgParams)
+%   rgbLinCalFormat = RGB2rgbLin(RGBCalFormat, Disp)
 %
 %   Inputs:
 %     RGBCalFormat      - gamma corrected RGB image
-%     Disp              - Display structure
+%   Disp contains
+%       Disp.d                     - Struct.  Contains display information, displayCreate('LCD-Apple'); 
+%       Disp.T_cones               - [3xnWl]. Cone spectral sensitivities
+%       Disp.P_monitor             - [nWlx3]. Display primaries
 %   Outputs:
 %     rgbLinCalFormat   - linear RGB image (MxNx3), range [0,1]
 

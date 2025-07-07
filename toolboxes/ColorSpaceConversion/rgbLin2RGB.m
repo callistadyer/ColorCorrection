@@ -1,12 +1,13 @@
-function RGBCalFormat = rgbLin2RGB(rgbLinCalFormat, Disp, imgParams)
+function RGBCalFormat = rgbLin2RGB(rgbLinCalFormat, Disp)
 % rgbLin2RGB  Convert linear rgb image to gamma corrected rgb
-%   RGBCalFormat = rgbLin2RGB(rgbLinCalFormat, Disp, imgParams)
+%   RGBCalFormat = rgbLin2RGB(rgbLinCalFormat, Disp)
 %
 %   Inputs:
 %     rgbLinCalFormat  - linear rgb in cal format 
 %     Disp             - Struct containing:
-%     imgParams
-%
+%       Disp.d                     - Struct.  Contains display information, displayCreate('LCD-Apple'); 
+%       Disp.T_cones               - [3xnWl]. Cone spectral sensitivities
+%       Disp.P_monitor             - [nWlx3]. Display primaries
 %   Outputs:
 %     RGBCalFormat    - gamma-corrected RGB cal format 
 %
