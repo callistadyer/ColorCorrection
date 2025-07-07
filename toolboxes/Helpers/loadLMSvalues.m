@@ -99,7 +99,9 @@ else
     imageBaseName = [img, '.png'];
 end
 
-imageOutputPath = fullfile(outputSubdir, imageBaseName);
+tri_imageOutputPath = fullfile(outputSubdir, imageBaseName);
+diImageBaseName = ['di_', imageBaseName];
+di_imageOutputPath = fullfile(outputSubdir, diImageBaseName);
 
 % If all outputs exist, load them and return
 if exist(triLMSPath, 'file') && exist(trirgbLinPath, 'file') && exist(triRGBPath, 'file')...
@@ -155,7 +157,7 @@ if strcmp(img,'ishihara')
     triRGBCalFormat = ImageToCalFormat(triRGBImage);
      
     % Get linear rgb from gamma corrected RGB
-    trirgbLinCalFormat = RGB2rgbLin(triRGBCalFormat,Disp,imgParams);
+    trirgbLinCalFormat = RGB2rgbLin(triRGBCalFormat,Disp);
 
     % Put modified image into LMS 
     triLMSCalFormat      = Disp.M_rgb2cones * trirgbLinCalFormat;
@@ -203,7 +205,7 @@ else
 
     % Convert from LMS to linear rgb
     trirgbLinCalFormat = Disp.M_cones2rgb * triLMSCalFormat;
-    triRGBCalFormat    = rgbLin2RGB(trirgbLinCalFormat,Disp,imgParams);
+    triRGBCalFormat    = rgbLin2RGB(trirgbLinCalFormat,Disp);
 
     % Gamma corrected image (for visualization)
     triRGBImage        = CalFormatToImage(triRGBCalFormat,imgParams.m,imgParams.n);
@@ -220,11 +222,12 @@ end
 % figure(); imagesc(CalFormatToImage(dirgbLinCalFormat,imgParams.m,imgParams.n))
 
 % Get dichromat gamma corrected image (for visualization)
-diRGBCalFormat = rgbLin2RGB(dirgbLinCalFormat,Disp,imgParams);
+diRGBCalFormat = rgbLin2RGB(dirgbLinCalFormat,Disp);
 diRGBImage = CalFormatToImage(diRGBCalFormat,imgParams.m,imgParams.n);
 
 % Convert and save image
-imwrite(triRGBImage, imageOutputPath);
+imwrite(triRGBImage, tri_imageOutputPath);
+imwrite(diRGBImage, di_imageOutputPath);
 
 % Save trichromat values
 save(triLMSPath, 'triLMSCalFormat');
