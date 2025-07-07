@@ -164,22 +164,29 @@ if strcmp(img,'ishihara')
     
 elseif endsWith(img, '.png', 'IgnoreCase', true) || endsWith(img, '.jpg', 'IgnoreCase', true)
 
-    % Load in the image 
-    imgRGB = im2double(imread(img));   
+    % Load in the image
+    imgFolder = fullfile(outputDir, 'ColorCorrectionImages');
+    imgFullPath = fullfile(imgFolder, img);
 
+    imgRGB = im2double(imread(imgFullPath));
+    % imgRGB = im2double(imread(img));   
+
+    % Clip ends to ensure in gamut before we process the image
+    imgRGB(imgRGB>1) = 1;
+    imgRGB(imgRGB<0) = 0;
+    
     % Resize the image according to m and n (see buildSetParameters.m)
     % Gamma corrected image (for visualization)
     triRGBImage = imresize(imgRGB, [imgParams.m, imgParams.n]);       
 
-    % Get linear rgb from gamma corrected RGB
-    imgrgbLin = RGB2rgbLin(triRGBImage,Disp);
-
-    % Cal format linear rgb 
-    trirgbLinCalFormat = ImageToCalFormat(imgrgbLin); 
+    triRGBCalFormat = ImageToCalFormat(triRGBImage);
 
     % Clip ends to ensure in gamut before we process the image
-    trirgbLinCalFormat(trirgbLinCalFormat>1) = 1;
-    trirgbLinCalFormat(trirgbLinCalFormat<0) = 0;
+    triRGBCalFormat(triRGBCalFormat>1) = 1;
+    triRGBCalFormat(triRGBCalFormat<0) = 0;
+    
+    % Get linear rgb from gamma corrected RGB
+    trirgbLinCalFormat = RGB2rgbLin(triRGBCalFormat,Disp);
 
     % Convert to LMS 
     triLMSCalFormat = Disp.M_rgb2cones * trirgbLinCalFormat;    
