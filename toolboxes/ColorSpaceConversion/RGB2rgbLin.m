@@ -15,13 +15,9 @@ if max(RGBCalFormat(:)) > 1 || min(RGBCalFormat(:)) < 0
            '(e.g., RGBImage = im2double(RGBImage255));']);
 end
 
-% Image format for reverse gamma correction
-RGBImage = CalFormatToImage(RGBCalFormat,imgParams.m,imgParams.n);
-
 % Get gamma table from display (should be normalized to [0,1] already)
 gammaTable = displayGet(Disp.d, 'gamma table');
 nLevels = size(gammaTable, 1);
-xvals = linspace(0,1,nLevels); 
 
 % Compute indices for mapping
 indices = round(RGBCalFormat * (nLevels - 1)) + 1;
