@@ -93,12 +93,12 @@ diRGBPath    = fullfile(outputSubdir, 'diRGBCalFormat.mat');
 
 dispPath      = fullfile(outputSubdir, 'Disp.mat');
 imgParamsPath = fullfile(outputSubdir, 'imgParams.mat');
+
 if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
     imageBaseName = img;
 else
     imageBaseName = [img, '.png'];
 end
-
 tri_imageOutputPath = fullfile(outputSubdir, imageBaseName);
 diImageBaseName = ['di_', imageBaseName];
 di_imageOutputPath = fullfile(outputSubdir, diImageBaseName);
