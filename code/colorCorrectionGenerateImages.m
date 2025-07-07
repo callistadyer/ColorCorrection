@@ -47,7 +47,7 @@ for idx = 1:length(whichType)
 
     % Generate LMS/RGB calibration data for the image
     % loadLMSvalues computes and saves trichromat and dichromat LMS and RGB values
-    
+
     % Only clear test images on the first loop
     clearFlag = (idx == 1);
 
@@ -56,11 +56,6 @@ for idx = 1:length(whichType)
         loadLMSvalues(imgType, renderType, Disp, imgParams, 'clearTestImages', clearFlag);
 
 end
-
-
-
-
-
 
 
 

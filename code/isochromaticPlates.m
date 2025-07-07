@@ -1,4 +1,4 @@
-function [RGBCalFormat_plate LMSCalFormat_plate] = isochromaticPlates(LMSImage,LMSImageModulation,Disp,imgParams,options)
+function [RGBCalFormat_plate, LMSCalFormat_plate] = isochromaticPlates(LMSImage,LMSImageModulation,Disp,imgParams,options)
 
 % function create isochromatic plates for testing dichromacy
 %
@@ -35,14 +35,13 @@ if (options.verbose)
     fprintf('Starting execution of isochromaticPlates\n');
 end
 
-% Get LMS values
-[hyperspectralImageCalFormat,m,n] = ImageToCalFormat(LMSImage);
-LMSCalFormat = Disp.T_cones*hyperspectralImageCalFormat;
-LMSImage     = CalFormatToImage(LMSCalFormat,imgParams.m,imgParams.n);
+% % Get LMS values
+% LMSCalFormat = ImageToCalFormat(LMSImage);
+% % LMSCalFormat = Disp.T_cones*hyperspectralImageCalFormat;
+% LMSImage     = CalFormatToImage(LMSCalFormat,imgParams.m,imgParams.n);
 
 % Get original RGB image
-[RGBCalFormat rgbLinCalFormat]  = LMS2RGBCalFormat(LMSCalFormat,Disp,imgParams);
-RGBimage                        = CalFormatToImage(RGBCalFormat,imgParams.m,imgParams.n);
+% [RGBCalFormat rgbLinCalFormat]  = LMS2RGBCalFormat(LMSCalFormat,Disp,imgParams);
 
 % Create square modulations
 deltaLMS = plateSquare(size(LMSImage),LMSImageModulation,imgParams.nSquares);
@@ -69,9 +68,6 @@ M_cones2rgb = inv(M_rgb2cones);
 RGBCalFormat_plate = M_cones2rgb * LMSCalFormat_plate;
 % convert to RGB
 % RGBCalFormat_plate2 = LMS2RGBCalFormat(LMSCalFormat_plate,Disp);
-
-% convert to image for viewing
-RGBimageModulated = CalFormatToImage(RGBCalFormat_plate,imgParams.m,imgParams.n);
 
 % figure('position',[927         886        1245         367]);
 % subplot(1,2,1)

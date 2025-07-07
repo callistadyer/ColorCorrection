@@ -2,7 +2,7 @@ function [triLMScalFormat,triLMSCalFormat_plate] = generateGrayImage(nSquares,mo
 % Demonstrate how to read, add cone directed info, and render for tri- and dichromat
 %
 % Syntax:
-%   [triLMScalFormat,triLMSCalFormat_plate] = generateGrayImage(nSquares,modType,Disp)
+%   [triLMScalFormat,triLMSCalFormat_plate] = generateGrayImage(nSquares,modType,Disp,imgParams)  
 %
 % Description:
 %
@@ -34,27 +34,29 @@ function [triLMScalFormat,triLMSCalFormat_plate] = generateGrayImage(nSquares,mo
 %
 % Examples:
 %{
-[triLMScalFormat,triLMSCalFormat_plate,diLMScalFormat,diLMScalFormat_plate] = t_renderHyperspectralImage('gray','Deuteranopia',585,10,'rand',[]); 
+Disp = loadDisplay();
+imgParams = buildSetParameters('gray',10,64,64);
+[triLMScalFormat,triLMSCalFormat_plate] = generateGrayImage(10,'M',Disp,imgParams);
+triRGBCalFormat_plate = LMS2RGBCalFormat(triLMSCalFormat_plate,Disp,imgParams);
+GrayImage = CalFormatToImage(triRGBCalFormat_plate,64,64);
+figure(); imagesc(GrayImage); axis square;
 %}
-
 % Create gray hyperspectral image
-[grayImgCalFormat] = ImageToCalFormat(ones(imgParams.m,imgParams.n));
+[whitergbLinCalFormat] = ImageToCalFormat(ones(imgParams.m,imgParams.n));
 
 % Gray 0.5 rgb at each pixel in image
-grayImgCalFormat       = (0.5.*(repmat(grayImgCalFormat,3,1)));
+grayrgbLinCalFormat       = (0.5.*(repmat(whitergbLinCalFormat,3,1)));
 
 % Make hyperspectral img by multiplying primaries * rgb values at each pixel
 % This is a weighted sum of primaries
-hyperspecGrayCalFormat = Disp.P_monitor * grayImgCalFormat;
+% hyperspecGrayCalFormat = Disp.P_monitor * grayImgCalFormat;
 
 % Image format
-hyperspectralImage     = CalFormatToImage(hyperspecGrayCalFormat,imgParams.m,imgParams.n);
-
-% Get cone responses for every pixel of the hyperspectral image
-[hyperspectralImageCalFormat] = ImageToCalFormat(hyperspectralImage);
+% grayrgbImage    = CalFormatToImage(grayrgbLinCalFormat,imgParams.m,imgParams.n);
 
 % Render lms image that a trichromat sees
-triLMScalFormat = Disp.T_cones*hyperspectralImageCalFormat;
+triLMScalFormat = rgbLin2LMSCalFormat(grayrgbLinCalFormat,Disp);
+triLMSImage = CalFormatToImage(triLMScalFormat,imgParams.m,imgParams.n);
 trirgbLinCalFormat = Disp.M_cones2rgb * triLMScalFormat;
 
 % Get modulation for isochromatic plate modulation.
@@ -67,7 +69,7 @@ end
 % Create isochromatic plates
 % This is taking in the original hyperspectralImage and then adding the
 % modulation in squares to the it
-[~, triLMSCalFormat_plate] = isochromaticPlates(hyperspectralImage,lmsModulationImgFormat,Disp,imgParams, ...
+[~, triLMSCalFormat_plate] = isochromaticPlates(triLMSImage,lmsModulationImgFormat,Disp,imgParams, ...
     'verbose',true);
 
 

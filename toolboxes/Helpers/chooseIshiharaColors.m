@@ -29,10 +29,10 @@ function [insideColors, outsideColors] = chooseIshiharaColors(renderType,plateTy
 %{
 renderType = 'Deuteranopia';
 plateType = 1;
-Disp = loadDisplay('ishihara')
+Disp = loadDisplay()
 [insideColors, outsideColors] = chooseIshiharaColors(renderType, plateType, Disp);
 %%%% Visualize the plate %%%%
-ishiharaRGB = generateIshiharaPlate('74', insideColors,outsideColors,Disp.m);
+ishiharaRGB = generateIshiharaPlate('74', insideColors,outsideColors,128);
 figure();imagesc(ishiharaRGB)
 axis square;
 %}

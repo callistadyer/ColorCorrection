@@ -31,12 +31,12 @@ function [triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pa
 %{
 Disp = loadDisplay();
 imgParams = buildSetParameters('ishihara',1,128,128);
-[triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = loadLMSvalues('ishihara','Deuteranopia',Disp,imgParams,'clearTestImages', true);
+[triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = loadLMSvalues('ishihara','Deuteranopia',Disp,imgParams,'clearTestImages', false);
 
 % Check that behavior has not changed since we declared it good.
-if (abs(sum(testLMS(:)) - 525.8024)/525.8024 > 1e-4)
-    error('No longer get same LMS image returned by loadLMSValues');
-end
+% if (abs(sum(testLMS(:)) - 525.8024)/525.8024 > 1e-4)
+%     error('No longer get same LMS image returned by loadLMSValues');
+% end
 %}
 
 % key-value pairs

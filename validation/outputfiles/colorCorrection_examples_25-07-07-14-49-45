@@ -1,0 +1,17 @@
+
+
+Success cases (5)
+1 examples suceeded for colorCorrectionHardPCA.
+1 examples suceeded for buildSetParameters.
+1 examples suceeded for checkGamut.
+1 examples suceeded for loadDisplay.
+1 examples suceeded for generateIshiharaPlate.
+
+
+Failure cases (6)
+At least one example failed for dichromatCorrection.
+At least one example failed for generateGrayImage.
+At least one example failed for colorCorrectionOptimize.
+At least one example failed for chooseIshiharaColors.
+At least one example failed for loadLMSvalues.
+At least one example failed for DichromSimulateLinear.

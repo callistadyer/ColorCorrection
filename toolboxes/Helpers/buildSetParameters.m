@@ -49,7 +49,7 @@ if strcmpi(img, 'gray')
     % For gray stimuli
     if isempty(setType), setType = 1; end
     switch setType
-        case {1, 2, 3, 4, 5}
+        case {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
             imgParams.nSquares = setType;
         otherwise
             error('ERROR: undefined setType for gray. Choose setType between 1–5.');
