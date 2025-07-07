@@ -29,18 +29,15 @@ if max(rgbLinCalFormat(:)) > 1 || min(rgbLinCalFormat(:)) < 0
            '(e.g., rgbLin = im2double(rgbLin255));']);
 end
 
-% Image format for gamma correction
-rgbLinImage = CalFormatToImage(rgbLinCalFormat, imgParams.m,imgParams.n);
-
-% Gamma correction
+% Get inverse gamma table for gamma correction
 invGammaTable = displayGet(Disp.d,'inverse gamma');
+% Normalize inverse gamma table so it takes in 0 to 1 inputs
 dacSize = displayGet(Disp.d, 'dacsize');
 maxDAC  = 2^dacSize - 1;
 invGammaTable = invGammaTable / maxDAC;
 
 % Number of levels in the inverse gamma table
 nLevels = size(invGammaTable, 1);
-xvals = linspace(0,1,nLevels); 
 
 % Compute lookup indices 
 indices = round(rgbLinCalFormat * (nLevels - 1)) + 1;

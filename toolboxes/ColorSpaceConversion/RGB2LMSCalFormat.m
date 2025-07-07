@@ -1,4 +1,4 @@
-function LMSCalFormat = RGB2LMSCalFormat(RGBImage,Disp)
+function LMSCalFormat = RGB2LMSCalFormat(RGBImage,Disp,imgParams)
 % Function takes in RGB image in image format, and outputs LMS image in image format 
 % also calls function rgb2LMSimg.m
 %
@@ -29,10 +29,10 @@ function LMSCalFormat = RGB2LMSCalFormat(RGBImage,Disp)
 
 
 % Reverse the gamma correction
-gammaTable = displayGet(Disp.d,'gammatable');
-rgbLinImage = dac2rgb(RGBImage, gammaTable)*(2^displayGet(Disp.d,'dacsize')-1);
-
-rgbLinCalFormat = ImageToCalFormat(rgbLinImage,Disp.m,Disp.n);
+% gammaTable = displayGet(Disp.d,'gammatable');
+% rgbLinImage = dac2rgb(RGBImage, gammaTable)*(2^displayGet(Disp.d,'dacsize')-1);
+RGBCalFormat = ImageToCalFormat(RGBImage);
+rgbLinCalFormat = RGB2rgbLin(RGBCalFormat, Disp, imgParams);
 
 % Convert to LMS
 LMSCalFormat = rgbLin2LMSCalFormat(rgbLinCalFormat,Disp);

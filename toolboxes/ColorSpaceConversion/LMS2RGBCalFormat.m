@@ -30,19 +30,11 @@ M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 
 % Get linear RGB from LMS
-[rgbImageCalFormat] = LMS2rgbLinCalFormat(lmsImageCalFormat,Disp);
-rgbImage = CalFormatToImage(rgbImageCalFormat,imgParams.m,imgParams.n);
-
-% Linear rgb values make sure not below 0
-rgbLinImage = rgbImage; 
-
-rgbLinCalFormat = ImageToCalFormat(rgbLinImage);
+[rgbLinCalFormat] = LMS2rgbLinCalFormat(lmsImageCalFormat,Disp);
 
 % Gamma correct
-iGtable  = displayGet(Disp.d,'inversegamma');
-RGBImage = rgb2dac(rgbLinImage,iGtable)/(2^displayGet(Disp.d,'dacsize')-1);
-
-% Transform to cal format
-RGBCalFormat = ImageToCalFormat(RGBImage);
+% iGtable  = displayGet(Disp.d,'inversegamma');
+% RGBImage = rgb2dac(rgbLinImage,iGtable)/(2^displayGet(Disp.d,'dacsize')-1);
+RGBCalFormat = rgbLin2RGB(rgbLinCalFormat, Disp, imgParams);
 
 end

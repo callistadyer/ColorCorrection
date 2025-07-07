@@ -1,4 +1,4 @@
-function [triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = loadLMSvalues(img,renderType,Disp,imgParams)
+function [triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = loadLMSvalues(img,renderType,Disp,imgParams,varargin)
 % loadLMSvalues  Loads or generates an image and converts to LMS for dichromat simulation
 %
 % Syntax:
@@ -31,13 +31,20 @@ function [triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pa
 %{
 Disp = loadDisplay();
 imgParams = buildSetParameters('ishihara',1,128,128);
-[triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = loadLMSvalues('ishihara','Deuteranopia',Disp,imgParams);
+[triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = loadLMSvalues('ishihara','Deuteranopia',Disp,imgParams,'clearTestImages', true);
 
 % Check that behavior has not changed since we declared it good.
 if (abs(sum(testLMS(:)) - 525.8024)/525.8024 > 1e-4)
     error('No longer get same LMS image returned by loadLMSValues');
 end
 %}
+
+% key-value pairs
+p = inputParser;
+defaultClearTestImages = false;              % Set default value for 'clearTestImages' key
+addParameter(p, 'clearTestImages', defaultClearTestImages, @(x) islogical(x) || isnumeric(x)); % Define optional key
+parse(p, varargin{:});                       
+clearTestImages = p.Results.clearTestImages; % Extract value of 'clearTestImages' key
 
 
 
@@ -47,17 +54,17 @@ outputDir   = getpref(projectName, 'outputDir');
 
 
 % Make this a key value pair
-clearTestImages = true;  
+% clearTestImages = true;  
 testImagesDir = fullfile(outputDir, 'testImages');
+
 % Clear 'testImages' folder if requested
-if exist('clearTestImages', 'var') && clearTestImages
+if clearTestImages
     if exist(testImagesDir, 'dir')
         fprintf('Clearing entire folder: %s\n', testImagesDir);
-        rmdir(testImagesDir, 's');  
+        rmdir(testImagesDir, 's');
     end
     mkdir(testImagesDir);  % recreate empty testImages folder
 end
-
 
 % Check to see if the image already exists
 % Determine output subdirectory

@@ -28,7 +28,7 @@ function [rgbImageCalFormat] = LMS2rgbLinCalFormat(lmsImageCalFormat,Disp)
 M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 
-% Get linear RGB from LMS
+% Get linear rgb from LMS
 rgbImageCalFormat = M_cones2rgb*lmsImageCalFormat;
 
 end
