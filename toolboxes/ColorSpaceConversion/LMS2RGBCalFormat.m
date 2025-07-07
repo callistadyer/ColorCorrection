@@ -1,22 +1,22 @@
-function [RGBCalFormat,rgbLinCalFormat] = LMS2RGBCalFormat(lmsImageCalFormat,Disp,imgParams)
+function [RGBCalFormat,rgbLinCalFormat] = LMS2RGBCalFormat(lmsCalFormat,Disp,imgParams)
 
 % Converts LMS cone images to RGB images. Outputs both linear and gamma
 % corrected rgb/RGB values
 %
 % Syntax:
-%   [RGBImageCalFormat,rgbLinImageCalFormat] = LMS2RGBCalFormat(lmsImageCalFormat,Disp)
+%   [RGBCalFormat,rgbLinCalFormat] = LMS2RGBCalFormat(lmsCalFormat,Disp,imgParams)
 %
 % Description:
 %
 % Inputs:
-%   lmsImageCalFormat     - [3xnPix] matrix. Cal formatted LMS image
+%   lmsCalFormat     - [3xnPix] matrix. Cal formatted LMS image
 %   Disp contains:
 %       Disp.d                     - Struct.  Contains display information, displayCreate('LCD-Apple'); 
 %       Disp.T_cones               - [3xnWl]. Cone spectral sensitivities
 %       Disp.P_monitor             - [nWlx3]. Display primaries
-%       Disp.m                     - Scalar.  Row dimension of image     
-%       Disp.n                     - Scalar.  Column dimension of image     
-%
+%   imgParams contains:
+%       imgParams.m
+%       imgParams.n
 % Outputs:
 %   RGBImageCalFormat     - RGB image in cal format
 %   rgbLinImageCalFormat  - linear rgb image in cal format
@@ -30,7 +30,7 @@ M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 M_cones2rgb = inv(M_rgb2cones);
 
 % Get linear RGB from LMS
-[rgbLinCalFormat] = LMS2rgbLinCalFormat(lmsImageCalFormat,Disp);
+[rgbLinCalFormat] = LMS2rgbLinCalFormat(lmsCalFormat,Disp);
 
 % Gamma correct
 % iGtable  = displayGet(Disp.d,'inversegamma');
