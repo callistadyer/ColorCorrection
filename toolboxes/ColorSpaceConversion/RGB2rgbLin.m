@@ -8,6 +8,13 @@ function rgbLinCalFormat = RGB2rgbLin(RGBCalFormat, Disp, imgParams)
 %   Outputs:
 %     rgbLinCalFormat   - linear RGB image (MxNx3), range [0,1]
 
+% Check that RGBCalFormat is in [0,1]
+if max(RGBCalFormat(:)) > 1 || min(RGBCalFormat(:)) < 0
+    error(['RGB2rgbLin: input RGBCalFormat must be in range [0,1]. ' ...
+           'If your data is in [0,255], try converting it using im2double() ' ...
+           '(e.g., RGBImage = im2double(RGBImage255));']);
+end
+
 % Image format for reverse gamma correction
 RGBImage = CalFormatToImage(RGBCalFormat,imgParams.m,imgParams.n);
 

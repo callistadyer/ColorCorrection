@@ -22,6 +22,12 @@ function RGBCalFormat = rgbLin2RGB(rgbLinCalFormat, Disp, imgParams)
 % For each channel, I replace the linear input with the corresponding value
 % from the inverse gamma table
 
+% Check that rgbLinCalFormat is in [0,1]
+if max(rgbLinCalFormat(:)) > 1 || min(rgbLinCalFormat(:)) < 0
+    error(['rgbLin2RGB: input rgbLinCalFormat must be in range [0,1]. ' ...
+           'If your data is in [0,255], try converting it using im2double() ' ...
+           '(e.g., rgbLin = im2double(rgbLin255));']);
+end
 
 % Image format for gamma correction
 rgbLinImage = CalFormatToImage(rgbLinCalFormat, imgParams.m,imgParams.n);
