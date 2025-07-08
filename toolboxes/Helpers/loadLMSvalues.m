@@ -44,9 +44,7 @@ p = inputParser;
 defaultClearTestImages = false;              % Set default value for 'clearTestImages' key
 addParameter(p, 'clearTestImages', defaultClearTestImages, @(x) islogical(x) || isnumeric(x)); % Define optional key
 parse(p, varargin{:});                       
-clearTestImages = p.Results.clearTestImages; % Extract value of 'clearTestImages' key
-
-
+clearTestImages = p.Results.clearTestImages; 
 
 %%%%%%%%%%%%%%%%%%%%%% Dealing with save directory %%%%%%%%%%%%%%%%%%%%%%
 projectName = 'ColorCorrection';
