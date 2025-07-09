@@ -97,15 +97,6 @@ end
 
 rng(1);
 
-% Converting from cones to rgb and vice versa
-% NOTE: MUST APPLY THIS M MATRIX ON THE LEFT OF CAL FORMAT DATA
-M_rgb2cones = Disp.T_cones*Disp.P_monitor;
-M_cones2rgb = inv(M_rgb2cones);
-
-% Create gray
-grayRGB = [0.5 0.5 0.5]';
-grayLMS = M_rgb2cones*grayRGB;
-
 % Number of pixels
 nPix   = size(triLMSCalFormat,2);
 
@@ -113,13 +104,13 @@ nPix   = size(triLMSCalFormat,2);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 1: GET TRICHROMAT RGB VALUES FROM LMS %%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-triRGBCalFormat = M_cones2rgb * triLMSCalFormat;
+triRGBCalFormat = Disp.M_cones2rgb * triLMSCalFormat;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 2: GET TRI CONTRAST RGB FROM RGB      %%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Contrast RGB, trichromat
-triRGBContrastCalFormat = (triRGBCalFormat - grayRGB)./grayRGB;
+triRGBContrastCalFormat = (triRGBCalFormat - Disp.grayRGB)./Disp.grayRGB;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 3: MAKE BLOCKED DIAGONAL MATRIX OF CONTRAST RGB %%%
@@ -167,12 +158,12 @@ b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is ba
 [calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
 
 %%% Gamut check %%%
-% dirgb = inv(M_rgb2cones) * calFormatDiLMS;
+% dirgb = inv(Disp.M_rgb2cones) * calFormatDiLMS;
 % max(dirgb(:))
 % min(dirgb(:))
 
 % Matrix that converts LMS contrast into rgb contrast
-M_conesC2rgbC = diag(1./grayRGB) * inv(M_rgb2cones) * diag(grayLMS);
+M_conesC2rgbC = diag(1./Disp.grayRGB) * inv(Disp.M_rgb2cones) * diag(Disp.grayLMS);
 M_all = M_conesC2rgbC * M_triToDi * inv(M_conesC2rgbC); % left apply this to tri rgb contrast image
 
 % NOTE: TRY TO DO THIS OUTISDE OF THE OPT. PROCEDURE TO SPEED IT UP ... JUT
@@ -272,7 +263,7 @@ if (max(triRGBCalFormat_T(:))>1)
 end
 
 % Get LMS values to output
-triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
+triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
 
 %% Functions
 
@@ -298,31 +289,26 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         % altogether, (LMSCalFormatTran * M_cones2rgb' * T) returns scaled RGB values in calFormatTransposed format
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-        % Weber contrast image
-        grayRGB = [0.5 0.5 0.5]';
-        grayLMS = inv(M_cones2rgb)*grayRGB;
-
         % Convert into RGB where gray is removed
-        RGBCalFormat = M_cones2rgb * LMSCalFormat;
+        RGBCalFormat = Disp.M_cones2rgb * LMSCalFormat;
 
         % Create original contrast image
-        RGBContrastCalFormat     = (RGBCalFormat - grayRGB)./grayRGB;
+        RGBContrastCalFormat     = (RGBCalFormat - Disp.grayRGB)./Disp.grayRGB;
         
         % Convert original LMS to contrast image
-        LMSContrastCalFormat = (LMSCalFormat-grayLMS) ./ grayLMS;
+        LMSContrastCalFormat = (LMSCalFormat-Disp.grayLMS) ./ Disp.grayLMS;
 
         %%%%%%%% Transformation on gray subtracted image %%%%%%%%
         newRGBContrastCalFormat = T * RGBContrastCalFormat;
 
         % Add gray back in
-        newRGBCalFormat = (newRGBContrastCalFormat.*grayRGB) + grayRGB;
+        newRGBCalFormat = (newRGBContrastCalFormat.*Disp.grayRGB) + Disp.grayRGB;
 
         % Convert to LMS excitations 
-        newLMSCalFormat = inv(M_cones2rgb)*newRGBCalFormat;
+        newLMSCalFormat = inv(Disp.M_cones2rgb)*newRGBCalFormat;
 
         % Convert to LMS contrast 
-        newLMSContrastCalFormat =  (newLMSCalFormat-grayLMS) ./ grayLMS;
+        newLMSContrastCalFormat =  (newLMSCalFormat-Disp.grayLMS) ./ Disp.grayLMS;
 
         % Get into cal format
         newLMSCalFormatTran = newLMSCalFormat';
