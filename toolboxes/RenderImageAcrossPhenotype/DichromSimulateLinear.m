@@ -44,8 +44,9 @@ function [calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(ca
 %{
 
 Disp = loadDisplay();
+imgParams = buildSetParameters('ishihara',1,128,128);
 [triLMSCalFormat] = loadLMSvalues('ishihara','Deuteranopia',Disp,imgParams);
-[calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(triLMSCalFormat, "Deuteranopia", Disp)
+[calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(triLMSCalFormat, "Deuteranopia", Disp);
 
 %}
 

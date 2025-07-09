@@ -329,6 +329,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
         LMSCalFormatTran    = LMSCalFormat';
 
         %%%%%%%% Variance term %%%%%%%%
+        varianceType = 'regress';
         switch (varianceType)
             case 'LMdifferenceContrast'  % use LMS contrast
                 LMSold = LMSContrastCalFormat;
@@ -346,6 +347,7 @@ triLMSCalFormatOpt = M_rgb2cones * triRGBCalFormat_T;
                 LMSold = LMSCalFormat;
                 LMSnew = newLMSCalFormat;
         end
+       
         var_term_raw = varianceLMS(varianceType,renderType,LMSold,LMSnew,Disp);
         
         % Weight by lambda (use this when trying to find range of variances)
