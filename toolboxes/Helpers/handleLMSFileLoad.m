@@ -1,10 +1,10 @@
-function [didLoad, triLMSCalFormat, trirgbLinCalFormat, triRGBImage, diLMSCalFormat, dirgbLinCalFormat, diRGBImage, pathName, outputSubdir] = handleLMSFileLoad(img, renderType, imgParams, Disp, clearTestImages)
+function [didLoad, triLMSCalFormat, trirgbLinCalFormat, triRGBImage, diLMSCalFormat, dirgbLinCalFormat, diRGBImage, pathName, outputDir, outputSubdir] = handleLMSFileLoad(img, renderType, imgParams, Disp, clearTestImages)
 % handleLMSFileLoad  Handles file path setup, directory clearing, loading, and cache validation
 %
 % Syntax:
 %   [didLoad, triLMSCalFormat, trirgbLinCalFormat, triRGBImage, ...
 %    diLMSCalFormat, dirgbLinCalFormat, diRGBImage, ...
-%    pathName, outputSubdir] = handleLMSFileLoad(img, renderType, imgParams, Disp, clearTestImages)
+%    pathName, outputDir, outputSubdir] = handleLMSFileLoad(img, renderType, imgParams, Disp, clearTestImages)
 %
 % Inputs:
 %   img:               Image identifier or filename 
@@ -24,6 +24,7 @@ function [didLoad, triLMSCalFormat, trirgbLinCalFormat, triRGBImage, diLMSCalFor
 %   dirgbLinCalFormat: Dichromat linear RGB (calibration format)
 %   diRGBImage:        Dichromat gamma-corrected image
 %   pathName:          Truncated subfolder path for organizational use
+%   outputDir
 %   outputSubdir:      Full path to output directory
 %
 % Description:

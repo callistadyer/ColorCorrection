@@ -47,7 +47,7 @@ parse(p, varargin{:});
 clearTestImages = p.Results.clearTestImages; 
 
 [didLoad, triLMSCalFormat, trirgbLinCalFormat, triRGBImage, ...
- diLMSCalFormat, dirgbLinCalFormat, diRGBImage, pathName, outputSubdir] = handleLMSFileLoad(img, renderType, imgParams, Disp, clearTestImages);
+ diLMSCalFormat, dirgbLinCalFormat, diRGBImage, pathName, outputDir, outputSubdir] = handleLMSFileLoad(img, renderType, imgParams, Disp, clearTestImages);
 
 if didLoad
     fprintf('Found precomputed LMS data for %s\n', img);
