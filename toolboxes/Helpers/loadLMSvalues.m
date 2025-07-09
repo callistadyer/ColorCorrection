@@ -46,77 +46,12 @@ addParameter(p, 'clearTestImages', defaultClearTestImages, @(x) islogical(x) || 
 parse(p, varargin{:});                       
 clearTestImages = p.Results.clearTestImages; 
 
-%%%%%%%%%%%%%%%%%%%%%% Dealing with save directory %%%%%%%%%%%%%%%%%%%%%%
-projectName = 'ColorCorrection';
-outputDir   = getpref(projectName, 'outputDir');
+[didLoad, triLMSCalFormat, trirgbLinCalFormat, triRGBImage, ...
+ diLMSCalFormat, dirgbLinCalFormat, diRGBImage, pathName, outputSubdir] = handleLMSFileLoad(img, renderType, imgParams, Disp, clearTestImages);
 
-
-% Make this a key value pair
-% clearTestImages = true;  
-testImagesDir = fullfile(outputDir, 'testImages');
-
-% Clear 'testImages' folder if requested
-if clearTestImages
-    if exist(testImagesDir, 'dir')
-        fprintf('Clearing entire folder: %s\n', testImagesDir);
-        rmdir(testImagesDir, 's');
-    end
-    mkdir(testImagesDir);  % recreate empty testImages folder
-end
-
-% Check to see if the image already exists
-% Determine output subdirectory
-if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
-    outputSubdir = fullfile(outputDir, 'testImages', renderType, img);
-else
-    outputSubdir = fullfile(outputDir, 'testImages', renderType, img, num2str(imgParams.setType));
-end
-if ~exist(outputSubdir, "dir")
-    mkdir(outputSubdir);
-end
-
-% Save path after testImages. Can use this later when creating parallel
-% file structure as the original images... for the transformed images
-idx = strfind(outputSubdir, ['testImages' filesep]);
-pathName = outputSubdir(idx + length('testImages') + 1 : end);
-
-% Determine expected output file paths
-triLMSPath    = fullfile(outputSubdir, 'triLMSCalFormat.mat');
-trirgbLinPath = fullfile(outputSubdir, 'trirgbLinCalFormat.mat');
-triRGBPath    = fullfile(outputSubdir, 'triRGBCalFormat.mat');
-
-diLMSPath    = fullfile(outputSubdir, 'diLMSCalFormat.mat');
-dirgbLinPath = fullfile(outputSubdir, 'dirgbLinCalFormat.mat');
-diRGBPath    = fullfile(outputSubdir, 'diRGBCalFormat.mat');
-
-dispPath      = fullfile(outputSubdir, 'Disp.mat');
-imgParamsPath = fullfile(outputSubdir, 'imgParams.mat');
-
-if endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
-    imageBaseName = img;
-else
-    imageBaseName = [img, '.png'];
-end
-tri_imageOutputPath = fullfile(outputSubdir, imageBaseName);
-diImageBaseName = ['di_', imageBaseName];
-di_imageOutputPath = fullfile(outputSubdir, diImageBaseName);
-
-% If all outputs exist, load them and return
-if exist(triLMSPath, 'file') && exist(trirgbLinPath, 'file') && exist(triRGBPath, 'file')...
-        && exist(diLMSPath, 'file') && exist(dirgbLinPath, 'file') && exist(diRGBPath, 'file')...
-        && exist(dispPath, 'file') && exist(imgParamsPath, 'file')
-    fprintf('Found precomputed LMS data for %s', img);
-    load(triLMSPath,    'triLMSCalFormat');
-    load(trirgbLinPath, 'trirgbLinCalFormat');
-    load(triRGBPath,    'triRGBImage');
-
-    load(diLMSPath,     'diLMSCalFormat');
-    load(dirgbLinPath,  'dirgbLinCalFormat');
-    load(diRGBPath,     'diRGBImage');
-
-    load(dispPath,      'Disp');
-    load(imgParamsPath, 'imgParams');
-
+if didLoad
+    fprintf('Found precomputed LMS data for %s\n', img);
+    
     % Show image pair of original and dichromat simulation
     figure();
     subplot(1,2,1)
@@ -129,8 +64,7 @@ if exist(triLMSPath, 'file') && exist(trirgbLinPath, 'file') && exist(triRGBPath
     imagesc(diRGBImage);
     axis square
     title(sprintf('%s | %s | %dx%d', img, renderType, imgParams.m, imgParams.n));
-    subtitle('Dichromat RGB image')
-
+    subtitle('Dichromat RGB image');
 
     return;
 end
@@ -217,6 +151,7 @@ else
 
 end
 
+ 
 % Create dichromat simulation
 [diLMSCalFormat,  dirgbLinCalFormat] = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
 
@@ -230,25 +165,9 @@ end
 diRGBCalFormat = rgbLin2RGB(dirgbLinCalFormat,Disp);
 diRGBImage = CalFormatToImage(diRGBCalFormat,imgParams.m,imgParams.n);
 
-% Convert and save image
-imwrite(triRGBImage, tri_imageOutputPath);
-imwrite(diRGBImage, di_imageOutputPath);
 
-% Save trichromat values
-save(triLMSPath, 'triLMSCalFormat');
-save(trirgbLinPath, 'trirgbLinCalFormat');
-save(triRGBPath, 'triRGBImage') % should this be cal format or image?
-
-% Save dichromat values
-save(diLMSPath, 'diLMSCalFormat');
-save(dirgbLinPath, 'dirgbLinCalFormat');
-save(diRGBPath, 'diRGBImage') % should this be cal format or image?
-
-% Save Display parameters
-save(dispPath,  'Disp');
-
-% Save image parameters
-save(imgParamsPath,  'imgParams');
+% saveLMSData(outputSubdir, img, triLMSCalFormat, trirgbLinCalFormat, triRGBImage, diLMSCalFormat, dirgbLinCalFormat, diRGBImage, Disp, imgParams);
+saveLMSData(outputSubdir, triLMSCalFormat, trirgbLinCalFormat, triRGBImage, diLMSCalFormat, dirgbLinCalFormat, diRGBImage, Disp, imgParams)
 
 fprintf('Generated and saved LMS data for %s\n', img);
 

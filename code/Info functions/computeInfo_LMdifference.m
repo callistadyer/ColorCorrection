@@ -1,4 +1,4 @@
-function info = computeInfo_LMdifference(availableConesContrast_old, availableConesContrast_new)
+function info = computeInfo_LMdifference(availableConesContrast_old, availableConesContrast_new,Lcontrast_old,Mcontrast_old)
 % computeInfo_LMdifference  Contrast loss weighted by L-M difference in original contrast
 %
 % Syntax:
@@ -18,8 +18,8 @@ function info = computeInfo_LMdifference(availableConesContrast_old, availableCo
    info = computeInfo_LMdifference(LMScontrast_old([1 2],:), LMScontrast_new([1 2],:));
 %}
 
-L = availableConesContrast_old(1, :);         % Extract L-cone contrast from the original image
-M = availableConesContrast_old(2, :);         % Extract M-cone contrast from the original image
+L = Lcontrast_old;         % Extract L-cone contrast from the original image
+M = Mcontrast_old;         % Extract M-cone contrast from the original image
 
 LM_diff = abs(L - M);                         % Compute L–M opponent contrast (absolute difference)
 alpha = 2;                                    % Exponent to emphasize stronger opponent differences

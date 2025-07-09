@@ -89,5 +89,8 @@ imgParams.n = n;
 imgParams.img = img;
 imgParams.setType = setType;
 
+% Get normalizer for information and distortion
+%????
+
 
 end
