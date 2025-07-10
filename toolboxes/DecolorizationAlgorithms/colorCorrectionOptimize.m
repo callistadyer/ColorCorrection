@@ -240,8 +240,8 @@ disp('Just finished optimization')
 bCheck = A_total*transformRGB_opt(:);
 if (any(bCheck > b_total))
     fprintf('Failed to satisfy constraint\n');
-end
-
+end  
+ 
 % Reshape optimal solution into matrix
 transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 
