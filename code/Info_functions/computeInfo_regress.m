@@ -1,23 +1,64 @@
-function info = computeInfo_regress(availableConesContrast_old, availableConesContrast_new, missingConeContrast_old)
+function info = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, DichromatType, NormalizingValue, Disp, imgParams, varargin)
 % computeInfo_regress  Contrast loss weighted by regression residuals from original contrast
 %
 % Syntax:
 %   info = computeInfo_regress(availableConesContrast_old, availableConesContrast_new, missingConeContrast_old)
 %
 % Inputs:
-%   availableConesContrast_old:   2 x N matrix of original LMS contrast (available cones)
-%   availableConesContrast_new:   2 x N matrix of transformed LMS contrast (available cones)
-%   missingConeContrast_old:      1 x N vector of original LMS contrast (missing cone)
+%   LMSContrastCalFormat_old:   3 x N matrix of original LMS contrast
+%   LMSContrastCalFormat_new:   3 x N matrix of transformed LMS contrast 
+%   DichromatType:              type of dichromat for this simulation   
+%                                    "Protanopia"
+%                                    "Deuteranopia"
+%                                    "Tritanopia"
+%   NormalizingValue:           value used to normalize info function
+%   Disp:                       display parameters
+%   imgParams:                  image parameters
 %
 % Outputs:
 %   info:                         information in image – you want the info
 %                                 to increase most in the available cone planes, especially where the
 %                                 missing cone could not be well predicted from them.
 %
+% Optional key/value pairs:
+%   'AlgParams' (struct):       algorithm-specific parameters (optional)
+%
 % Example:
 %{
    info = computeInfo_regress(LMScontrast_old([1 3],:), LMScontrast_new([1 3],:), LMScontrast_old(2,:));
 %}
+
+% -------------------------------
+% Parse optional key/value pairs
+% -------------------------------
+parser = inputParser;
+parser.KeepUnmatched = true;
+addParameter(parser, 'AlgParams', struct());  % Default: empty struct
+parse(parser, varargin{:});
+AlgParams = parser.Results.AlgParams;
+
+
+switch DichromatType
+    case 'Protanopia'
+        % Missing L cone (1), available: M (2), S (3)
+        missingConesIdx     = 1;
+        availableConesIdx   = [2 3];
+    case 'Deuteranopia'
+        % Missing M cone (2), available: L (1), S (3)
+        missingConesIdx     = 2;
+        availableConesIdx   = [1 3];
+    case 'Tritanopia'
+        % Missing S cone (3), available: L (1), M (2)
+        missingConesIdx     = 3;
+        availableConesIdx   = [1 2];
+    otherwise
+        error('Unknown DichromatType: %s. Use ''Protanopia'', ''Deuteranopia'', or ''Tritanopia''.', DichromatType);
+end
+
+
+availableConesContrast_old = LMSContrastCalFormat_old(availableConesIdx);
+missingConeContrast_old    = LMSContrastCalFormat_old(missingConesIdx);
+
 
 X = availableConesContrast_old';      % N x 2 (predictors)
 y = missingConeContrast_old';         % N x 1 (target)
