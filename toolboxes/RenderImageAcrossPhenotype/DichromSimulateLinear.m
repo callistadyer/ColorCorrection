@@ -3,7 +3,7 @@ function [calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(ca
 % in LMS space
 %
 % Syntax:
-%    [calFormatDiLMS] = DichromSimulateLinear(calFormatLMS, cbType, Disp)
+%    [calFormatDiLMS] = DichromSimulateLinear(calFormatLMS, dichromatType, Disp)
 %
 % Inputs:
 %   calFormatLMS:   Input LMS image
