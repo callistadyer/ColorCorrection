@@ -68,7 +68,7 @@ classdef daltonize < handle
     % Public methods
     methods
         % Constructor
-        function obj = daltonze(infoFunctionHandle, infoFunctionParamsStruct, ...
+        function obj = daltonize(infoFunctionHandle, infoFunctionParamsStruct, ...
                 distortionFunctionHandle, distortionFunctionParamsStruct, ...
                 renderFunctionHandle, renderFunctionParamsStruct, ...
                 Disp, ...
@@ -84,7 +84,7 @@ classdef daltonize < handle
             obj.infoParams = infoFunctionParamsStruct;
             obj.distortionFcn = distortionFunctionHandle;
             obj.distortionParams = distortionFunctionParamsStruct;
-            obj.renderFunction = renderFunctionHandle;
+            obj.renderFcn = renderFunctionHandle;
             obj.renderParams = renderFunctionParamsStruct;
             obj.Disp = Disp;
         end   
