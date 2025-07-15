@@ -1,4 +1,4 @@
-function info = computeInfo_LMdifference(LMSContrastCalFormat_old, LMSContrastCalFormat_new, DichromatType, NormalizingValue, Disp, imgParams, varargin)
+function info = computeInfo_LMdifference(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
 % computeInfo_LMdifference  Contrast loss weighted by L–M opponent contrast from the original image
 %
 % Syntax:
@@ -18,21 +18,10 @@ function info = computeInfo_LMdifference(LMSContrastCalFormat_old, LMSContrastCa
 % Outputs:
 %   info:                       scalar information value based on L–M contrast loss
 %
-% Optional key/value pairs:
-%   'AlgParams' (struct):       algorithm-specific parameters (optional)
-%
 % Example:
 %{
-   info = computeInfo_LMdifference(LMScontrast_old([1 2],:), LMScontrast_new([1 2],:));
-%}
 
-% -------------------------------
-% Parse optional key/value pairs
-% -------------------------------
-parser = inputParser;
-parser.KeepUnmatched = true;
-addParameter(parser, 'AlgParams', struct());  % Default: empty struct
-parse(parser, varargin{:});
+%}
 
 % Get cone indices
 switch DichromatType

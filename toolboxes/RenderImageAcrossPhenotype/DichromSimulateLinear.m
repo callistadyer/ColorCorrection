@@ -1,13 +1,13 @@
-function [calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(calFormatLMS, cbType, Disp)
+function [calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(calFormatLMS, dichromatType, Disp)
 % Simulates color vision for dichromatic viewers by projecting onto a plane
 % in LMS space
 %
 % Syntax:
-%    [calFormatDiLMS] = DichromSimulateLinear(calFormatLMS, grayLMS, cbType, Disp)
+%    [calFormatDiLMS] = DichromSimulateLinear(calFormatLMS, cbType, Disp)
 %
 % Inputs:
 %   calFormatLMS:   Input LMS image
-%   cbType:         which type of dichromacy
+%   dichromatType:  which type of dichromacy
 %                       "Protanopia"
 %                       "Deuteranopia"
 %                       "Tritanopia"
@@ -50,7 +50,7 @@ imgParams = buildSetParameters('ishihara',1,128,128);
 
 %}
 
-switch (cbType)
+switch (dichromatType)
     case 'Deuteranopia'
         constraintWL = 575; % or 475 (blue)
     case 'Protanopia'
@@ -79,7 +79,7 @@ constraint2LMScontrast = (constraint2LMS - Disp.grayLMS)./Disp.grayLMS;
 % LMS contrast, in the plane spanned by the two constraint vectors
 constraintMatrix = [constraint1LMScontrast  constraint2LMScontrast];
 
-switch (cbType)
+switch (dichromatType)
     case 'Deuteranopia' % m cone deficiency
         missingConeIdx = 2;
         availableConeIdx = [1 3];

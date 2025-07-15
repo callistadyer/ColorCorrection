@@ -1,4 +1,4 @@
-function info = computeInfo_delta(LMSContrastCalFormat_old, LMSContrastCalFormat_new, DichromatType, NormalizingValue, Disp, imgParams, varargin)
+function info = computeInfo_delta(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
 % computeInfo_delta  Weighted contrast loss using missing cone contrast as weight
 %
 % Syntax:
@@ -18,21 +18,10 @@ function info = computeInfo_delta(LMSContrastCalFormat_old, LMSContrastCalFormat
 % Outputs:
 %   info:                       scalar value – weighted contrast loss using missing cone contrast
 %
-% Optional key/value pairs:
-%   'AlgParams' (struct):       algorithm-specific parameters (optional)
-%
 % Example:
 %{
-   info = computeInfo_delta(LMScontrast_old([1 3],:), LMScontrast_new([1 3],:), LMScontrast_old(2,:));
-%}
 
-% -------------------------------
-% Parse optional key/value pairs
-% -------------------------------
-parser = inputParser;
-parser.KeepUnmatched = true;
-addParameter(parser, 'AlgParams', struct());  % Default: empty struct
-parse(parser, varargin{:});
+%}
 
 % Identify available and missing cones
 switch DichromatType

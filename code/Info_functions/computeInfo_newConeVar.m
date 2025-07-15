@@ -1,4 +1,4 @@
-function info = computeInfo_newConeVar(LMSContrastCalFormat_old, LMSContrastCalFormat_new, DichromatType, NormalizingValue, Disp, imgParams, varargin)
+function info = computeInfo_newConeVar(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
 % computeInfo_newConeVar  Maximize variance on the available cones of the transformed LMS image
 %
 % Syntax:
@@ -18,21 +18,10 @@ function info = computeInfo_newConeVar(LMSContrastCalFormat_old, LMSContrastCalF
 % Outputs:
 %   info:                       Scalar total variance across both available cones
 %
-% Optional key/value pairs:
-%   'AlgParams' (struct):       algorithm-specific parameters (optional)
-%
 % Example:
 %{
-   info = computeInfo_newConeVar(LMS_new([1 3], :));
-%}
 
-% -------------------------------
-% Parse optional key/value pairs
-% -------------------------------
-parser = inputParser;
-parser.KeepUnmatched = true;
-addParameter(parser, 'AlgParams', struct());  % Default: empty struct
-parse(parser, varargin{:});
+%}
 
 % Determine available cones
 switch DichromatType

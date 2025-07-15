@@ -253,11 +253,11 @@ triRGBContrastCalFormat_T = transformRGBmatrix_opt * triRGBContrastCalFormat;
 diRGBContrastCalFormat_T = M_all * triRGBContrastCalFormat_T;
 
 % Add back in gray before outputting the image
-diRGBCalFormat_T = (diRGBContrastCalFormat_T.*grayRGB) + grayRGB;
+diRGBCalFormat_T = (diRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
 min(min(diRGBCalFormat_T(:)))
 max(max(diRGBCalFormat_T(:)))
 
-triRGBCalFormat_T = (triRGBContrastCalFormat_T.*grayRGB) + grayRGB;
+triRGBCalFormat_T = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
 if (max(triRGBCalFormat_T(:))>1)
     triRGBCalFormat_T(triRGBCalFormat_T>1)=1;
 end
