@@ -54,7 +54,7 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     % S-cone value obtained from a tritanopia simulation.
     %
     % Here we need to produce those three simulations to build the second
-    % image to compare to the original:
+    % image to compare to the original. See DichromSimulateLinear.m
 
     distortionNormalizer = obj.distortionFcn(args{:}, obj.distortionParams);
 
@@ -69,7 +69,7 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     % to think about how you'll do that.
 
     % Since we want this to work generically, probably you pull out of the LMS image the
-    % two available cone classes and the one that is not available to the dicrhomat.
+    % two available cone classes and the one that is not available to the dichromat.
 
              
 end
