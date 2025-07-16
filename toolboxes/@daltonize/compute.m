@@ -12,11 +12,13 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
 %    functions specified when the @dalonize object was created.
 %
 % Inputs:
-%    obj                            - the @daltonze object  
-%    LMSCalFormat         - the LMS excitations to daltonize in PTB CalFormat (3 by npixels matrix)
-%    dichromatType          - type of dichromat to daltonize for: 'Protaniopia',
-%                                       'Deuteranopia', 'Tritanopia'
-%    imgParams               - struct containing ancilliary information about the image.
+%    obj                    - the @daltonze object  
+%    LMSCalFormat           - the LMS excitations to daltonize in PTB CalFormat (3 by npixels matrix)
+%    dichromatType          - type of dichromat to daltonize for: 
+%                                       'Protaniopia',
+%                                       'Deuteranopia', 
+%                                       'Tritanopia'
+%    imgParams              - struct containing ancilliary information about the image.
 %
 % Optional key/value input arguments:
 %    None.
@@ -32,8 +34,6 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
 %    2025-07-14  dhb, cmd  Wrote it
     
     % Load Disp structure. This contains background LMS excitations
-    Disp = loadDisplay();
-    % Or...
     Disp = obj.Disp;
 
     % Convert input image to contrast from passed excitations.  Use background LMS
@@ -45,7 +45,10 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     % Note that you can set the normalizer to 1 and call the function to get an
     % unnormalized value, which is what you need to do to get the normalizing value.
     normalizerValueToGetRawValue = 1;
-
+    LMSContrastCalFormat_old = LMSContrastCalFormat; 
+    % LMSContrastCalFormat_new = ???? what to place for the "new" image
+    % here? This is used in order to calculate delta, or the change in
+    % available cones. 
     infoNormalizer       = obj.infoFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizerValueToGetRawValue, Disp, imgParams, obj.infoParams);
 
     % Also note that for distortion normalizer, you first need to create
@@ -57,12 +60,21 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     %
     % Here we need to produce those three simulations to build the second
     % image to compare to the original. See DichromSimulateLinear.m
-    distortionNormalizer = obj.distortionFcn(args{:}, obj.distortionParams);
+    [calFormatLMS_prot,~,~] = DichromSimulateLinear(LMSContrastCalFormat_old, 'Protaniopia', Disp);
+    [calFormatLMS_deut,~,~] = DichromSimulateLinear(LMSContrastCalFormat_old, 'Deuteranopia', Disp);
+    [calFormatLMS_trit,~,~] = DichromSimulateLinear(LMSContrastCalFormat_old, 'Tritanopia', Disp);
+    % Build new LMS to compare to old LMS
+    LMSContrastCalFormat_new = [calFormatLMS_prot(1,:); calFormatLMS_deut(2,:); calFormatLMS_trit(3,:)];
+
+
+    % do we want the distortion to also be in contrast? or in regular
+    % excitations? 
+    distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, obj.distortionParams);
 
     % Use the render function to get the linear transformation needed to render an LMS
     % image for this type of dichromat, for viewing by a trichromat.  We need this to set
     % up the constraint matrix.
-    [calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(calFormatLMS, cbType, Disp);
+    [calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(LMSContrastCalFormat_old, dichromatType, Disp);
 
     % At this point, you can run the daltonizing search.  But we still need to either pass
     % in lambda, or a value of info to lock in and then minimize distortion with respect
