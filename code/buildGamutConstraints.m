@@ -1,16 +1,16 @@
 function [A_total, b_total] = buildGamutConstraints(triLMSCalFormat, renderType, Disp)
 % buildGamutConstraints
-% Constructs linear inequality constraints for color transformation matrix T
+% Constructs linear constraints for color transformation matrix T
 % such that both trichromat and dichromat RGB renderings stay within gamut [0,1].
 %
 % Inputs:
-%   triLMSCalFormat : 3 x N matrix of LMS values (trichromat)
-%   renderType      : string specifying type of dichromat 
-%   Disp            : display struct with fields:
-%                         M_cones2rgb: 3x3 matrix
-%                         M_rgb2cones: 3x3 matrix
-%                         grayRGB    : 3x1 vector
-%                         grayLMS    : 3x1 vector
+%   triLMSCalFormat   3 x N matrix of LMS values
+%   renderType        type of dichromat 
+%   Disp              display struct with fields:
+%                         M_cones2rgb 
+%                         M_rgb2cones
+%                         grayRGB   
+%                         grayLMS    
 %
 % Outputs:
 %   A_total : Combined constraint matrix (12N x 9)
