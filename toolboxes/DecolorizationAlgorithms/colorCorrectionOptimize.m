@@ -101,96 +101,10 @@ rng(1);
 % Number of pixels
 nPix   = size(triLMSCalFormat,2);
 
-% Start building the linear constraints
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%% STEP 1: GET TRICHROMAT RGB VALUES FROM LMS %%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-triRGBCalFormat = Disp.M_cones2rgb * triLMSCalFormat;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%% STEP 2: GET TRI CONTRAST RGB FROM RGB      %%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Contrast RGB, trichromat
-triRGBContrastCalFormat = (triRGBCalFormat - Disp.grayRGB)./Disp.grayRGB;
+% Get linear constraints
+[A_total, b_total] = buildGamutConstraints(triLMSCalFormat, renderType, Disp);
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%% STEP 3: MAKE BLOCKED DIAGONAL MATRIX OF CONTRAST RGB %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Contrast version: the contrast image A
-% [(nPix x 3) x 9] =    [nPix x 3]                 [nPix x 3]              [nPix x 3]
-% A_upper = blkdiag(triRGBContrastCalFormat', triRGBContrastCalFormat', triRGBContrastCalFormat');      % Upper constraint blocks
-
-% ALTERNATIVE:
-% Attempt at making the [3 x 9] matrix for each pixel, then append every
-% pixel on the bottom so that the total matrix is size [(3*nPix) x 9]
-constraintA = [];
-for i = 1:size(triRGBContrastCalFormat,2)
-    constraintA = [constraintA; eye(3)*triRGBContrastCalFormat(1,i), eye(3)*triRGBContrastCalFormat(2,i), eye(3)*triRGBContrastCalFormat(3,i)];
-end
-A_upper = constraintA;
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%% STEP 4: MAKE LOWER MATRIX JUST NEGATIVE OF UPPER %%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Lower is always negative of upper
-A_lower = -(A_upper);              % for -I * X <= 0
-% Create A from upper and lower
-A = double([A_upper; A_lower]);
-
-% b defines the gamut. In regular RGB, it must stay between 0 and 1
-% b = [ones(nPix * 3, 1); zeros(nPix * 3, 1)];
-% % Update b to deal with contrast image
-% % (contrastA * T) * grayRGB + grayRGB <= b
-% % (contrastA * T)                     <= (b - grayRGB)/grayRGB
-% b = (b - grayRGB(1))./grayRGB(1);
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%% STEP 5: RIGHT HAND SIDE OF CONSTRAINT, POST CONTRAST %%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-b = [ones(nPix * 3, 1); ones(nPix * 3, 1)]; % only for the case where gray is background
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%% STEP 6: BUILD CONSTRAINT FOR DICHROMAT     %%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Matrix that transforms contrast RGB trichromat input into contrast RGB
-% dichromat output --> this also needs to be in gamut
-% Contrast RGB, dichromat
-[calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
-
-%%% Gamut check %%%
-% dirgb = inv(Disp.M_rgb2cones) * calFormatDiLMS;
-% max(dirgb(:))
-% min(dirgb(:))
-
-% Matrix that converts LMS contrast into rgb contrast
-M_conesC2rgbC = diag(1./Disp.grayRGB) * inv(Disp.M_rgb2cones) * diag(Disp.grayLMS);
-M_all = M_conesC2rgbC * M_triToDi * inv(M_conesC2rgbC); % left apply this to tri rgb contrast image
-
-% NOTE: TRY TO DO THIS OUTISDE OF THE OPT. PROCEDURE TO SPEED IT UP ... JUT
-% NEED THE CONSTRAINT WL
-% Make big diagonal matrix of Ms to multiply at each pixel
-contRGB = M_all * triRGBContrastCalFormat;
-RGB = (contRGB.*Disp.grayRGB)+ Disp.grayRGB;
-max(RGB(:))
-min(RGB(:))
-
-bigM = kron(speye(nPix), M_all);
-
-% Dichromat constraint is just trichromat constraint transformed
-% Left multuply the big M transformation matrix
-A_di_upper = bigM * constraintA;
-% Lower is just negative of upper
-A_di_lower = -A_di_upper;
-% Combine lower and upper
-A_di = double([A_di_upper; A_di_lower]);
-% b (right hand side of constraint AT<b) is constructed the same as orig
-b_di = [ones(nPix * 3, 1); ones(nPix * 3, 1)];
-
-% Combine trichromat and dichromat constraints
-A_total = [A; A_di];
-b_total = [b; b_di];
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Initial guess at transformation matrix - start with identity
 T_I    = eye(3, 3);
