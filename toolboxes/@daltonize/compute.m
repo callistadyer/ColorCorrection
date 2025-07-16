@@ -46,12 +46,8 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     % unnormalized value, which is what you need to do to get the normalizing value.
     normalizerValueToGetRawValue = 1;
     LMSContrastCalFormat_old = LMSContrastCalFormat; 
-    % LMSContrastCalFormat_new = ???? what to place for the "new" image
-    % here? This is used in order to calculate delta, or the change in
-    % available cones. 
-    infoNormalizer       = obj.infoFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizerValueToGetRawValue, Disp, imgParams, obj.infoParams);
 
-    % Also note that for distortion normalizer, you first need to create
+    % Also note that for the normalizers, you first need to create
     % the second, distorted image to compare to the original. The idea
     % behind this is to render the image for all three types of dichromats.
     % Then, the new image is the L-cone value obtained from protonopia
@@ -59,17 +55,18 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     % S-cone value obtained from a tritanopia simulation.
     %
     % Here we need to produce those three simulations to build the second
-    % image to compare to the original. See DichromSimulateLinear.m
+    % image to compare to the original. 
     [calFormatLMS_prot,~,~] = DichromSimulateLinear(LMSContrastCalFormat_old, 'Protaniopia', Disp);
     [calFormatLMS_deut,~,~] = DichromSimulateLinear(LMSContrastCalFormat_old, 'Deuteranopia', Disp);
     [calFormatLMS_trit,~,~] = DichromSimulateLinear(LMSContrastCalFormat_old, 'Tritanopia', Disp);
     % Build new LMS to compare to old LMS
     LMSContrastCalFormat_new = [calFormatLMS_prot(1,:); calFormatLMS_deut(2,:); calFormatLMS_trit(3,:)];
 
-
+    infoNormalizer       = obj.infoFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizerValueToGetRawValue, Disp, imgParams, obj.infoParams);
+    distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, obj.distortionParams);
     % do we want the distortion to also be in contrast? or in regular
     % excitations? 
-    distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, obj.distortionParams);
+
 
     % Use the render function to get the linear transformation needed to render an LMS
     % image for this type of dichromat, for viewing by a trichromat.  We need this to set
@@ -80,6 +77,7 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     % in lambda, or a value of info to lock in and then minimize distortion with respect
     % to, or a value of distoriont to lock in and then maximize info with respec to.  Need
     % to think about how you'll do that.
+    
 
     % Since we want this to work generically, probably you pull out of the LMS image the
     % two available cone classes and the one that is not available to the dichromat.

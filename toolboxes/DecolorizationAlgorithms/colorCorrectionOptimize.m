@@ -1,21 +1,22 @@
-function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(lambdaOrVar,var,lambda_var,triLMSCalFormat, renderType,infoType,distortionType, T_prev, Disp, imgParams, V0,V1)
+function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,triLMSCalFormat, renderType,infoType,distortionType, T_prev, Disp, imgParams, V0,V1)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
 % Syntax:
 %   [triLMSCalFormatOpt, s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = ...
-%       colorCorrectionOptimize(lambdaOrVar, var, lambda_var, triLMSCalFormat, ...
+%       colorCorrectionOptimize(lambdaOrVar, var, lambdaOrTargetInfo, triLMSCalFormat, ...
 %       renderType, infoType, distortionType, constraintWL, T_prev, Disp, V0, V1)
 %
 % Inputs:
-%   lambdaOrVar:        String. Optimization mode:
-%                           'lambda'  – vary tradeoff weight λ (0 to 1)
-%                           'var'     – vary based on target contrast variance
+%   useLambdaOrTargetInfo: String. Optimization mode:
+%                           'lambda'       – vary tradeoff weight λ (0 to 1)
+%                           'targetInfo'   – vary based on target contrast info  
 %
-%   var:                Numeric value or vector. If 'lambdaOrVar' = 'var', this specifies
-%                       a contrast variance target. If unused, set to [].
-%
-%   lambda_var:         Scalar (0 ≤ λ ≤ 1). Tradeoff weight balancing contrast maximization
-%                       and similarity to the original image.
+%   lambdaOrTargetInfo:   Either the lambda or the var value, depending on useLambdaOrTargetInfo 
+%                                 If 'lambdaOrTargetInfo' = 'lambda': (0 ≤ λ ≤ 1). 
+%                                    Tradeoff weight balancing contrast maximization
+%                                    and similarity to the original image.
+%                                 If 'lambdaOrTargetInfo' = 'targetInfo', this specifies
+%                                    a contrast info target
 %
 %   triLMSCalFormat:    Nx3 matrix of original LMS-calibrated image data to be transformed.
 %
@@ -72,7 +73,7 @@ Disp = loadDisplay()
 imgParams = buildSetParameters('gray',1,128,128);
 [triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = loadLMSvalues('gray','Deuteranopia',Disp,imgParams);
 T_prev = eye(3);
-[triLMSOpt, s0, v0, s1, v1, T_opt] = colorCorrectionOptimize('lambda', [], 0.5, triLMSCalFormat,'Deuteranopia', 'LMdifferenceContrast', 'squared', T_prev, Disp,imgParams,[],[]);
+[triLMSOpt, s0, v0, s1, v1, T_opt] = colorCorrectionOptimize('lambda', 0.5, triLMSCalFormat,'Deuteranopia', 'LMdifferenceContrast', 'squared', T_prev, Disp,imgParams,[],[]);
 %}
 
 % Sample data to see how code works
@@ -170,7 +171,7 @@ M_all = M_conesC2rgbC * M_triToDi * inv(M_conesC2rgbC); % left apply this to tri
 % NEED THE CONSTRAINT WL
 % Make big diagonal matrix of Ms to multiply at each pixel
 contRGB = M_all * triRGBContrastCalFormat;
-RGB = (contRGB.*grayRGB)+grayRGB;
+RGB = (contRGB.*Disp.grayRGB)+ Disp.grayRGB;
 max(RGB(:))
 min(RGB(:))
 
@@ -193,36 +194,28 @@ b_total = [b; b_di];
 
 % Initial guess at transformation matrix - start with identity
 T_I    = eye(3, 3);
-% T_I = eye(3) + (2*randn(3)); 
 T_prev = T_prev;
 
-% T0 = eye(3, 3);
-% 
-% 
-% bCheck = A_total*T0(:);
-% if (any(bCheck > b_total))
-%     fprintf('Failed to satisfy constraint\n');
-% end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% OPTIMIZATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 disp('Just reached optimization')
 % Optimization - start with identity transformation matrix
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
-[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, renderType,infoType,distortionType, Disp,imgParams,V0,V1), ...
+[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, renderType,infoType,distortionType, Disp,imgParams), ...
     T_I(:), A_total, b_total, [], [], [], [], [], options);
 % Test loss function with final transformation matrix values
-[fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var,lambda_var,transformRGB_opt_TI, triLMSCalFormat,renderType,infoType,distortionType, Disp,imgParams,V0,V1);
+[fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt_TI, triLMSCalFormat,renderType,infoType,distortionType, Disp,imgParams);
 
 % If previous transformation is the identity, then skip this step
 if (~isequal(T_prev,T_I)) && (~isequal(T_prev,eye(3,3)))
     % Optimization - start with previous transformation matrix
     options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
     % fmincon
-    [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(lambdaOrVar,var,lambda_var,transformRGB, triLMSCalFormat, renderType,infoType,distortionType, Disp,imgParams,V0,V1), ...
+    [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, renderType,infoType,distortionType, Disp,imgParams), ...
         T_prev(:), A_total, b_total, [], [], [], [], [], options);
     % Test loss function with final transformation matrix values
-    [fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var, lambda_var, transformRGB_opt_Tprev, triLMSCalFormat,renderType,infoType,distortionType, Disp,imgParams,V0,V1);
+    [fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo, transformRGB_opt_Tprev, triLMSCalFormat,renderType,infoType,distortionType, Disp,imgParams);
     % Choose the transformation that gets a lower loss
     if fValOpt_TI <= fValOpt_Tprev
         % transformRGB_opt = transformRGB_opt_TI;
@@ -257,7 +250,7 @@ diRGBCalFormat_T = (diRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
 min(min(diRGBCalFormat_T(:)))
 max(max(diRGBCalFormat_T(:)))
 
-triRGBCalFormat_T = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
+triRGBCalFormat_T = (triRGBContrastCalFormat_T.*grayRGB) + grayRGB;
 if (max(triRGBCalFormat_T(:))>1)
     triRGBCalFormat_T(triRGBCalFormat_T>1)=1;
 end
@@ -268,7 +261,7 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
 %% Functions
 
 % OBJECTIVE FUNCTION
-    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(lambdaOrVar,var,lambda,t_vec, LMSCalFormat, renderType,infoType, distortionType, Disp,imgParams,V0,V1)
+    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,t_vec, LMSCalFormat, renderType,infoType, distortionType, Disp,imgParams)
         T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
 
         % I - LMS
@@ -327,7 +320,7 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
                 missingIdx = 3;
         end
 
-        %%%%%%%% Info term %%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%% Info term %%%%%%%%%%%%%%%%%%%%%%%%%%
         switch (infoType)
             case 'LMdifferenceContrast'  % use contrast
 
@@ -369,27 +362,20 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
                 info = computeInfo_newConeVar(availableCones_new);
 
         end
-       
-        % var_term_raw = varianceLMS(infoType,renderType,LMSold,LMSnew,Disp);
-        
+               
         % Weight by lambda (use this when trying to find range of variances)
-        if strcmp(lambdaOrVar,'lambda')
-            infoWeighted = lambda*info;
-        elseif strcmp(lambdaOrVar,'var')
+        if strcmp(useLambdaOrTargetInfo,'lambda')
+            infoWeighted = lambdaOrTargetInfo*info;
+        elseif strcmp(useLambdaOrTargetInfo,'targetInfo')
             infoWeighted = info;
         end
 
         % Normalization to get info and distortion on the same scale
         infoNormalized = infoWeighted./imgParams.infoNorm;
 
-        % Normalize via total variance in white noise image
-        % totalVariance = whiteNoiseVariance(infoType,renderType,0.5*eye(3,3),Disp,imgParams);
-
-        % Normalize by whiteNoiseVariance
-        % var_term_balance = var_term/totalVariance;
-        % var_term_balance = var_term;
-
-        %%%%%%%% Distortion term %%%%%%%%
+       
+        %%%%%%%%%%%%%%%%%%%%%%%%%% Distortion term %%%%%%%%%%%%%%%%%%%%%%%%%%
+        % DISTORTION IN CONTRAST OR REGULAR LMS???
         switch (distortionType)
             case 'squared'
 
@@ -407,21 +393,15 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
 
         end
 
-        % SIMILARITY IN CONTRAST OR REGULAR IMAGE??
-        % similarity_term_raw = similarityLMS(distortionType,LMSCalFormatTran,newLMSCalFormatTran);
-
         % Weight by lambda
-        if strcmp(lambdaOrVar,'lambda')
-            distortion_weighted = (1-lambda)*distortion;
-        elseif strcmp(lambdaOrVar,'var')
+        if strcmp(useLambdaOrTargetInfo,'lambda')
+            distortion_weighted = (1-lambdaOrTargetInfo)*distortion;
+        elseif strcmp(useLambdaOrTargetInfo,'targetInfo')
             distortion_weighted = distortion;
         end
 
         % Normalization to get info and distortion on the same scale
         distortionNormalized = distortion_weighted./imgParams.distortionNorm;
-
-        % totalSimilarity         = abs(whiteNoiseSimilarity(distortionType,Disp,imgParams));
-        % similarity_term_balance = distortion_weighted/totalSimilarity;
 
         % Maybe next we normalize by something else:
         % Compute similarity and variance normalizing constants by taking
@@ -430,48 +410,29 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
         % similarity and variance scores between the original and those.
         % This could be a good reference point for scale.
 
-        %%%%%%%% Loss %%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Loss %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Scale loss so that it is small enough to make fmincon happy but not
         % so small that it is unhappy. How to determine this?
-        % fminconFactor = 1e50;
         fminconFactor = 1e8;
 
-
-        s_raw = similarity_term_raw/totalSimilarity;
-        v_raw = info/totalVariance;
-        % v_raw = info;
-
-        % s_bal = similarity_term_balance;
-        % v_bal = var_term_balance; = infoNormalized
-
         % To enforce a certain variance value, put it into the loss function
-        if strcmp(lambdaOrVar,'var')
-            if ~exist('var', 'var') || var == 0
-                error(['Make sure you are properly choosing your var values. Remember they are indices' ...
-                    'between 1 and ' num2str(numSamps)])
-            end
-            vL0 = V0;
-            vL1 = V1;
+        if strcmp(useLambdaOrTargetInfo,'targetInfo')
 
-            numSamps = 10;
-            vRange = linspace(vL0,vL1,20);
-            vRange = vRange(1:numSamps);
-
-            var_diff = v_raw - vRange(var);
+            info_diff = infoNormalized - lambdaOrTargetInfo;
             % Scale the difference by some amount so that fmincon prioritizes it
-            var_scalar = 1e20;
+            info_scalar = 1e20;
+
+            loss = fminconFactor*((info_scalar*(info_diff.^2)));
+
+        else  % Otherwise, just minimize this loss
             % want low loss
-            % want +var_diff small
-            % want var big, so -var small, min (-)
-            % want similarity big
-            % when similarity is squared, it is big positive when bad, so
-            % min (+); when similarity is luminance, is 0 when good, is big
+            % want +info_diff small
+            % want info big, so -info small, min (-)
+            % want distortion small
+            % when distortion is "squared", it is big positive when bad, so
+            % min (+); when distortion is luminance, is 0 when good, is big
             % positive when bad - so min (+)
-            loss = fminconFactor*((var_scalar*(var_diff.^2)) - var_term_balance + similarity_term_balance);
-            % loss = -fminconFactor*((var_scalar*(var_diff.^2)) + similarity_term);
-            % Otherwise, just minimize this loss
-        else
-            loss = fminconFactor*((-var_term_balance) + similarity_term_balance);
+            loss = fminconFactor*((-infoNormalized) + distortionNormalized);
         end
 
     end
