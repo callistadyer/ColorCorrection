@@ -44,7 +44,9 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     %
     % Note that you can set the normalizer to 1 and call the function to get an
     % unnormalized value, which is what you need to do to get the normalizing value.
-    infoNormalizer       = obj.infoFcn(args{:}, obj.infoParams);
+    normalizerValueToGetRawValue = 1;
+
+    infoNormalizer       = obj.infoFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizerValueToGetRawValue, Disp, imgParams, obj.infoParams);
 
     % Also note that for distortion normalizer, you first need to create
     % the second, distorted image to compare to the original. The idea
@@ -55,7 +57,6 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     %
     % Here we need to produce those three simulations to build the second
     % image to compare to the original. See DichromSimulateLinear.m
-
     distortionNormalizer = obj.distortionFcn(args{:}, obj.distortionParams);
 
     % Use the render function to get the linear transformation needed to render an LMS

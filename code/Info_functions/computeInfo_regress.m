@@ -41,6 +41,7 @@ end
 availableConesContrast_old = LMSContrastCalFormat_old(availableConesIdx);
 missingConeContrast_old    = LMSContrastCalFormat_old(missingConesIdx);
 
+availableConesContrast_new = LMSContrastCalFormat_new(availableConesIdx);
 
 X = availableConesContrast_old';      % N x 2 (predictors)
 y = missingConeContrast_old';         % N x 1 (target)
