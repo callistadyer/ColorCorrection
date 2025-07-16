@@ -98,18 +98,12 @@ end
 
 rng(1);
 
-% Number of pixels
-nPix   = size(triLMSCalFormat,2);
-
-
 % Get linear constraints
 [A_total, b_total] = buildGamutConstraints(triLMSCalFormat, renderType, Disp);
-
 
 % Initial guess at transformation matrix - start with identity
 T_I    = eye(3, 3);
 T_prev = T_prev;
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% OPTIMIZATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 disp('Just reached optimization')
