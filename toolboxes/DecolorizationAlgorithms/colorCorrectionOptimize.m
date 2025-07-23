@@ -201,10 +201,6 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
         % Convert to LMS contrast 
         newLMSContrastCalFormat =  (newLMSCalFormat-Disp.grayLMS) ./ Disp.grayLMS;
 
-        % Get into cal format
-        % newLMSCalFormatTran = newLMSCalFormat';
-        % LMSCalFormatTran    = LMSCalFormat';
-
         % Which cones are missing? available?
         switch (dichromatType)
             case 'Deuteranopia' % m cone deficiency
@@ -223,8 +219,9 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
         LMSold = LMSContrastCalFormat;
         LMSnew = newLMSContrastCalFormat;
 
-        % previous infoType == infoFnc
+        % infoFnc used to be infoType, which determined which function to call
         info = infoFnc(LMSold, LMSnew, dichromatType, normalizingValue, Disp, imgParams, paramsStruct);
+
         %%%%%%%%%%%%%%%%%%%%%%%%%% Info term %%%%%%%%%%%%%%%%%%%%%%%%%%
         % switch (infoType)
         %     case 'LMdifferenceContrast'  % use contrast
@@ -280,7 +277,6 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
 
         % Normalization to get info and distortion on the same scale
         infoNormalized = infoWeighted./imgParams.infoNorm;
-
 
         % You need to decide whether the distortion term will be calculated
         % in terms of LMS excitations or contrast. Info is calculated with

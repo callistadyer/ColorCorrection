@@ -56,7 +56,7 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     %
     % Here we need to produce those three simulations to build the second
     % image to compare to the original. 
-    [calFormatLMS_prot,~,~] = DichromSimulateLinear(LMSContrastCalFormat_old, 'Protaniopia', Disp);
+    [calFormatLMS_prot,~,~] = DichromSimulateLinear(LMSContrastCalFormat_old, 'Protanopia', Disp);
     [calFormatLMS_deut,~,~] = DichromSimulateLinear(LMSContrastCalFormat_old, 'Deuteranopia', Disp);
     [calFormatLMS_trit,~,~] = DichromSimulateLinear(LMSContrastCalFormat_old, 'Tritanopia', Disp);
     % Build new LMS to compare to old LMS
@@ -107,17 +107,18 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     % So first you need to run the optimization for lambda = 0 and lambda = 1:
     useLambdaOrTargetInfo = "lambda";
     lambdaOrTargetInfo    = 0;
+    T_prev = eye(3,3);
     % Optimization function
     [triLMSCalFormatOpt_lambda0,info_0, infoNormalized_0, transformRGBmatrix_opt_lambda0] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
-        triLMSCalFormat,...
-        dichromatType,obj.infoFnc,obj.distortionFcn, T_prev, Disp, imgParams);
+        LMSCalFormat,...
+        dichromatType,obj.infoFcn,obj.distortionFcn, T_prev, Disp, imgParams);
 
     useLambdaOrTargetInfo = "lambda";
     lambdaOrTargetInfo    = 1;
     % Optimization function
     [triLMSCalFormatOpt_lambda1,info_1, infoNormalized_1, transformRGBmatrix_opt_lambda1] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
-        triLMSCalFormat,...
-        dichromatType,obj.infoFnc,obj.distortionFcn, T_prev, Disp, imgParams);
+        LMSCalFormat,...
+        dichromatType,obj.infoFcn,obj.distortionFcn, T_prev, Disp, imgParams);
 
     % Now we can grab those info values
     targetInfoVals = linspace(info_0, info_1);
@@ -126,8 +127,9 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
         useLambdaOrTargetInfo = "targetInfo";
         lambdaOrTargetInfo = targetInfoVals(i);
         % Optimization function
-        [triLMSCalFormatOpt,info, infoNormalized, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,triLMSCalFormat,...
-            dichromatType,obj.infoFnc,obj.distortionFcn, T_prev, Disp, imgParams);
+        [triLMSCalFormatOpt,info, infoNormalized, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
+            LMSCalFormat,...
+            dichromatType,obj.infoFcn,obj.distortionFcn, T_prev, Disp, imgParams);
     end
 
     % Since we want this to work generically, probably you pull out of the LMS image the

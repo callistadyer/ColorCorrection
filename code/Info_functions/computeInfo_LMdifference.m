@@ -24,7 +24,7 @@ function info = computeInfo_LMdifference(LMSContrastCalFormat_old, LMSContrastCa
 %}
 
 % Get cone indices
-switch DichromatType
+switch dichromatType
     case 'Protanopia'
         availableConesIdx = [2 3];  % M and S
     case 'Deuteranopia'

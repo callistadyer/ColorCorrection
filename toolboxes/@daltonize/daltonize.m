@@ -75,9 +75,9 @@ classdef daltonize < handle
                 options)
 
             % You could do argument checking and/or set optional key values pairs here.
-            arguments
-
-            end
+            % arguments
+            % 
+            % end
 
             % Set the key properties from the passed arguments
             obj.infoFcn = infoFunctionHandle;
