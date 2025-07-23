@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,triLMSCalFormat, dichromatType,infoType,distortionType, T_prev, Disp, imgParams)
+function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,triLMSCalFormat, dichromatType,infoFnc,distortionType, T_prev, Disp, imgParams)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
 % Syntax:
@@ -25,7 +25,7 @@ function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt]
 %                           'Protanopia'   (L-cone missing)
 %                           'Tritanopia'   (S-cone missing)
 %
-%   infoType:           String. Method used to define how much info is in the image.
+%   infoFnc:            Function handle used to define how much info is in the image.
 %
 %   distortionType:     String. Type of similarity metric to preserve naturalness.
 %                           "squared"   -> sum of squared error
@@ -99,10 +99,10 @@ disp('Just reached optimization')
 % Optimization - start with identity transformation matrix
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
-[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, dichromatType,infoType,distortionType, Disp,imgParams), ...
+[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, dichromatType,infoFnc,distortionType, Disp,imgParams), ...
     T_I(:), A_total, b_total, [], [], [], [], [], options);
 % Test loss function with final transformation matrix values
-[fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt_TI, triLMSCalFormat,dichromatType,infoType,distortionType, Disp,imgParams);
+[fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt_TI, triLMSCalFormat,dichromatType,infoFnc,distortionType, Disp,imgParams);
 
 % If previous transformation is the identity, then skip this step
 % Otherwise, see if the previous solution gets you a better solution when
@@ -111,10 +111,10 @@ if (~isequal(T_prev,T_I)) && (~isequal(T_prev,eye(3,3)))
     % Optimization - start with previous transformation matrix
     options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
     % fmincon
-    [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, dichromatType,infoType,distortionType, Disp,imgParams), ...
+    [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, dichromatType,infoFnc,distortionType, Disp,imgParams), ...
         T_prev(:), A_total, b_total, [], [], [], [], [], options);
     % Test loss function with final transformation matrix values
-    [fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo, transformRGB_opt_Tprev, triLMSCalFormat,dichromatType,infoType,distortionType, Disp,imgParams);
+    [fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo, transformRGB_opt_Tprev, triLMSCalFormat,dichromatType,infoFnc,distortionType, Disp,imgParams);
     % Choose the transformation that gets a lower loss
     if fValOpt_TI <= fValOpt_Tprev
         transformRGB_opt = transformRGB_opt_TI;
@@ -159,7 +159,7 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
 %% Functions
 
 % OBJECTIVE FUNCTION
-    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,t_vec, LMSCalFormat, dichromatType,infoType, distortionType, Disp,imgParams)
+    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,t_vec, LMSCalFormat, dichromatType,infoFnc, distortionType, Disp,imgParams)
         T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
 
         % I - LMS
@@ -218,11 +218,13 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
                 missingIdx = 3;
         end
 
+        % What values are used to determine (1) info amount and (2)
+        % distortion amount? Here, we decide that it is LMS contrast:
         LMSold = LMSContrastCalFormat;
         LMSnew = newLMSContrastCalFormat;
 
-        % make infoType == infoFnc
-        info = infoType(LMSold, LMSnew, dichromatType, normalizingValue, Disp, imgParams, paramsStruct);
+        % previous infoType == infoFnc
+        info = infoFnc(LMSold, LMSnew, dichromatType, normalizingValue, Disp, imgParams, paramsStruct);
         %%%%%%%%%%%%%%%%%%%%%%%%%% Info term %%%%%%%%%%%%%%%%%%%%%%%%%%
         % switch (infoType)
         %     case 'LMdifferenceContrast'  % use contrast
