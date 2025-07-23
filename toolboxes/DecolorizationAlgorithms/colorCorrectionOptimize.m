@@ -218,48 +218,56 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
                 missingIdx = 3;
         end
 
+        LMSold = LMSContrastCalFormat;
+        LMSnew = newLMSContrastCalFormat;
+
+        % make infoType == infoFnc
+        info = infoType(LMSold, LMSnew, dichromatType, normalizingValue, Disp, imgParams, paramsStruct);
         %%%%%%%%%%%%%%%%%%%%%%%%%% Info term %%%%%%%%%%%%%%%%%%%%%%%%%%
-        switch (infoType)
-            case 'LMdifferenceContrast'  % use contrast
-
-                LMSold = LMSContrastCalFormat;
-                LMSnew = newLMSContrastCalFormat;
-                availableConesContrast_old = LMSold(index,:);
-                availableConesContrast_new = LMSnew(index,:);
-                Lcontrast_old = LMSold(1,:);
-                Mcontrast_old = LMSold(2,:);
-                % Compute information available
-                info = computeInfo_LMdifference(availableConesContrast_old, availableConesContrast_new,Lcontrast_old,Mcontrast_old);
-
-            case 'regress'  % use LMS contrast
-
-                LMSold = LMSContrastCalFormat;
-                LMSnew = newLMSContrastCalFormat;
-                availableConesContrast_old = LMSold(index,:);
-                availableConesContrast_new = LMSnew(index,:);
-                missingConeContrast_old    = LMSold(missingIdx,:);
-                % Compute information available
-                info = computeInfo_regress(availableConesContrast_old, availableConesContrast_new, missingConeContrast_old);
-
-            case 'delta'   % use LMS contrast
-
-                LMSold = LMSContrastCalFormat;
-                LMSnew = newLMSContrastCalFormat;
-                availableConesContrast_old = LMSold(index,:);
-                availableConesContrast_new = LMSnew(index,:);
-                missingConeContrast_old    = LMSold(missingIdx,:);
-                % Compute information available
-                info = computeInfo_delta(availableConesContrast_old, availableConesContrast_new, missingConeContrast_old);
-
-            case 'newConeVar' % use LMS excitations
-
-                LMSold = LMSCalFormat;
-                LMSnew = newLMSCalFormat;
-                availableCones_new = LMSnew(index,:);
-                % Compute information available
-                info = computeInfo_newConeVar(availableCones_new);
-
-        end
+        % switch (infoType)
+        %     case 'LMdifferenceContrast'  % use contrast
+        % 
+        %         LMSold = LMSContrastCalFormat;
+        %         LMSnew = newLMSContrastCalFormat;
+        %         % availableConesContrast_old = LMSold(index,:);
+        %         % availableConesContrast_new = LMSnew(index,:);
+        %         % Lcontrast_old = LMSold(1,:);
+        %         % Mcontrast_old = LMSold(2,:);
+        %         % Compute information available
+        %         info = computeInfo_LMdifference(LMSold, LMSnew, dichromatType, normalizingValue, Disp, imgParams, paramsStruct);
+        %         % info = computeInfo_LMdifference(availableConesContrast_old, availableConesContrast_new,Lcontrast_old,Mcontrast_old);
+        % 
+        %     case 'regress'  % use LMS contrast
+        % 
+        %         LMSold = LMSContrastCalFormat;
+        %         LMSnew = newLMSContrastCalFormat;
+        %         % availableConesContrast_old = LMSold(index,:);
+        %         % availableConesContrast_new = LMSnew(index,:);
+        %         % missingConeContrast_old    = LMSold(missingIdx,:);
+        %         % Compute information available
+        %         % info = computeInfo_regress(availableConesContrast_old, availableConesContrast_new, missingConeContrast_old);
+        %         info = computeInfo_regress(LMSold, LMSnew, dichromatType, normalizingValue, Disp, imgParams, paramsStruct);
+        %     case 'delta'   % use LMS contrast
+        % 
+        %         LMSold = LMSContrastCalFormat;
+        %         LMSnew = newLMSContrastCalFormat;
+        %         % availableConesContrast_old = LMSold(index,:);
+        %         % availableConesContrast_new = LMSnew(index,:);
+        %         % missingConeContrast_old    = LMSold(missingIdx,:);
+        %         % Compute information available
+        %         info = computeInfo_delta(LMSold, LMSnew, dichromatType, normalizingValue, Disp, imgParams, paramsStruct);
+        %         % info = computeInfo_delta(availableConesContrast_old, availableConesContrast_new, missingConeContrast_old);
+        % 
+        %     case 'newConeVar' % use LMS excitations
+        % 
+        %         LMSold = LMSCalFormat;
+        %         LMSnew = newLMSCalFormat;
+        %         % availableCones_new = LMSnew(index,:);
+        %         % Compute information available
+        %         info = computeInfo_newConeVar(LMSold, LMSnew, dichromatType, normalizingValue, Disp, imgParams, paramsStruct);
+        %         % info = computeInfo_newConeVar(availableCones_new);
+        % 
+        % end
                
         % Weight by lambda (use this when trying to find range of variances)
         if strcmp(useLambdaOrTargetInfo,'lambda')
