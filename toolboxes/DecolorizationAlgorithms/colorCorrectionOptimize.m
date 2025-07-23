@@ -103,7 +103,6 @@ rng(1);
 
 % Initial guess at transformation matrix - start with identity
 T_I    = eye(3, 3);
-T_prev = T_prev;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% OPTIMIZATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 disp('Just reached optimization')
@@ -116,6 +115,8 @@ options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance'
 [fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt_TI, triLMSCalFormat,renderType,infoType,distortionType, Disp,imgParams);
 
 % If previous transformation is the identity, then skip this step
+% Otherwise, see if the previous solution gets you a better solution when
+% it's used as the starting point instead of the identity
 if (~isequal(T_prev,T_I)) && (~isequal(T_prev,eye(3,3)))
     % Optimization - start with previous transformation matrix
     options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
@@ -151,12 +152,12 @@ transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Transform contrast image
 triRGBContrastCalFormat_T = transformRGBmatrix_opt * triRGBContrastCalFormat;
-diRGBContrastCalFormat_T = M_all * triRGBContrastCalFormat_T;
+diRGBContrastCalFormat_T  = M_all * triRGBContrastCalFormat_T;
 
 % Add back in gray before outputting the image
 diRGBCalFormat_T = (diRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
-min(min(diRGBCalFormat_T(:)))
-max(max(diRGBCalFormat_T(:)))
+% min(min(diRGBCalFormat_T(:)))
+% max(max(diRGBCalFormat_T(:)))
 
 triRGBCalFormat_T = (triRGBContrastCalFormat_T.*grayRGB) + grayRGB;
 if (max(triRGBCalFormat_T(:))>1)
