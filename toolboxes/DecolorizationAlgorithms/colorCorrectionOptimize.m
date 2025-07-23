@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,triLMSCalFormat, dichromatType,infoFnc,distortionFcn, T_prev, Disp, imgParams)
+function [triLMSCalFormatOpt,info, infoNormalized, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,triLMSCalFormat, dichromatType,infoFnc,distortionFcn, T_prev, Disp, imgParams)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
 % Syntax:
@@ -8,11 +8,11 @@ function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt]
 %
 % Inputs:
 %   useLambdaOrTargetInfo: String. Optimization mode:
-%                           'lambda'       – vary tradeoff weight λ (0 to 1)
+%                           'lambda'       – vary tradeoff weight lambda (0 to 1)
 %                           'targetInfo'   – vary based on target contrast info  
 %
 %   lambdaOrTargetInfo:   Either the lambda or the var value, depending on useLambdaOrTargetInfo 
-%                                 If 'lambdaOrTargetInfo' = 'lambda': (0 ≤ λ ≤ 1). 
+%                                 If 'lambdaOrTargetInfo' = 'lambda': (0 ≤ lambda ≤ 1). 
 %                                    Tradeoff weight balancing contrast maximization
 %                                    and similarity to the original image.
 %                                 If 'lambdaOrTargetInfo' = 'targetInfo', this specifies
@@ -35,7 +35,7 @@ function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt]
 %                       for dichromat projection (e.g., 585 for Deuteranopia).
 %
 %   T_prev:             3×3 matrix. Initial RGB transformation matrix. Usually start with eye(3).
-%                       Useful for warm-starting optimization across a λ sweep.
+%                       Useful for warm-starting optimization across a lambda sweep.
 %
 %   Disp:               Struct with display parameters. Must include:
 %                           .M_cones2rgb  – Matrix to convert LMS to RGB
@@ -102,7 +102,7 @@ options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance'
 [transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, dichromatType,infoFnc,distortionFcn, Disp,imgParams), ...
     T_I(:), A_total, b_total, [], [], [], [], [], options);
 % Test loss function with final transformation matrix values
-[fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt_TI, triLMSCalFormat,dichromatType,infoFnc,distortionFcn, Disp,imgParams);
+[fValOpt_TI, info, infoNormalized] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt_TI, triLMSCalFormat,dichromatType,infoFnc,distortionFcn, Disp,imgParams);
 
 % If previous transformation is the identity, then skip this step
 % Otherwise, see if the previous solution gets you a better solution when
@@ -114,7 +114,7 @@ if (~isequal(T_prev,T_I)) && (~isequal(T_prev,eye(3,3)))
     [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, dichromatType,infoFnc,distortionFcn, Disp,imgParams), ...
         T_prev(:), A_total, b_total, [], [], [], [], [], options);
     % Test loss function with final transformation matrix values
-    [fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo, transformRGB_opt_Tprev, triLMSCalFormat,dichromatType,infoFnc,distortionFcn, Disp,imgParams);
+    [fValOpt_Tprev, info, infoNormalized] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo, transformRGB_opt_Tprev, triLMSCalFormat,dichromatType,infoFnc,distortionFcn, Disp,imgParams);
     % Choose the transformation that gets a lower loss
     if fValOpt_TI <= fValOpt_Tprev
         transformRGB_opt = transformRGB_opt_TI;
@@ -159,7 +159,7 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
 %% Functions
 
 % OBJECTIVE FUNCTION
-    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,t_vec, LMSCalFormat, dichromatType,infoFnc, distortionFcn, Disp,imgParams)
+    function [loss, info, infoNormalized] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,t_vec, LMSCalFormat, dichromatType,infoFnc, distortionFcn, Disp,imgParams)
         T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
 
         % I - LMS
@@ -282,6 +282,9 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
         infoNormalized = infoWeighted./imgParams.infoNorm;
 
 
+        % You need to decide whether the distortion term will be calculated
+        % in terms of LMS excitations or contrast. Info is calculated with
+        % contrast. Currently, distortion is calculated with excitations:
         LMSold = LMSCalFormat;
         LMSnew = newLMSCalFormat;
         distortion = distortionFcn(LMSold, LMSnew);
@@ -330,7 +333,8 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
         % To enforce a certain variance value, put it into the loss function
         if strcmp(useLambdaOrTargetInfo,'targetInfo')
 
-            info_diff = infoNormalized - lambdaOrTargetInfo;
+            % should this be info or info normalized?
+            info_diff = info - lambdaOrTargetInfo;
             % Scale the difference by some amount so that fmincon prioritizes it
             info_scalar = 1e20;
 

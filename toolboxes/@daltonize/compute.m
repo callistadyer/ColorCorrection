@@ -75,10 +75,60 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
 
     % At this point, you can run the daltonizing search.  But we still need to either pass
     % in lambda, or a value of info to lock in and then minimize distortion with respect
-    % to, or a value of distoriont to lock in and then maximize info with respec to.  Need
+    % to, or a value of distoriont to lock in and then maximize info with respect to.  Need
     % to think about how you'll do that.
-    [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,triLMSCalFormat,...
-        dichromatType,obj.infoFnc,obj.distortionFcn, T_prev, Disp, imgParams)
+
+    % Here we must decide whether to pass in lambda or a specific info
+    % value to search for. Lambda is simple. For example, here is how to do
+    % the optimization where lambda = 1. This corresponds to prioritizing
+    % only maximizing the info. You should get back a black and gray or
+    % white and gray image:
+
+    %%%%%% LAMBDA = 1; MAXIMIZE INFO ONLY %%%%%%
+    % useLambdaOrTargetInfo = "lambda";
+    % lambdaOrTargetInfo    = 1;
+
+    %%%%%% LAMBDA = 0 ; MAXIMIZE SIMILARITY ONLY %%%%%%
+    % useLambdaOrTargetInfo = "lambda";
+    % lambdaOrTargetInfo    = 1;
+
+
+    % But alas - marching through lambdas does not produce smoothly
+    % changing image transformations. There is a nonlinearity somewhere
+    % here. How do we handle that? We use the "TargetInfo" option in useLambdaOrTargetInfo
+    %
+    % "targetInfo" will force the optimization to search for specific
+    % values of info that are produced from a given obj.infoFnc. You may ask: how do you
+    % know which values of "targetInfo" to plug in for the variable lambdaOrTargetInfo?
+    % You find the info values associated with lambda = 0 and lambda = 1,
+    % then interpolate between them:
+    % targetInfoVals = linspace(info(lambda = 0),info(lambda = 1), 10);
+
+    % So first you need to run the optimization for lambda = 0 and lambda = 1:
+    useLambdaOrTargetInfo = "lambda";
+    lambdaOrTargetInfo    = 0;
+    % Optimization function
+    [triLMSCalFormatOpt_lambda0,info_0, infoNormalized_0, transformRGBmatrix_opt_lambda0] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
+        triLMSCalFormat,...
+        dichromatType,obj.infoFnc,obj.distortionFcn, T_prev, Disp, imgParams);
+
+    useLambdaOrTargetInfo = "lambda";
+    lambdaOrTargetInfo    = 1;
+    % Optimization function
+    [triLMSCalFormatOpt_lambda1,info_1, infoNormalized_1, transformRGBmatrix_opt_lambda1] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
+        triLMSCalFormat,...
+        dichromatType,obj.infoFnc,obj.distortionFcn, T_prev, Disp, imgParams);
+
+    % Now we can grab those info values
+    targetInfoVals = linspace(info_0, info_1);
+
+    for i = 1:length(targetInfoVals)
+        useLambdaOrTargetInfo = "targetInfo";
+        lambdaOrTargetInfo = targetInfoVals(i);
+        % Optimization function
+        [triLMSCalFormatOpt,info, infoNormalized, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,triLMSCalFormat,...
+            dichromatType,obj.infoFnc,obj.distortionFcn, T_prev, Disp, imgParams);
+    end
 
     % Since we want this to work generically, probably you pull out of the LMS image the
     % two available cone classes and the one that is not available to the dichromat.
