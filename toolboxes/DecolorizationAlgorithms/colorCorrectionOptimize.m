@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,triLMSCalFormat, renderType,infoType,distortionType, T_prev, Disp, imgParams)
+function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,triLMSCalFormat, dichromatType,infoType,distortionType, T_prev, Disp, imgParams)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
 % Syntax:
@@ -20,7 +20,7 @@ function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt]
 %
 %   triLMSCalFormat:    Nx3 matrix of original LMS-calibrated image data to be transformed.
 %
-%   renderType:         String. Type of color vision deficiency:
+%   dichromatType:      String. Type of color vision deficiency:
 %                           'Deuteranopia' (M-cone missing)
 %                           'Protanopia'   (L-cone missing)
 %                           'Tritanopia'   (S-cone missing)
@@ -86,19 +86,10 @@ if isempty(triLMSCalFormat)
 end
 
 %% Find optimal transformation matrix
-switch (renderType)
-    case 'Deuteranopia' % m cone deficiency
-        cbType = 2;
-    case 'Protanopia'   % l cone deficiency
-        cbType = 1;
-    case 'Tritanopia'   % s cone deficiency
-        cbType = 3;
-end
-
 rng(1);
 
 % Get linear constraints
-[A_total, b_total] = buildGamutConstraints(triLMSCalFormat, renderType, Disp);
+[A_total, b_total] = buildGamutConstraints(triLMSCalFormat, dichromatType, Disp);
 
 % Initial guess at transformation matrix - start with identity
 T_I    = eye(3, 3);
@@ -108,10 +99,10 @@ disp('Just reached optimization')
 % Optimization - start with identity transformation matrix
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
-[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, renderType,infoType,distortionType, Disp,imgParams), ...
+[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, dichromatType,infoType,distortionType, Disp,imgParams), ...
     T_I(:), A_total, b_total, [], [], [], [], [], options);
 % Test loss function with final transformation matrix values
-[fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt_TI, triLMSCalFormat,renderType,infoType,distortionType, Disp,imgParams);
+[fValOpt_TI, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt_TI, triLMSCalFormat,dichromatType,infoType,distortionType, Disp,imgParams);
 
 % If previous transformation is the identity, then skip this step
 % Otherwise, see if the previous solution gets you a better solution when
@@ -120,14 +111,13 @@ if (~isequal(T_prev,T_I)) && (~isequal(T_prev,eye(3,3)))
     % Optimization - start with previous transformation matrix
     options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
     % fmincon
-    [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, renderType,infoType,distortionType, Disp,imgParams), ...
+    [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, dichromatType,infoType,distortionType, Disp,imgParams), ...
         T_prev(:), A_total, b_total, [], [], [], [], [], options);
     % Test loss function with final transformation matrix values
-    [fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo, transformRGB_opt_Tprev, triLMSCalFormat,renderType,infoType,distortionType, Disp,imgParams);
+    [fValOpt_Tprev, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo, transformRGB_opt_Tprev, triLMSCalFormat,dichromatType,infoType,distortionType, Disp,imgParams);
     % Choose the transformation that gets a lower loss
     if fValOpt_TI <= fValOpt_Tprev
-        % transformRGB_opt = transformRGB_opt_TI;
-        transformRGB_opt = transformRGB_opt_Tprev;
+        transformRGB_opt = transformRGB_opt_TI;
     elseif fValOpt_Tprev  < fValOpt_TI
         transformRGB_opt = transformRGB_opt_Tprev;
     end
@@ -169,7 +159,7 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
 %% Functions
 
 % OBJECTIVE FUNCTION
-    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,t_vec, LMSCalFormat, renderType,infoType, distortionType, Disp,imgParams)
+    function [loss, s_raw, v_raw, s_bal, v_bal] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,t_vec, LMSCalFormat, dichromatType,infoType, distortionType, Disp,imgParams)
         T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
 
         % I - LMS
@@ -216,7 +206,7 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
         LMSCalFormatTran    = LMSCalFormat';
 
         % Which cones are missing? available?
-        switch (renderType)
+        switch (dichromatType)
             case 'Deuteranopia' % m cone deficiency
                 index = [1 3];
                 missingIdx = 2;

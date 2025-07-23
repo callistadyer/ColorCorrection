@@ -77,7 +77,8 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     % in lambda, or a value of info to lock in and then minimize distortion with respect
     % to, or a value of distoriont to lock in and then maximize info with respec to.  Need
     % to think about how you'll do that.
-    
+    [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,triLMSCalFormat,...
+        dichromatType,infoType,distortionType, T_prev, Disp, imgParams)
 
     % Since we want this to work generically, probably you pull out of the LMS image the
     % two available cone classes and the one that is not available to the dichromat.

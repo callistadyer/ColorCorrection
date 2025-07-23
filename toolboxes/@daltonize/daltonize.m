@@ -14,11 +14,11 @@ classdef daltonize < handle
 %    daltonize any image, through its compute method.
 %
 % Inputs:
-%    infoFunctionHandle     - Function handle to the function that defines
+%    infoFunctionHandle        - Function handle to the function that defines
 %                                          how much information about the missing cone
 %                                          class is carried by the cone classes that are
 %                                          there.
-%    infoFunctionParamsStruct - Parameter structure that the info function understands.
+%    infoFunctionParamsStruct  - Parameter structure that the info function understands.
 %    distortionFunctionHandle  - Function handle to the function that defines
 %                                          how much the daltonized image differs from the
 %                                          original
