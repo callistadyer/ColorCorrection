@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,triLMSCalFormat, renderType,infoType,distortionType, T_prev, Disp, imgParams, V0,V1)
+function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,triLMSCalFormat, renderType,infoType,distortionType, T_prev, Disp, imgParams)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
 % Syntax:
@@ -25,7 +25,7 @@ function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt]
 %                           'Protanopia'   (L-cone missing)
 %                           'Tritanopia'   (S-cone missing)
 %
-%   infoType:       String. Method used to define perceptual contrast variance.
+%   infoType:           String. Method used to define how much info is in the image.
 %
 %   distortionType:     String. Type of similarity metric to preserve naturalness.
 %                           "squared"   -> sum of squared error
@@ -43,8 +43,7 @@ function [triLMSCalFormatOpt,s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt]
 %                           .P_monitor    – Monitor spectral power distribution
 %                           .wls          – Wavelength sampling
 %
-%   V0, V1:             Optional variables for internal optimization bookkeeping (used in
-%                       variance/similarity functions).
+%   imgParams:          Struct with image parameters
 %
 % Outputs:
 %   triLMSCalFormatOpt: Transformed LMS-calibrated image optimized for colorblind viewing.
