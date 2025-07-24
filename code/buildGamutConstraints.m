@@ -15,6 +15,8 @@ function [A_total, b_total, M_triRGBc2diRGBc] = buildGamutConstraints(triLMSCalF
 % Outputs:
 %   A_total : Combined constraint matrix (12N x 9)
 %   b_total : Combined b vector (12N x 1)
+%   M_triRGBc2diRGBc: matrix the converts trichromat contrast RGB to
+%                     dichromat contrast RGB
 
 % Number of pixels
 nPix = size(triLMSCalFormat, 2);
