@@ -64,6 +64,12 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
 
     infoNormalizer       = obj.infoFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizerValueToGetRawValue, Disp, imgParams, obj.infoParams);
     distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, normalizerValueToGetRawValue, obj.distortionParams);
+
+    % Add normalizing values to the imgParams function to pass through the
+    % optimization function
+    imgParams.infoNorm       = infoNormalizer;
+    imgParams.distortionNorm = distortionNormalizer;
+
     % do we want the distortion to also be in contrast? or in regular
     % excitations? 
 

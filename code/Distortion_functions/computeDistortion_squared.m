@@ -1,4 +1,4 @@
-function distortion = computeDistortion_squared(LMS_old, LMS_new, normalizingValue, paramsStruct)
+function [distortion, distortionNormalized] = computeDistortion_squared(LMS_old, LMS_new, imgParams, paramsStruct)
 % computeDistortion_squared  Computes sum of squared error between LMS images
 %
 % Syntax:
@@ -17,5 +17,7 @@ function distortion = computeDistortion_squared(LMS_old, LMS_new, normalizingVal
 
 diff = LMS_new(:) - LMS_old(:);       % subtract LMS vectors
 distortion = sum(diff.^2);            % Sum of squared differences
+
+distortionNormalized = distortion/imgParams.distortionNorm;
 
 end

@@ -1,4 +1,4 @@
-function info = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
+function [info,infoNormalized] = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, paramsStruct)
 %  Syntax:
 %     info  = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
 %
@@ -62,6 +62,7 @@ weight = residual'.^2;                % More weight where missing cone is poorly
 delta = availableConesContrast_old - availableConesContrast_new;  % Contrast difference in visible cones
 info = norm(delta .* weight).^2;     
 
+infoNormalized = info/imgParams.infoNorm;
 
 end
 

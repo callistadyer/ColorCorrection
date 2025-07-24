@@ -1,4 +1,4 @@
-function distortion = computeDistortion_luminance(LMS_old, LMS_new, normalizingValue, paramsStruct)
+function distortion = computeDistortion_luminance(LMS_old, LMS_new, imgParams, paramsStruct)
 % computeDistortion_luminance  Computes chromaticity difference to preserve hue
 %
 % Syntax:
@@ -42,5 +42,7 @@ m_new = M_new ./ sum_new;            % m (transformed)
 chroma_diff = (l_new - l_old).^2 + (m_new - m_old).^2;
 
 distortion = sum(chroma_diff);       % Total chromaticity distortion across pixels
+
+distortionNormalized = distortion/imgParams.distortionNorm;
 
 end

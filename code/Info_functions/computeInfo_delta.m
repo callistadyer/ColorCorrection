@@ -1,4 +1,4 @@
-function info = computeInfo_delta(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
+function [info,infoNormalized] = computeInfo_delta(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, paramsStruct)
 % computeInfo_delta  Weighted contrast loss using missing cone contrast as weight
 %
 % Syntax:
@@ -46,5 +46,7 @@ missing_old   = LMSContrastCalFormat_old(missingConeIdx, :);  % 1 x N
 % Compute info
 delta = available_old - available_new;        % 2 x N
 info = norm(delta .* missing_old).^2;         % scalar
+
+infoNormalized = info/imgParams.infoNorm;
 
 end

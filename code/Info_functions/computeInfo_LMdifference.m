@@ -1,4 +1,4 @@
-function info = computeInfo_LMdifference(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
+function [info, infoNormalized] = computeInfo_LMdifference(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, paramsStruct)
 % computeInfo_LMdifference  Contrast loss weighted by L–M opponent contrast from the original image
 %
 % Syntax:
@@ -50,6 +50,6 @@ delta = availableCones_old - availableCones_new;
 info = norm(delta .* weight).^2;
 
 % Normalize
-infoNormalized = info/normalizingValue;
+infoNormalized = info/imgParams.infoNorm;
 
 end

@@ -159,7 +159,7 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
 %% Functions
 
 % OBJECTIVE FUNCTION
-    function [loss, info, infoNormalized] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,t_vec, LMSCalFormat, dichromatType, infoFnc, distortionFcn, Disp,imgParams)
+    function [loss, info, infoNormalized] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,t_vec, LMSCalFormat, dichromatType, infoFnc, distortionFcn, Disp, imgParams)
         T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
 
         % I - LMS
@@ -220,7 +220,8 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
         LMSnew = newLMSContrastCalFormat;
 
         % infoFnc used to be infoType, which determined which function to call
-        info = infoFnc(LMSold, LMSnew, dichromatType, normalizingValue, Disp, imgParams, paramsStruct);
+        paramsStruct = struct();
+        [info,infoNormalized] = infoFnc(LMSold, LMSnew, dichromatType, Disp, imgParams, paramsStruct);
 
         %%%%%%%%%%%%%%%%%%%%%%%%%% Info term %%%%%%%%%%%%%%%%%%%%%%%%%%
         % switch (infoType)
@@ -276,14 +277,14 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
         end
 
         % Normalization to get info and distortion on the same scale
-        infoNormalized = infoWeighted./imgParams.infoNorm;
+        % infoNormalized = infoWeighted./imgParams.infoNorm;
 
         % You need to decide whether the distortion term will be calculated
         % in terms of LMS excitations or contrast. Info is calculated with
         % contrast. Currently, distortion is calculated with excitations:
         LMSold = LMSCalFormat;
         LMSnew = newLMSCalFormat;
-        distortion = distortionFcn(LMSold, LMSnew);
+        [distortion, distortionNormalized] = distortionFcn(LMSold, LMSnew, imgParams);
 
         %%%%%%%%%%%%%%%%%%%%%%%%%% Distortion term %%%%%%%%%%%%%%%%%%%%%%%%%%
         % DISTORTION IN CONTRAST OR REGULAR LMS???
@@ -312,7 +313,7 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
         end
 
         % Normalization to get info and distortion on the same scale
-        distortionNormalized = distortion_weighted./imgParams.distortionNorm;
+        % distortionNormalized = distortion_weighted./imgParams.distortionNorm;
 
         % Maybe next we normalize by something else:
         % Compute similarity and variance normalizing constants by taking
