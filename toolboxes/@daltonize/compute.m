@@ -62,8 +62,12 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     % Build new LMS to compare to old LMS
     LMSContrastCalFormat_new = [calFormatLMS_prot(1,:); calFormatLMS_deut(2,:); calFormatLMS_trit(3,:)];
 
-    infoNormalizer       = obj.infoFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizerValueToGetRawValue, Disp, imgParams, obj.infoParams);
-    distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, normalizerValueToGetRawValue, obj.distortionParams);
+    imgParams.infoNorm       = normalizerValueToGetRawValue;
+    imgParams.distortionNorm = normalizerValueToGetRawValue;
+    
+    infoNormalizer       = obj.infoFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, obj.infoParams);
+    distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, imgParams, obj.distortionParams);
+    % distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, normalizerValueToGetRawValue, obj.distortionParams);
 
     % Add normalizing values to the imgParams function to pass through the
     % optimization function
@@ -115,14 +119,14 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     lambdaOrTargetInfo    = 0;
     T_prev = eye(3,3);
     % Optimization function
-    [triLMSCalFormatOpt_lambda0,info_0, infoNormalized_0, transformRGBmatrix_opt_lambda0] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
+    [triLMSCalFormatOpt_lambda0, triRGBCalFormat_T_lambda0, info_0, infoNormalized_0, transformRGBmatrix_opt_lambda0] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
         LMSCalFormat,...
         dichromatType,obj.infoFcn,obj.distortionFcn, T_prev, Disp, imgParams);
 
     useLambdaOrTargetInfo = "lambda";
     lambdaOrTargetInfo    = 1;
     % Optimization function
-    [triLMSCalFormatOpt_lambda1,info_1, infoNormalized_1, transformRGBmatrix_opt_lambda1] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
+    [triLMSCalFormatOpt_lambda1, triRGBCalFormat_T_lambda1, info_1, infoNormalized_1, transformRGBmatrix_opt_lambda1] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
         LMSCalFormat,...
         dichromatType,obj.infoFcn,obj.distortionFcn, T_prev, Disp, imgParams);
 
@@ -133,7 +137,7 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
         useLambdaOrTargetInfo = "targetInfo";
         lambdaOrTargetInfo = targetInfoVals(i);
         % Optimization function
-        [triLMSCalFormatOpt,info, infoNormalized, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
+        [triLMSCalFormatOpt{i},triRGBCalFormat_T{i},info{i}, infoNormalized{i}, transformRGBmatrix_opt{i}] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
             LMSCalFormat,...
             dichromatType,obj.infoFcn,obj.distortionFcn, T_prev, Disp, imgParams);
     end

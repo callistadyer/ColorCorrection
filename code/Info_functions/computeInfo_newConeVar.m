@@ -2,18 +2,19 @@ function [info,infoNormalized] = computeInfo_newConeVar(LMSContrastCalFormat_old
 % computeInfo_newConeVar  Maximize variance on the available cones of the transformed LMS image
 %
 % Syntax:
-%   info = computeInfo_newConeVar(LMSContrastCalFormat_old, LMSContrastCalFormat_new, DichromatType, normalizingValue, Disp, imgParams,paramsStruct)
+%   [info,infoNormalized] = computeInfo_newConeVar(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, paramsStruct)
 %
 % Inputs:
 %   LMSContrastCalFormat_old:   3 x N matrix of original LMS contrast
 %   LMSContrastCalFormat_new:   3 x N matrix of transformed LMS contrast 
-%   DichromatType:              type of dichromat for this simulation   
+%   dichromatType:              type of dichromat for this simulation   
 %                                    "Protanopia"
 %                                    "Deuteranopia"
 %                                    "Tritanopia"
 %   NormalizingValue:           value used to normalize info function
-%   Disp:                       (unused here) display parameters
-%   imgParams:                  (unused here) image parameters
+%   Disp:                       display parameters
+%   imgParams:                  image parameters
+%                                  imgParams.infoNorm --> value used to normalize info function
 %
 % Outputs:
 %   info:                       Scalar total variance across both available cones

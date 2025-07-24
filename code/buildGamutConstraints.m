@@ -1,4 +1,4 @@
-function [A_total, b_total] = buildGamutConstraints(triLMSCalFormat, renderType, Disp)
+function [A_total, b_total, M_triRGBc2diRGBc] = buildGamutConstraints(triLMSCalFormat, renderType, Disp)
 % buildGamutConstraints
 % Constructs linear constraints for color transformation matrix T
 % such that both trichromat and dichromat RGB renderings stay within gamut [0,1].

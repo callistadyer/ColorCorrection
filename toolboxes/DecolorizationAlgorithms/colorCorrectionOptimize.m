@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt,info, infoNormalized, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo, lambdaOrTargetInfo, triLMSCalFormat, dichromatType, infoFnc, distortionFcn, T_prev, Disp, imgParams)
+function [triLMSCalFormatOpt, triRGBCalFormat_T, info, infoNormalized, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo, lambdaOrTargetInfo, triLMSCalFormat, dichromatType, infoFnc, distortionFcn, T_prev, Disp, imgParams)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
 % Syntax:
@@ -89,7 +89,7 @@ end
 rng(1);
 
 % Get linear constraints
-[A_total, b_total] = buildGamutConstraints(triLMSCalFormat, dichromatType, Disp);
+[A_total, b_total, M_triRGBc2diRGBc] = buildGamutConstraints(triLMSCalFormat, dichromatType, Disp);
 
 % Initial guess at transformation matrix - start with identity
 T_I    = eye(3, 3);
@@ -139,16 +139,23 @@ transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 7: TRANSFORM CONTRAST IMAGE W OPTIMAL %%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Transform contrast image
+
+% Convert LMS to RGB
+triRGBCalFormat = Disp.M_cones2rgb * triLMSCalFormat;
+
+% Convert RGB to contrast RGB
+triRGBContrastCalFormat = (triRGBCalFormat - Disp.grayRGB) ./ Disp.grayRGB;
+
+% Transform RGB contrast image
 triRGBContrastCalFormat_T = transformRGBmatrix_opt * triRGBContrastCalFormat;
-diRGBContrastCalFormat_T  = M_all * triRGBContrastCalFormat_T;
+diRGBContrastCalFormat_T  = M_triRGBc2diRGBc * triRGBContrastCalFormat_T;
 
 % Add back in gray before outputting the image
 diRGBCalFormat_T = (diRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
 % min(min(diRGBCalFormat_T(:)))
 % max(max(diRGBCalFormat_T(:)))
 
-triRGBCalFormat_T = (triRGBContrastCalFormat_T.*grayRGB) + grayRGB;
+triRGBCalFormat_T = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
 if (max(triRGBCalFormat_T(:))>1)
     triRGBCalFormat_T(triRGBCalFormat_T>1)=1;
 end
@@ -271,7 +278,8 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
                
         % Weight by lambda (use this when trying to find range of variances)
         if strcmp(useLambdaOrTargetInfo,'lambda')
-            infoWeighted = lambdaOrTargetInfo*info;
+            % infoWeighted = lambdaOrTargetInfo*info;
+            infoWeighted = lambdaOrTargetInfo*infoNormalized;
         elseif strcmp(useLambdaOrTargetInfo,'targetInfo')
             infoWeighted = info;
         end
@@ -307,7 +315,9 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
 
         % Weight by lambda
         if strcmp(useLambdaOrTargetInfo,'lambda')
-            distortion_weighted = (1-lambdaOrTargetInfo)*distortion;
+            % distortion_weighted = (1-lambdaOrTargetInfo)*distortion;
+            distortion_weighted = (1-lambdaOrTargetInfo)*distortionNormalized;
+
         elseif strcmp(useLambdaOrTargetInfo,'targetInfo')
             distortion_weighted = distortion;
         end
@@ -345,7 +355,7 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
             % when distortion is "squared", it is big positive when bad, so
             % min (+); when distortion is luminance, is 0 when good, is big
             % positive when bad - so min (+)
-            loss = fminconFactor*((-infoNormalized) + distortionNormalized);
+            loss = fminconFactor*((-infoWeighted) + distortion_weighted);
         end
 
     end

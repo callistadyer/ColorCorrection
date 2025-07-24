@@ -31,8 +31,8 @@ renderType = 'Deuteranopia';
 Disp = loadDisplay();
 
 %% Load image parameters
-m = 128;
-n = 128;
+m = 64*2;
+n = 64*2;
 
 %% Loop through each image and generate all:
 for idx = 1:length(whichType)

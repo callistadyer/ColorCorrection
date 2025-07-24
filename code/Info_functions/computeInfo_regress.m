@@ -1,22 +1,21 @@
 function [info,infoNormalized] = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, paramsStruct)
 %  Syntax:
-%     info  = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
+%     [info,infoNormalized] = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, paramsStruct)
 %
 % Description:
 %
 % Inputs:
 %   LMSContrastCalFormat_old:     3 x N matrix of original LMS contrast
-%   LMSContrastCalFormat_new:   3 x N matrix of transformed LMS contrast 
-%   dichromatType:                          type of dichromat for this simulation   
-%                                                        "Protanopia"
-%                                                        "Deuteranopia"
-%                                                        "Tritanopia"
-%   normalizingValue:                     value used to normalize info function
-%   Disp:                                         display parameters
-%   imgParams:                              image parameters
-%
+%   LMSContrastCalFormat_new:     3 x N matrix of transformed LMS contrast 
+%   dichromatType:                type of dichromat for this simulation   
+%                                           "Protanopia"
+%                                           "Deuteranopia"
+%                                           "Tritanopia"
+%   Disp:                         display parameters
+%   imgParams:                    image parameters
+%                                       imgParams.infoNorm --> value used to normalize info function
 % Outputs:
-%   info:                       a scalar reporting information in image – you want the info
+%   info:                         a scalar reporting information in image – you want the info
 %                                 to increase most in the available cone planes, especially where the
 %                                 missing cone could not be well predicted from them.
 

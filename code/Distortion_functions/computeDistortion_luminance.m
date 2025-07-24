@@ -1,19 +1,22 @@
-function distortion = computeDistortion_luminance(LMS_old, LMS_new, imgParams, paramsStruct)
+function [distortion,distortionNormalized] = computeDistortion_luminance(LMS_old, LMS_new, imgParams, paramsStruct)
 % computeDistortion_luminance  Computes chromaticity difference to preserve hue
 %
 % Syntax:
-%   distortion = computeDistortion_luminance(LMS_old, LMS_new)
+%   [distortion,distortionNormalized] = computeDistortion_luminance(LMS_old, LMS_new, imgParams, paramsStruct)
 %
 % Inputs:
 %   LMS_old:     3 x N matrix of original LMS values
 %   LMS_new:     3 x N matrix of transformed LMS values
+%   imgParams:   image parameters
+%                      imgParams.distortionNorm  --> value used to normalize distortion function
+%   paramsStruct: ???
 %
 % Outputs:
 %   distortion:  Scalar – distortion in image via how much chromaticity (L/(L+M+S), M/(L+M+S)) has shifted
 %                         (large value = more hue shift)
 %
 % Example:
-%   distortion = computeDistortion_luminance(LMS_old, LMS_new);
+%  
 
 % Extract LMS from original image
 L_old = LMS_old(1, :);     
