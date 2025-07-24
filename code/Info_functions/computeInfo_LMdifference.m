@@ -49,4 +49,7 @@ delta = availableCones_old - availableCones_new;
 
 info = norm(delta .* weight).^2;
 
+% Normalize
+infoNormalized = info/normalizingValue;
+
 end

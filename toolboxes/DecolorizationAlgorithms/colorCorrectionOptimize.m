@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt,info, infoNormalized, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,triLMSCalFormat, dichromatType,infoFnc,distortionFcn, T_prev, Disp, imgParams)
+function [triLMSCalFormatOpt,info, infoNormalized, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo, lambdaOrTargetInfo, triLMSCalFormat, dichromatType, infoFnc, distortionFcn, T_prev, Disp, imgParams)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
 % Syntax:
@@ -159,7 +159,7 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
 %% Functions
 
 % OBJECTIVE FUNCTION
-    function [loss, info, infoNormalized] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,t_vec, LMSCalFormat, dichromatType,infoFnc, distortionFcn, Disp,imgParams)
+    function [loss, info, infoNormalized] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,t_vec, LMSCalFormat, dichromatType, infoFnc, distortionFcn, Disp,imgParams)
         T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
 
         % I - LMS

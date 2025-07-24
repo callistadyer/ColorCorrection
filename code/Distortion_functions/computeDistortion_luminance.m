@@ -1,4 +1,4 @@
-function distortion = computeDistortion_luminance(LMS_old, LMS_new)
+function distortion = computeDistortion_luminance(LMS_old, LMS_new, normalizingValue, paramsStruct)
 % computeDistortion_luminance  Computes chromaticity difference to preserve hue
 %
 % Syntax:
