@@ -131,7 +131,7 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
         dichromatType,obj.infoFcn,obj.distortionFcn, T_prev, Disp, imgParams);
 
     % Now we can grab those info values
-    targetInfoVals = linspace(info_0, info_1);
+    targetInfoVals = linspace(info_0, info_1,10);
 
     for i = 1:length(targetInfoVals)
         useLambdaOrTargetInfo = "targetInfo";
