@@ -306,11 +306,9 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * trirgbLinCalFormat_T;
 
         % Weight by lambda 
         if strcmp(useLambdaOrTargetInfo,'lambda')
+            % info, normalized according to the image AND weighted by lambda
             infoWeighted = lambdaOrTargetInfo*infoNormalized;
-        end
-
-        % Weight by lambda
-        if strcmp(useLambdaOrTargetInfo,'lambda')
+            % distortion, normalized according to the image AND weighted by (1 - lambda)
             distortion_weighted = (1-lambdaOrTargetInfo)*distortionNormalized;
         end
 
