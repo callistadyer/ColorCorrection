@@ -25,14 +25,14 @@ whichType  = [3];
 setType    = 1;
 
 % Choose dichromat type: 'Deuteranopia', 'Protanopia', 'Tritanopia'
-renderType = 'Deuteranopia';
+dichromatType = 'Deuteranopia';
 
 %% Load display calibration
 Disp = loadDisplay();
 
 %% Load image parameters
-m = 64*2;
-n = 64*2;
+m = 64;
+n = 64;
 
 %% Loop through each image and generate all:
 for idx = 1:length(whichType)
@@ -53,7 +53,7 @@ for idx = 1:length(whichType)
 
     % Generate LMS/RGB calibration data for the image
     [triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = ...
-        loadLMSvalues(imgType, renderType, Disp, imgParams, 'clearTestImages', clearFlag);
+        loadLMSvalues(imgType, dichromatType, Disp, imgParams, 'clearTestImages', clearFlag);
 
 end
 

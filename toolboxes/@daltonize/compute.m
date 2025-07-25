@@ -1,5 +1,6 @@
 function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj, ...
-                LMSCalFormat, dichromatType, imgParams, options)
+                LMSCalFormat, dichromatType, imgParams,...
+                useLambdaOrTargetInfo, lambdaOrTargetInfo, T_prev, options)
 % Generic compute method for the @daltonize class.
 %
 % Syntax:
@@ -15,8 +16,8 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
 %    obj                    - the @daltonze object  
 %    LMSCalFormat           - the LMS excitations to daltonize in PTB CalFormat (3 by npixels matrix)
 %    dichromatType          - type of dichromat to daltonize for: 
-%                                       'Protaniopia',
-%                                       'Deuteranopia', 
+%                                       'Protaniopia'
+%                                       'Deuteranopia'
 %                                       'Tritanopia'
 %    imgParams              - struct containing ancilliary information about the image.
 %
@@ -115,9 +116,9 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     % targetInfoVals = linspace(info(lambda = 0),info(lambda = 1), 10);
 
     % So first you need to run the optimization for lambda = 0 and lambda = 1:
-    useLambdaOrTargetInfo = "lambda";
-    lambdaOrTargetInfo    = 0;
-    T_prev = eye(3,3);
+    % useLambdaOrTargetInfo = "lambda";
+    % lambdaOrTargetInfo    = 0;
+    % T_prev = eye(3,3);
     % Optimization function
     [triLMSCalFormatOpt_lambda0, triRGBCalFormat_T_lambda0, info_0, infoNormalized_0, transformRGBmatrix_opt_lambda0] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
         LMSCalFormat,...

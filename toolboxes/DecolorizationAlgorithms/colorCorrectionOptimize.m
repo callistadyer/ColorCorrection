@@ -160,7 +160,11 @@ if (max(trirgbLinCalFormat_T(:))>1)
     trirgbLinCalFormat_T(trirgbLinCalFormat_T>1)=1;
 end
 
-triRGBCalFormat_T = rgbLin2RGB(trirgbLinCalFormat_T);
+if (min(trirgbLinCalFormat_T(:))<1)
+    trirgbLinCalFormat_T(trirgbLinCalFormat_T<1)=0;
+end
+
+triRGBCalFormat_T = rgbLin2RGB(trirgbLinCalFormat_T,Disp);
 
 % Get LMS values to output
 triLMSCalFormatOpt = Disp.M_rgb2cones * trirgbLinCalFormat_T;
