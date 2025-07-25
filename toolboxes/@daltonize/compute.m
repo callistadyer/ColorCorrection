@@ -123,28 +123,33 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
         LMSCalFormat,...
         dichromatType,obj.infoFcn,obj.distortionFcn, T_prev, Disp, imgParams);
 
-    useLambdaOrTargetInfo = "lambda";
-    lambdaOrTargetInfo    = 1;
-    % Optimization function
-    [triLMSCalFormatOpt_lambda1, triRGBCalFormat_T_lambda1, info_1, infoNormalized_1, transformRGBmatrix_opt_lambda1] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
-        LMSCalFormat,...
-        dichromatType,obj.infoFcn,obj.distortionFcn, T_prev, Disp, imgParams);
-
-    % Now we can grab those info values
-    targetInfoVals = linspace(info_0, info_1,10);
-
-    for i = 1:length(targetInfoVals)
-        useLambdaOrTargetInfo = "targetInfo";
-        lambdaOrTargetInfo = targetInfoVals(i);
-        % Optimization function
-        [triLMSCalFormatOpt{i},triRGBCalFormat_T{i},info{i}, infoNormalized{i}, transformRGBmatrix_opt{i}] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
-            LMSCalFormat,...
-            dichromatType,obj.infoFcn,obj.distortionFcn, T_prev, Disp, imgParams);
-    end
+    % useLambdaOrTargetInfo = "lambda";
+    % lambdaOrTargetInfo    = 1;
+    % % Optimization function
+    % [triLMSCalFormatOpt_lambda1, triRGBCalFormat_T_lambda1, info_1, infoNormalized_1, transformRGBmatrix_opt_lambda1] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
+    %     LMSCalFormat,...
+    %     dichromatType,obj.infoFcn,obj.distortionFcn, T_prev, Disp, imgParams);
+    % 
+    % % Now we can grab those info values
+    % targetInfoVals = linspace(info_0, info_1,10);
+    % 
+    % for i = 1:length(targetInfoVals)
+    %     useLambdaOrTargetInfo = "targetInfo";
+    %     lambdaOrTargetInfo = targetInfoVals(i);
+    %     % Optimization function
+    %     [triLMSCalFormatOpt{i},triRGBCalFormat_T{i},info{i}, infoNormalized{i}, transformRGBmatrix_opt{i}] = colorCorrectionOptimize(useLambdaOrTargetInfo,lambdaOrTargetInfo,...
+    %         LMSCalFormat,...
+    %         dichromatType,obj.infoFcn,obj.distortionFcn, T_prev, Disp, imgParams);
+    % end
 
     % Since we want this to work generically, probably you pull out of the LMS image the
     % two available cone classes and the one that is not available to the dichromat.
 
-             
+    % Daltonized image (LMS)
+    LMSDaltonizedCalFormat = triLMSCalFormatOpt_lambda0;
+    [calFormatDiLMS,~,~] = DichromSimulateLinear(LMSDaltonizedCalFormat, dichromatType, Disp);
+    
+    % Dichromat rendering of daltonized image (LMS)
+    LMSDaltonizedRenderedCalFormat = calFormatDiLMS;
 end
         
