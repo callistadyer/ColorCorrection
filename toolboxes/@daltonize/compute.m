@@ -45,7 +45,6 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     % Note that you can set the normalizer to 1 and call the function to get an
     % unnormalized value, which is what you need to do to get the normalizing value.
     normalizerValueToGetRawValue = 1;
-    LMSContrastCalFormat_old = LMSContrastCalFormat; 
 
     % Also note that for the normalizers, you first need to create
     % the second, distorted image to compare to the original. The idea
@@ -56,17 +55,19 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     %
     % Here we need to produce those three simulations to build the second
     % image to compare to the original. 
-    [calFormatLMS_prot,~,~] = DichromSimulateLinear(LMSContrastCalFormat_old, 'Protanopia', Disp);
-    [calFormatLMS_deut,~,~] = DichromSimulateLinear(LMSContrastCalFormat_old, 'Deuteranopia', Disp);
-    [calFormatLMS_trit,~,~] = DichromSimulateLinear(LMSContrastCalFormat_old, 'Tritanopia', Disp);
+    [calFormatLMS_prot,~,~] = DichromSimulateLinear(LMSCalFormat, 'Protanopia', Disp);
+    [calFormatLMS_deut,~,~] = DichromSimulateLinear(LMSCalFormat, 'Deuteranopia', Disp);
+    [calFormatLMS_trit,~,~] = DichromSimulateLinear(LMSCalFormat, 'Tritanopia', Disp);
     % Build new LMS to compare to old LMS
-    LMSContrastCalFormat_new = [calFormatLMS_prot(1,:); calFormatLMS_deut(2,:); calFormatLMS_trit(3,:)];
+    LMSCalFormat_new = [calFormatLMS_prot(1,:); calFormatLMS_deut(2,:); calFormatLMS_trit(3,:)];
+    % Get contrast LMS for info and distortino functions
+    LMSContrastCalFormat_new = (LMSCalFormat_new - Disp.grayLMS)./Disp.grayLMS;
 
     imgParams.infoNorm       = normalizerValueToGetRawValue;
     imgParams.distortionNorm = normalizerValueToGetRawValue;
     
-    infoNormalizer       = obj.infoFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, obj.infoParams);
-    distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, imgParams, obj.distortionParams);
+    infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, obj.infoParams);
+    distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, obj.distortionParams);
     % distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat_old, LMSContrastCalFormat_new, normalizerValueToGetRawValue, obj.distortionParams);
 
     % Add normalizing values to the imgParams function to pass through the
@@ -77,11 +78,10 @@ function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj
     % do we want the distortion to also be in contrast? or in regular
     % excitations? 
 
-
     % Use the render function to get the linear transformation needed to render an LMS
     % image for this type of dichromat, for viewing by a trichromat.  We need this to set
     % up the constraint matrix.
-    [calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(LMSContrastCalFormat_old, dichromatType, Disp);
+    % [calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(LMSContrastCalFormat, dichromatType, Disp);
 
     % At this point, you can run the daltonizing search.  But we still need to either pass
     % in lambda, or a value of info to lock in and then minimize distortion with respect

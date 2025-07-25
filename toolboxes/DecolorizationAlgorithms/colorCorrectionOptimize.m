@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt, triRGBCalFormat_T, info, infoNormalized, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo, lambdaOrTargetInfo, triLMSCalFormat, dichromatType, infoFnc, distortionFcn, T_prev, Disp, imgParams)
+function [triLMSCalFormatOpt, trirgbLinCalFormat_T, info, infoNormalized, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo, lambdaOrTargetInfo, triLMSCalFormat, dichromatType, infoFnc, distortionFcn, T_prev, Disp, imgParams)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
 % Syntax:
@@ -151,17 +151,19 @@ triRGBContrastCalFormat_T = transformRGBmatrix_opt * triRGBContrastCalFormat;
 diRGBContrastCalFormat_T  = M_triRGBc2diRGBc * triRGBContrastCalFormat_T;
 
 % Add back in gray before outputting the image
-diRGBCalFormat_T = (diRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
+% diRGBCalFormat_T = (diRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
 % min(min(diRGBCalFormat_T(:)))
 % max(max(diRGBCalFormat_T(:)))
 
-triRGBCalFormat_T = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
-if (max(triRGBCalFormat_T(:))>1)
-    triRGBCalFormat_T(triRGBCalFormat_T>1)=1;
+trirgbLinCalFormat_T = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
+if (max(trirgbLinCalFormat_T(:))>1)
+    trirgbLinCalFormat_T(trirgbLinCalFormat_T>1)=1;
 end
 
+triRGBCalFormat_T = rgbLin2RGB(trirgbLinCalFormat_T);
+
 % Get LMS values to output
-triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
+triLMSCalFormatOpt = Disp.M_rgb2cones * trirgbLinCalFormat_T;
 
 %% Functions
 
@@ -275,18 +277,7 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
         %         % info = computeInfo_newConeVar(availableCones_new);
         % 
         % end
-               
-        % Weight by lambda (use this when trying to find range of variances)
-        if strcmp(useLambdaOrTargetInfo,'lambda')
-            % infoWeighted = lambdaOrTargetInfo*info;
-            infoWeighted = lambdaOrTargetInfo*infoNormalized;
-        elseif strcmp(useLambdaOrTargetInfo,'targetInfo')
-            infoWeighted = info;
-        end
-
-        % Normalization to get info and distortion on the same scale
-        % infoNormalized = infoWeighted./imgParams.infoNorm;
-
+              
         % You need to decide whether the distortion term will be calculated
         % in terms of LMS excitations or contrast. Info is calculated with
         % contrast. Currently, distortion is calculated with excitations:
@@ -313,17 +304,15 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
         % 
         % end
 
-        % Weight by lambda
+        % Weight by lambda 
         if strcmp(useLambdaOrTargetInfo,'lambda')
-            % distortion_weighted = (1-lambdaOrTargetInfo)*distortion;
-            distortion_weighted = (1-lambdaOrTargetInfo)*distortionNormalized;
-
-        elseif strcmp(useLambdaOrTargetInfo,'targetInfo')
-            distortion_weighted = distortion;
+            infoWeighted = lambdaOrTargetInfo*infoNormalized;
         end
 
-        % Normalization to get info and distortion on the same scale
-        % distortionNormalized = distortion_weighted./imgParams.distortionNorm;
+        % Weight by lambda
+        if strcmp(useLambdaOrTargetInfo,'lambda')
+            distortion_weighted = (1-lambdaOrTargetInfo)*distortionNormalized;
+        end
 
         % Maybe next we normalize by something else:
         % Compute similarity and variance normalizing constants by taking
@@ -347,7 +336,7 @@ triLMSCalFormatOpt = Disp.M_rgb2cones * triRGBCalFormat_T;
 
             loss = fminconFactor*((info_scalar*(info_diff.^2)));
 
-        else  % Otherwise, just minimize this loss
+        elseif strcmp(useLambdaOrTargetInfo,'lambda') % Otherwise, just minimize this loss
             % want low loss
             % want +info_diff small
             % want info big, so -info small, min (-)
