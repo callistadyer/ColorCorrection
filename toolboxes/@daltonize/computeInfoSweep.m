@@ -20,7 +20,8 @@ function [triLMSCalFormatOpt, triRGBCalFormat_T, info, infoNormalized, transform
 %   nSteps         - Number of target info steps to interpolate (default: 10).
 %
 % Outputs:
-%   triLMSCalFormatOpt      - Cell array of optimized LMS images
+%   triLMSCalFormatOpt      - Cell array of optimized LMS images (this is
+%                             the size of 1xnSteps)
 %   triRGBCalFormat_T       - Cell array of optimized RGB images
 %   info                    - Cell array of info values at each step
 %   infoNormalized          - Cell array of normalized info values
@@ -31,7 +32,6 @@ if nargin < 5
     nSteps = 10;
 end
 
-% Step 1: Prepare simulation
 Disp = obj.Disp;
 LMSContrastCalFormat = (LMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
 
@@ -41,55 +41,52 @@ LMSContrastCalFormat = (LMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
 LMSCalFormat_new = [calFormatLMS_prot(1,:); calFormatLMS_deut(2,:); calFormatLMS_trit(3,:)];
 LMSContrastCalFormat_new = (LMSCalFormat_new - Disp.grayLMS) ./ Disp.grayLMS;
 
-% Step 2: Normalize distortion and info
+% Normalize distortion and info
 normalizerValueToGetRawValue = 1;
-imgParams.infoNorm       = normalizerValueToGetRawValue;
-imgParams.distortionNorm = normalizerValueToGetRawValue;
 
-infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, obj.infoParams);
-distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, obj.distortionParams);
+infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, dichromatType, normalizerValueToGetRawValue, Disp, imgParams, obj.infoParams);
+distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, normalizerValueToGetRawValue, imgParams, obj.distortionParams);
 
-imgParams.infoNorm       = infoNormalizer;
-imgParams.distortionNorm = distortionNormalizer;
-
-T_prev = eye(3);
-
-% Step 3: Get info values for lambda = 0 and lambda = 1
+% Get info values for lambda = 0 and lambda = 1
 [~,~,info_0,~,~] = colorCorrectionOptimize("lambda", 0, LMSCalFormat, dichromatType, ...
-    obj.infoFcn, obj.distortionFcn, T_prev, Disp, imgParams);
-[~,~,info_1,~,~] = colorCorrectionOptimize("lambda", 1, LMSCalFormat, dichromatType, ...
-    obj.infoFcn, obj.distortionFcn, T_prev, Disp, imgParams);
+    obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams);
 
+[~,~,info_1,~,~] = colorCorrectionOptimize("lambda", 1, LMSCalFormat, dichromatType, ...
+    obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams);
+
+% Get target info values interpolated between lambdas 0 and 1 
 targetInfoVals = linspace(info_0, info_1, nSteps);
 
-% Step 4: Preallocate outputs
+% Preallocate outputs
 triLMSCalFormatOpt     = cell(1, nSteps);
 triRGBCalFormat_T      = cell(1, nSteps);
 info                   = cell(1, nSteps);
 infoNormalized         = cell(1, nSteps);
 transformRGBmatrix_opt = cell(1, nSteps);
 
-    %% SWEEP THROUGH TARGET INFOS
+    %% Sweep through target infos 
     T_I = eye(3);
-
+    T_prev = eye(3);
     for i = 1:nSteps
         thisTargetInfo = targetInfoVals(i);
 
-        % Optimize from identity
+        % Optimize from identity starting point
         [LMS_TI, RGB_TI, info_TI, normInfo_TI, T_TI] = colorCorrectionOptimize( ...
             "targetInfo", thisTargetInfo, LMSCalFormat, ...
             dichromatType, obj.infoFcn, obj.distortionFcn, ...
-            T_I, Disp, imgParams);
+            infoNormalizer, distortionNormalizer,...
+            Disp, imgParams,'T_init',T_I);
 
-        % Optimize from T_prev
+        % Optimize from T_prev starting point
         [LMS_Tprev, RGB_Tprev, info_Tprev, normInfo_Tprev, T_Tprev] = colorCorrectionOptimize( ...
             "targetInfo", thisTargetInfo, LMSCalFormat, ...
             dichromatType, obj.infoFcn, obj.distortionFcn, ...
-            T_prev, Disp, imgParams);
+            infoNormalizer, distortionNormalizer,...
+            Disp, imgParams,'T_init',T_prev);
 
         % Compare losses
-        loss_TI    = lossFunction("targetInfo", thisTargetInfo, T_TI(:), LMSCalFormat, dichromatType, obj.infoFcn, obj.distortionFcn, Disp, imgParams);
-        loss_Tprev = lossFunction("targetInfo", thisTargetInfo, T_Tprev(:), LMSCalFormat, dichromatType, obj.infoFcn, obj.distortionFcn, Disp, imgParams);
+        loss_TI    = lossFunction("targetInfo", thisTargetInfo, T_TI(:), LMSCalFormat, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams);
+        loss_Tprev = lossFunction("targetInfo", thisTargetInfo, T_Tprev(:), LMSCalFormat, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams);
 
         % Select better of the two
         if loss_TI <= loss_Tprev
@@ -98,14 +95,14 @@ transformRGBmatrix_opt = cell(1, nSteps);
             info{i}                   = info_TI;
             infoNormalized{i}         = normInfo_TI;
             transformRGBmatrix_opt{i} = T_TI;
-            T_prev = T_TI;  % UPDATE FOR NEXT SWEEP STEP
+            T_prev = T_TI;  % Update T_prev based on previous step 
         else
             triLMSCalFormatOpt{i}     = LMS_Tprev;
             triRGBCalFormat_T{i}      = RGB_Tprev;
             info{i}                   = info_Tprev;
             infoNormalized{i}         = normInfo_Tprev;
             transformRGBmatrix_opt{i} = T_Tprev;
-            T_prev = T_Tprev;  % UPDATE FOR NEXT SWEEP STEP
+            T_prev = T_Tprev;  % Update T_prev based on previous step 
         end
     end
 end
