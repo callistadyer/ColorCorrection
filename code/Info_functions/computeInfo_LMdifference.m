@@ -1,8 +1,8 @@
-function [info, infoNormalized] = computeInfo_LMdifference(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, paramsStruct)
+function [info, infoNormalized] = computeInfo_LMdifference(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
 % computeInfo_LMdifference  Contrast loss weighted by L–M opponent contrast from the original image
 %
 % Syntax:
-%   [info, infoNormalized] = computeInfo_LMdifference(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, paramsStruct)
+%   [info, infoNormalized] = computeInfo_LMdifference(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
 %
 % Inputs:
 %   LMSContrastCalFormat_old:   3 x N matrix of original LMS contrast
@@ -11,10 +11,10 @@ function [info, infoNormalized] = computeInfo_LMdifference(LMSContrastCalFormat_
 %                                    "Protanopia"
 %                                    "Deuteranopia"
 %                                    "Tritanopia"
+%   normalizingValue:           value for normalizing info
 %   Disp:                       display parameters
 %   imgParams:                  image parameters
-%                                  imgParams.infoNorm --> value used to normalize info function
-
+%   paramsStruct:
 %
 % Outputs:
 %   info:                       scalar information value based on L–M contrast loss
@@ -51,6 +51,6 @@ delta = availableCones_old - availableCones_new;
 info = norm(delta .* weight).^2;
 
 % Normalize
-infoNormalized = info/imgParams.infoNorm;
+infoNormalized = info/normalizingValue;
 
 end

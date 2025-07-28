@@ -1,6 +1,6 @@
-function [info,infoNormalized] = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, paramsStruct)
+function [info,infoNormalized] = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
 %  Syntax:
-%     [info,infoNormalized] = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, paramsStruct)
+%     [info,infoNormalized] = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
 %
 % Description:
 %
@@ -11,9 +11,11 @@ function [info,infoNormalized] = computeInfo_regress(LMSContrastCalFormat_old, L
 %                                           "Protanopia"
 %                                           "Deuteranopia"
 %                                           "Tritanopia"
+%   normalizingValue:             Value for normalizing the output
 %   Disp:                         display parameters
 %   imgParams:                    image parameters
-%                                       imgParams.infoNorm --> value used to normalize info function
+%   paramsStruct:
+%
 % Outputs:
 %   info:                         a scalar reporting information in image – you want the info
 %                                 to increase most in the available cone planes, especially where the
@@ -61,7 +63,7 @@ weight = residual'.^2;                % More weight where missing cone is poorly
 delta = availableConesContrast_old - availableConesContrast_new;  % Contrast difference in visible cones
 info = norm(delta .* weight).^2;     
 
-infoNormalized = info/imgParams.infoNorm;
+infoNormalized = info/normalizingValue;
 
 end
 

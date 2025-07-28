@@ -1,8 +1,8 @@
-function [info,infoNormalized] = computeInfo_delta(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, paramsStruct)
+function [info,infoNormalized] = computeInfo_delta(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
 % computeInfo_delta  Weighted contrast loss using missing cone contrast as weight
 %
 % Syntax:
-%   [info,infoNormalized] = computeInfo_delta(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, Disp, imgParams, paramsStruct)
+%   [info,infoNormalized] = computeInfo_delta(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
 %
 % Inputs:
 %   LMSContrastCalFormat_old:   3 x N matrix of original LMS contrast
@@ -11,9 +11,10 @@ function [info,infoNormalized] = computeInfo_delta(LMSContrastCalFormat_old, LMS
 %                                    "Protanopia"
 %                                    "Deuteranopia"
 %                                    "Tritanopia"
+%   normalizingValue:           Value for normalizing output
 %   Disp:                       display parameters
 %   imgParams:                  image parameters
-%                                  imgParams.infoNorm --> value used to normalize info function
+%   paramsStruct:
 %
 % Outputs:
 %   info:                       scalar value – weighted contrast loss using missing cone contrast
@@ -47,6 +48,6 @@ missing_old   = LMSContrastCalFormat_old(missingConeIdx, :);  % 1 x N
 delta = available_old - available_new;        % 2 x N
 info = norm(delta .* missing_old).^2;         % scalar
 
-infoNormalized = info/imgParams.infoNorm;
+infoNormalized = info/normalizingValue;
 
 end
