@@ -1,9 +1,10 @@
 function [loss, info, infoNormalized] = lossFunction(useLambdaOrTargetInfo, lambdaOrTargetInfo,... 
-    t_vec, LMSCalFormat, dichromatType, infoFcn, distortionFcn,infoNormalizer, distortionNormalizer, Disp, imgParams)
+    t_vec, LMSCalFormat, dichromatType, infoFcn, distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams)
 % lossFunction  Objective for color correction optimization
 %
 % Syntax:
-%   [loss, info, infoNormalized] = lossFunction(useLambdaOrTargetInfo, lambdaOrTargetInfo, t_vec, LMSCalFormat, dichromatType, infoFnc, distortionFcn, Disp, imgParams)
+ % [loss, info, infoNormalized] = lossFunction(useLambdaOrTargetInfo, lambdaOrTargetInfo,... 
+ %    t_vec, LMSCalFormat, dichromatType, infoFcn, distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams)
 % Description:
 %   Computes the loss used in optimization by applying a 3x3 transformation
 %   to RGB contrast values, then converting to LMS, computing information gain

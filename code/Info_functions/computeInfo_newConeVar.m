@@ -25,7 +25,7 @@ function [info,infoNormalized] = computeInfo_newConeVar(LMSContrastCalFormat_old
 %}
 
 % Determine available cones
-switch DichromatType
+switch dichromatType
     case 'Protanopia'
         availableConesIdx = [2 3];  % M and S
     case 'Deuteranopia'

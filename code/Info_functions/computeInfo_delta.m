@@ -25,7 +25,7 @@ function [info,infoNormalized] = computeInfo_delta(LMSContrastCalFormat_old, LMS
 %}
 
 % Identify available and missing cones
-switch DichromatType
+switch dichromatType
     case 'Protanopia'
         missingConeIdx     = 1;
         availableConesIdx  = [2 3];  % M, S

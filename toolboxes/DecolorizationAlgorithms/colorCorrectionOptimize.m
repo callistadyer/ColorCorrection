@@ -3,11 +3,11 @@ function [triLMSCalFormatOpt, trirgbLinCalFormat_T, info, infoNormalized, transf
     triLMSCalFormat, dichromatType, infoFnc, distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams, varargin)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
-% Syntax:
-%   [triLMSCalFormatOpt, s_raw, v_raw, s_bal, v_bal, transformRGBmatrix_opt] = ...
-%       colorCorrectionOptimize(lambdaOrVar, var, lambdaOrTargetInfo, triLMSCalFormat, ...
-%       renderType, infoType, distortionType, constraintWL, T_prev, Disp, V0, V1)
-%
+% % Syntax:
+% [triLMSCalFormatOpt, trirgbLinCalFormat_T, info, infoNormalized, transformRGBmatrix_opt] = ...
+%     colorCorrectionOptimize(useLambdaOrTargetInfo, lambdaOrTargetInfo, ...
+%     triLMSCalFormat, dichromatType, infoFnc, distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams, varargin)
+
 % Inputs:
 %   useLambdaOrTargetInfo: String. Optimization mode:
 %                           'lambda'       – vary tradeoff weight lambda (0 to 1)
@@ -32,6 +32,8 @@ function [triLMSCalFormatOpt, trirgbLinCalFormat_T, info, infoNormalized, transf
 %   distortionFcn:      Function handle used to define similarity metric to preserve naturalness.
 %                           "squared"   -> sum of squared error
 %                           "luminance" -> keep chromaticity similar only
+%   infoNormalizer:     normalizing constant
+%   distortionNormalizer:  normalizing constant
 %
 %   constraintWL:       Scalar. Wavelength (in nm) used to define the confusion plane
 %                       for dichromat projection (e.g., 585 for Deuteranopia).
