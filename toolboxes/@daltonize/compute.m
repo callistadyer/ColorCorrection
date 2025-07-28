@@ -81,7 +81,7 @@ infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_ne
 distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams,          normalizerValueToGetRawValue, obj.distortionParams);
 
 % Optimization function
-[triLMSCalFormatOpt_lambda0, triRGBCalFormat_T_lambda0, info_0, infoNormalized_0, transformRGBmatrix_opt_lambda0] = ...
+[triLMSCalFormatOpt, triRGBCalFormat_T, info, infoNormalized, transformRGBmatrix_opt] = ...
     colorCorrectionOptimize( ...
     useLambdaOrTargetInfo, lambdaOrTargetInfo, ... % Choose lambda or target info, then set the value
     LMSCalFormat, ...                              % LMS image to be transformed
@@ -92,7 +92,7 @@ distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFor
     'T_init', T_init);                             % Starting point for transformation matrix search
 
 % Daltonized image (LMS)
-LMSDaltonizedCalFormat = triLMSCalFormatOpt_lambda0;
+LMSDaltonizedCalFormat = triLMSCalFormatOpt;
 [calFormatDiLMS,~,~] = DichromSimulateLinear(LMSDaltonizedCalFormat, dichromatType, Disp);
 
 % Dichromat rendering of daltonized image (LMS)

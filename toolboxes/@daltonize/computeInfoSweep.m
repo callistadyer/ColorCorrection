@@ -48,14 +48,14 @@ infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_ne
 distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, normalizerValueToGetRawValue, obj.distortionParams);
 
 % Get info values for lambda = 0 and lambda = 1
-[~,~,info_0,~,~] = colorCorrectionOptimize("lambda", 0, LMSCalFormat, imgParams, dichromatType, ...
+[~,~,info_0,infoNormalized_0,~] = colorCorrectionOptimize("lambda", 0, LMSCalFormat, imgParams, dichromatType, ...
     obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
 
-[~,~,info_1,~,~] = colorCorrectionOptimize("lambda", 1, LMSCalFormat, imgParams, dichromatType, ...
+[~,~,info_1,infoNormalized_1,~] = colorCorrectionOptimize("lambda", 1, LMSCalFormat, imgParams, dichromatType, ...
     obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
 
 % Get target info values interpolated between lambdas 0 and 1 
-targetInfoVals = linspace(info_0, info_1, nSteps);
+targetInfoVals = linspace(infoNormalized_0, infoNormalized_1, nSteps);
 
 % Preallocate outputs
 triLMSCalFormatOpt     = cell(1, nSteps);

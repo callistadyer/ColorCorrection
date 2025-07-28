@@ -70,7 +70,7 @@ function [loss, info, infoNormalized] = lossFunction(useLambdaOrTargetInfo, lamb
 
     if strcmp(useLambdaOrTargetInfo, 'targetInfo')
         % Squared difference from the desired info value
-        info_diff = info - lambdaOrTargetInfo;
+        info_diff = infoNormalized - lambdaOrTargetInfo;
         info_scalar = 1e20;
         loss = fminconFactor * (info_scalar * info_diff^2);
 

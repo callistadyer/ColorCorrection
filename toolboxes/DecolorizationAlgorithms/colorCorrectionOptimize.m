@@ -103,7 +103,7 @@ rng(1);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% OPTIMIZATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 disp('Just reached optimization')
 % Optimization - start with identity transformation matrix
-options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
+options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'ConstraintTolerance', 1e-10, 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
 [transformRGB_opt_TI, fval] = fmincon(@(transformRGB) lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat,imgParams,dichromatType,infoFnc,distortionFcn,infoNormalizer, distortionNormalizer, Disp), ...
     T_init(:), A_total, b_total, [], [], [], [], [], options);
@@ -145,11 +145,11 @@ trirgbLinCalFormat_T = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
 
 % Cut off values outside of gamut, when there is some weird numerical out
 % of bounds 
-if (max(trirgbLinCalFormat_T(:))>1 && max(trirgbLinCalFormat_T(:))<1+1e-3)
+if (max(trirgbLinCalFormat_T(:))>1)% && max(trirgbLinCalFormat_T(:))<1+1e-2)
     trirgbLinCalFormat_T(trirgbLinCalFormat_T>1)=1;
 end
 
-if (min(trirgbLinCalFormat_T(:))<0 && min(trirgbLinCalFormat_T(:))>0-1e-3)
+if (min(trirgbLinCalFormat_T(:))<0)% && min(trirgbLinCalFormat_T(:))>0-1e-2)
     trirgbLinCalFormat_T(trirgbLinCalFormat_T<0)=0;
 end
 

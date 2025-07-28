@@ -16,7 +16,7 @@ close all
 % Available image options: gray, Ishihara plate, or external images
 imageTypes = {'gray','ishihara','flower1.png','flower2.png','flower3.png', ...
     'fruit.png','map.png','painting.png','pool.png','tree.png'};
-whichType  = [2]; 
+whichType  = [3]; 
 
 % Types of 'setType' usage:
 %   gray      - number of squares
