@@ -1,11 +1,11 @@
 function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj, ...
-    LMSCalFormat, dichromatType, imgParams, ...
+    LMSCalFormat, imgParams, dichromatType, ...
     useLambdaOrTargetInfo, lambdaOrTargetInfo, varargin)
 % Generic compute method for the @daltonize class.
 %
 % Syntax:
 %   [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj, ...
-%       LMSCalFormat, dichromatType, imgParams, ...
+%       LMSCalFormat, imgParams, dichromatType, ...
 %       useLambdaOrTargetInfo, lambdaOrTargetInfo, varargin);
 %
 % Description:
@@ -77,8 +77,8 @@ LMSCalFormat_new = [calFormatLMS_prot(1,:); calFormatLMS_deut(2,:); calFormatLMS
 LMSContrastCalFormat_new = (LMSCalFormat_new - Disp.grayLMS)./Disp.grayLMS;
 
 % Calculate normalizers
-infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, dichromatType, normalizerValueToGetRawValue, Disp, imgParams, obj.infoParams);
-distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new,          normalizerValueToGetRawValue,       imgParams, obj.distortionParams);
+infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, dichromatType, normalizerValueToGetRawValue, Disp, obj.infoParams);
+distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams,          normalizerValueToGetRawValue, obj.distortionParams);
 
 % Optimization function
 [triLMSCalFormatOpt_lambda0, triRGBCalFormat_T_lambda0, info_0, infoNormalized_0, transformRGBmatrix_opt_lambda0] = ...

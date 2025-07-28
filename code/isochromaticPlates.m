@@ -44,7 +44,7 @@ end
 % [RGBCalFormat rgbLinCalFormat]  = LMS2RGBCalFormat(LMSCalFormat,Disp,imgParams);
 
 % Create square modulations
-deltaLMS = plateSquare(size(LMSImage),LMSImageModulation,imgParams.nSquares);
+deltaLMS = plateSquare(size(LMSImage),LMSImageModulation,imgParams.describe.nSquares);
 
 % Add the delta to the L M S values to modulate cones (original LMS + modulation) 
 lmsImage_mod = LMSImage + deltaLMS;

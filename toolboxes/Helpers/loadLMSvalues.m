@@ -73,7 +73,7 @@ end
 
 if strcmp(img,'ishihara')
 
-    [insideColors, outsideColors] = chooseIshiharaColors(renderType,imgParams.plateType,Disp);
+    [insideColors, outsideColors] = chooseIshiharaColors(renderType,imgParams.describe.plateType,Disp);
         % 1 -> gray with missing cone mod
         % 2 -> background random inside with missing cone mod
         % 3 -> LS background, M inside
@@ -137,7 +137,7 @@ else
     end
 
     % Generate gray image with squares
-    [~,triLMSCalFormat_plate] = generateGrayImage(imgParams.nSquares,modType,Disp,imgParams);
+    [~,triLMSCalFormat_plate] = generateGrayImage(imgParams.describe.nSquares,modType,Disp,imgParams);
 
     % Just grab the version with the isochromatic plate
     triLMSCalFormat = triLMSCalFormat_plate; % do this when you just want to see the isochromatic plate square version (other is just gray)

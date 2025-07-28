@@ -1,10 +1,10 @@
 function [triLMSCalFormatOpt, triRGBCalFormat_T, info, infoNormalized, transformRGBmatrix_opt, targetInfoVals] = ...
-    computeInfoSweep(obj, LMSCalFormat, dichromatType, imgParams, nSteps)
+    computeInfoSweep(obj, LMSCalFormat, imgParams, dichromatType, nSteps)
 % computeInfoSweep  Sweep through target info values and optimize color correction.
 %
 % Syntax:
 %   [triLMSCalFormatOpt, triRGBCalFormat_T, info, infoNormalized, transformRGBmatrix_opt, targetInfoVals] = ...
-%       obj.computeInfoSweep(LMSCalFormat, dichromatType, imgParams, nSteps)
+%       obj.computeInfoSweep(LMSCalFormat, imgParams, dichromatType, nSteps)
 %
 % Description:
 %   This method sweeps between the info values produced by lambda=0 and lambda=1,
@@ -44,15 +44,15 @@ LMSContrastCalFormat_new = (LMSCalFormat_new - Disp.grayLMS) ./ Disp.grayLMS;
 % Normalize distortion and info
 normalizerValueToGetRawValue = 1;
 
-infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, dichromatType, normalizerValueToGetRawValue, Disp, imgParams, obj.infoParams);
-distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, normalizerValueToGetRawValue, imgParams, obj.distortionParams);
+infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, dichromatType, normalizerValueToGetRawValue, Disp, obj.infoParams);
+distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, normalizerValueToGetRawValue, obj.distortionParams);
 
 % Get info values for lambda = 0 and lambda = 1
-[~,~,info_0,~,~] = colorCorrectionOptimize("lambda", 0, LMSCalFormat, dichromatType, ...
-    obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams);
+[~,~,info_0,~,~] = colorCorrectionOptimize("lambda", 0, LMSCalFormat, imgParams, dichromatType, ...
+    obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
 
-[~,~,info_1,~,~] = colorCorrectionOptimize("lambda", 1, LMSCalFormat, dichromatType, ...
-    obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams);
+[~,~,info_1,~,~] = colorCorrectionOptimize("lambda", 1, LMSCalFormat, imgParams, dichromatType, ...
+    obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
 
 % Get target info values interpolated between lambdas 0 and 1 
 targetInfoVals = linspace(info_0, info_1, nSteps);
@@ -72,21 +72,21 @@ transformRGBmatrix_opt = cell(1, nSteps);
 
         % Optimize from identity starting point
         [LMS_TI, RGB_TI, info_TI, normInfo_TI, T_TI] = colorCorrectionOptimize( ...
-            "targetInfo", thisTargetInfo, LMSCalFormat, ...
+            "targetInfo", thisTargetInfo, LMSCalFormat, imgParams, ...
             dichromatType, obj.infoFcn, obj.distortionFcn, ...
             infoNormalizer, distortionNormalizer,...
-            Disp, imgParams,'T_init',T_I);
+            Disp,'T_init',T_I);
 
         % Optimize from T_prev starting point
         [LMS_Tprev, RGB_Tprev, info_Tprev, normInfo_Tprev, T_Tprev] = colorCorrectionOptimize( ...
-            "targetInfo", thisTargetInfo, LMSCalFormat, ...
+            "targetInfo", thisTargetInfo, LMSCalFormat, imgParams, ...
             dichromatType, obj.infoFcn, obj.distortionFcn, ...
             infoNormalizer, distortionNormalizer,...
-            Disp, imgParams,'T_init',T_prev);
+            Disp,'T_init',T_prev);
 
         % Compare losses
-        loss_TI    = lossFunction("targetInfo", thisTargetInfo, T_TI(:), LMSCalFormat, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams);
-        loss_Tprev = lossFunction("targetInfo", thisTargetInfo, T_Tprev(:), LMSCalFormat, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams);
+        loss_TI    = lossFunction("targetInfo", thisTargetInfo, T_TI(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
+        loss_Tprev = lossFunction("targetInfo", thisTargetInfo, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
 
         % Select better of the two
         if loss_TI <= loss_Tprev

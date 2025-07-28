@@ -70,6 +70,7 @@ end
 
 imgParams.m = m;
 imgParams.n = n;
+imgParams.setType = setType;
 imgParams.describe = describe;
 
 end

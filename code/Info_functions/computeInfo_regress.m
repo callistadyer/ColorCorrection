@@ -1,19 +1,19 @@
-function [info,infoNormalized] = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
+function [info,infoNormalized] = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, imgParams, dichromatType, normalizingValue, Disp, paramsStruct)
 %  Syntax:
-%     [info,infoNormalized] = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, dichromatType, normalizingValue, Disp, imgParams, paramsStruct)
+%     [info,infoNormalized] = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, imgParams, dichromatType, normalizingValue, Disp, paramsStruct)
 %
 % Description:
 %
 % Inputs:
 %   LMSContrastCalFormat_old:     3 x N matrix of original LMS contrast
 %   LMSContrastCalFormat_new:     3 x N matrix of transformed LMS contrast 
+%   imgParams:                    image parameters
 %   dichromatType:                type of dichromat for this simulation   
 %                                           "Protanopia"
 %                                           "Deuteranopia"
 %                                           "Tritanopia"
 %   normalizingValue:             Value for normalizing the output
 %   Disp:                         display parameters
-%   imgParams:                    image parameters
 %   paramsStruct:
 %
 % Outputs:

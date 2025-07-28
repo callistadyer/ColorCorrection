@@ -1,10 +1,10 @@
 function [loss, info, infoNormalized] = lossFunction(useLambdaOrTargetInfo, lambdaOrTargetInfo,... 
-    t_vec, LMSCalFormat, dichromatType, infoFcn, distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams)
+    t_vec, LMSCalFormat, imgParams, dichromatType, infoFcn, distortionFcn, infoNormalizer, distortionNormalizer, Disp)
 % lossFunction  Objective for color correction optimization
 %
 % Syntax:
  % [loss, info, infoNormalized] = lossFunction(useLambdaOrTargetInfo, lambdaOrTargetInfo,... 
- %    t_vec, LMSCalFormat, dichromatType, infoFcn, distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams)
+ %    t_vec, LMSCalFormat, imgParams, dichromatType, infoFcn, distortionFcn, infoNormalizer, distortionNormalizer, Disp)
 % Description:
 %   Computes the loss used in optimization by applying a 3x3 transformation
 %   to RGB contrast values, then converting to LMS, computing information gain
@@ -53,7 +53,7 @@ function [loss, info, infoNormalized] = lossFunction(useLambdaOrTargetInfo, lamb
 
     paramsStruct = struct();
     % Info function
-    [info, infoNormalized] = infoFcn(LMSold, LMSnew, dichromatType, infoNormalizer, Disp, imgParams, paramsStruct);
+    [info, infoNormalized] = infoFcn(LMSold, LMSnew, imgParams, dichromatType, infoNormalizer, Disp, paramsStruct);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     %%%%%%%%%%%%%%% Calculate distortion in the image %%%%%%%%%%%%%%%%%
@@ -62,7 +62,7 @@ function [loss, info, infoNormalized] = lossFunction(useLambdaOrTargetInfo, lamb
     LMSnew = newLMSCalFormat;
 
     % Distortion function
-    [distortion, distortionNormalized] = distortionFcn(LMSold, LMSnew, distortionNormalizer, imgParams, paramsStruct);
+    [distortion, distortionNormalized] = distortionFcn(LMSold, LMSnew, imgParams, distortionNormalizer, paramsStruct);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % Loss functions
