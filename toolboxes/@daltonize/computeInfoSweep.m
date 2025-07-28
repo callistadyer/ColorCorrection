@@ -1,5 +1,5 @@
-function [triLMSCalFormatOpt, triRGBCalFormat_T, info, infoNormalized, transformRGBmatrix_opt, targetInfoVals] = ...
-    computeInfoSweep(obj, LMSCalFormat, imgParams, dichromatType, nSteps)
+function [triLMSCalFormatOpt, trirgbLinCalFormatOpt,diLMSCalFormatOpt,dirgbLinCalFormatOpt, info, infoNormalized, transformRGBmatrixOpt, targetInfoVals] = computeInfoSweep(obj,...
+    LMSCalFormat, imgParams, dichromatType, nSteps)
 % computeInfoSweep  Sweep through target info values and optimize color correction.
 %
 % Syntax:
@@ -59,10 +59,12 @@ targetInfoVals = linspace(infoNormalized_0, infoNormalized_1, nSteps);
 
 % Preallocate outputs
 triLMSCalFormatOpt     = cell(1, nSteps);
-triRGBCalFormat_T      = cell(1, nSteps);
+trirgbLinCalFormatOpt  = cell(1, nSteps);
+diLMSCalFormatOpt      = cell(1, nSteps);
+dirgbLinCalFormatOpt   = cell(1, nSteps);
 info                   = cell(1, nSteps);
 infoNormalized         = cell(1, nSteps);
-transformRGBmatrix_opt = cell(1, nSteps);
+transformRGBmatrixOpt  = cell(1, nSteps);
 
     %% Sweep through target infos 
     T_I = eye(3);
@@ -91,18 +93,20 @@ transformRGBmatrix_opt = cell(1, nSteps);
         % Select better of the two
         if loss_TI <= loss_Tprev
             triLMSCalFormatOpt{i}     = LMS_TI;
-            triRGBCalFormat_T{i}      = RGB_TI;
+            trirgbLinCalFormatOpt{i}  = RGB_TI;
             info{i}                   = info_TI;
             infoNormalized{i}         = normInfo_TI;
-            transformRGBmatrix_opt{i} = T_TI;
+            transformRGBmatrixOpt{i} = T_TI;
             T_prev = T_TI;  % Update T_prev based on previous step 
         else
             triLMSCalFormatOpt{i}     = LMS_Tprev;
-            triRGBCalFormat_T{i}      = RGB_Tprev;
+            trirgbLinCalFormatOpt{i}  = RGB_Tprev;
             info{i}                   = info_Tprev;
             infoNormalized{i}         = normInfo_Tprev;
-            transformRGBmatrix_opt{i} = T_Tprev;
+            transformRGBmatrixOpt{i} = T_Tprev;
             T_prev = T_Tprev;  % Update T_prev based on previous step 
         end
+         
+        [diLMSCalFormatOpt{i},dirgbLinCalFormatOpt{i},~] = DichromSimulateLinear(triLMSCalFormatOpt{i},dichromatType,Disp);
     end
 end

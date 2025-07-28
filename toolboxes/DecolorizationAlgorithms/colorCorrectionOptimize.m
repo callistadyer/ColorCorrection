@@ -1,4 +1,4 @@
-function [triLMSCalFormatOpt, trirgbLinCalFormat_T, info, infoNormalized, transformRGBmatrix_opt] = ...
+function [triLMSCalFormatOpt, trirgbLinCalFormatOpt, info, infoNormalized, transformRGBmatrix_opt] = ...
     colorCorrectionOptimize(useLambdaOrTargetInfo, lambdaOrTargetInfo, ...
     triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, infoNormalizer, distortionNormalizer, Disp, varargin)
 % Optimizes a linear transformation to enhance color contrast for dichromats
@@ -140,22 +140,22 @@ diRGBContrastCalFormat_T  = M_triRGBc2diRGBc * triRGBContrastCalFormat_T;
 % Add back in gray before outputting the image
 % min(min(diRGBCalFormat_T(:)))
 % max(max(diRGBCalFormat_T(:)))
-diRGBCalFormat_T = (diRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
-trirgbLinCalFormat_T = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
+diRGBCalFormatOpt = (diRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
+trirgbLinCalFormatOpt = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
 
 % Cut off values outside of gamut, when there is some weird numerical out
 % of bounds 
-if (max(trirgbLinCalFormat_T(:))>1)% && max(trirgbLinCalFormat_T(:))<1+1e-2)
-    trirgbLinCalFormat_T(trirgbLinCalFormat_T>1)=1;
+if (max(trirgbLinCalFormatOpt(:))>1)% && max(trirgbLinCalFormat_T(:))<1+1e-2)
+    trirgbLinCalFormatOpt(trirgbLinCalFormatOpt>1)=1;
 end
 
-if (min(trirgbLinCalFormat_T(:))<0)% && min(trirgbLinCalFormat_T(:))>0-1e-2)
-    trirgbLinCalFormat_T(trirgbLinCalFormat_T<0)=0;
+if (min(trirgbLinCalFormatOpt(:))<0)% && min(trirgbLinCalFormat_T(:))>0-1e-2)
+    trirgbLinCalFormatOpt(trirgbLinCalFormatOpt<0)=0;
 end
 
-triRGBCalFormat_T = rgbLin2RGB(trirgbLinCalFormat_T,Disp);
+triRGBCalFormatOpt = rgbLin2RGB(trirgbLinCalFormatOpt,Disp);
 
 % Get LMS values to output
-triLMSCalFormatOpt = Disp.M_rgb2cones * trirgbLinCalFormat_T;
+triLMSCalFormatOpt = Disp.M_rgb2cones * trirgbLinCalFormatOpt;
 
 end
