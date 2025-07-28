@@ -1,6 +1,6 @@
 function [triLMSCalFormatOpt, trirgbLinCalFormat_T, info, infoNormalized, transformRGBmatrix_opt] = ...
     colorCorrectionOptimize(useLambdaOrTargetInfo, lambdaOrTargetInfo, ...
-    triLMSCalFormat, dichromatType, infoFnc, distortionFcn, Disp, imgParams, varargin)
+    triLMSCalFormat, dichromatType, infoFnc, distortionFcn, infoNormalizer, distortionNormalizer, Disp, imgParams, varargin)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
 % Syntax:
@@ -110,10 +110,10 @@ disp('Just reached optimization')
 % Optimization - start with identity transformation matrix
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
-[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, dichromatType,infoFnc,distortionFcn, Disp,imgParams), ...
+[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, dichromatType,infoFnc,distortionFcn,infoNormalizer, distortionNormalizer, Disp,imgParams), ...
     T_I(:), A_total, b_total, [], [], [], [], [], options);
 % Test loss function with final transformation matrix values
-[fValOpt_TI, info, infoNormalized] = lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt_TI, triLMSCalFormat,dichromatType,infoFnc,distortionFcn, Disp,imgParams);
+[fValOpt_TI, info, infoNormalized] = lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt_TI, triLMSCalFormat,dichromatType,infoFnc,distortionFcn,infoNormalizer, distortionNormalizer, Disp,imgParams);
 transformRGB_opt = transformRGB_opt_TI;
 
 disp('Just finished optimization')
