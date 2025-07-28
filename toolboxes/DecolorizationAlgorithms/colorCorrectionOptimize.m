@@ -1,4 +1,6 @@
-function [triLMSCalFormatOpt, trirgbLinCalFormat_T, info, infoNormalized, transformRGBmatrix_opt] = colorCorrectionOptimize(useLambdaOrTargetInfo, lambdaOrTargetInfo, triLMSCalFormat, dichromatType, infoFnc, distortionFcn, T_prev, Disp, imgParams)
+function [triLMSCalFormatOpt, trirgbLinCalFormat_T, info, infoNormalized, transformRGBmatrix_opt] = ...
+    colorCorrectionOptimize(useLambdaOrTargetInfo, lambdaOrTargetInfo, ...
+    triLMSCalFormat, dichromatType, infoFnc, distortionFcn, Disp, imgParams, varargin)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
 % Syntax:
@@ -86,6 +88,15 @@ if isempty(triLMSCalFormat)
 end
 
 %% Find optimal transformation matrix
+
+% -------------------------------------------------------------------------
+% PARSE OPTIONAL PARAMETERS
+% -------------------------------------------------------------------------
+parser = inputParser;
+parser.addParameter('T_init', eye(3), @(x) isnumeric(x) && isequal(size(x), [3 3]));
+parser.parse(varargin{:});
+T_init = parser.Results.T_init;
+
 rng(1);
 
 % Get linear constraints
@@ -99,31 +110,12 @@ disp('Just reached optimization')
 % Optimization - start with identity transformation matrix
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
-[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, dichromatType,infoFnc,distortionFcn, Disp,imgParams), ...
+[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, dichromatType,infoFnc,distortionFcn, Disp,imgParams), ...
     T_I(:), A_total, b_total, [], [], [], [], [], options);
 % Test loss function with final transformation matrix values
-[fValOpt_TI, info, infoNormalized] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt_TI, triLMSCalFormat,dichromatType,infoFnc,distortionFcn, Disp,imgParams);
+[fValOpt_TI, info, infoNormalized] = lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt_TI, triLMSCalFormat,dichromatType,infoFnc,distortionFcn, Disp,imgParams);
+transformRGB_opt = transformRGB_opt_TI;
 
-% If previous transformation is the identity, then skip this step
-% Otherwise, see if the previous solution gets you a better solution when
-% it's used as the starting point instead of the identity
-if (~isequal(T_prev,T_I)) && (~isequal(T_prev,eye(3,3)))
-    % Optimization - start with previous transformation matrix
-    options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
-    % fmincon
-    [transformRGB_opt_Tprev, fval] = fmincon(@(transformRGB) loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, dichromatType,infoFnc,distortionFcn, Disp,imgParams), ...
-        T_prev(:), A_total, b_total, [], [], [], [], [], options);
-    % Test loss function with final transformation matrix values
-    [fValOpt_Tprev, info, infoNormalized] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo, transformRGB_opt_Tprev, triLMSCalFormat,dichromatType,infoFnc,distortionFcn, Disp,imgParams);
-    % Choose the transformation that gets a lower loss
-    if fValOpt_TI <= fValOpt_Tprev
-        transformRGB_opt = transformRGB_opt_TI;
-    elseif fValOpt_Tprev  < fValOpt_TI
-        transformRGB_opt = transformRGB_opt_Tprev;
-    end
-else
-    transformRGB_opt = transformRGB_opt_TI;
-end
 disp('Just finished optimization')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -160,7 +152,7 @@ if (max(trirgbLinCalFormat_T(:))>1)
     trirgbLinCalFormat_T(trirgbLinCalFormat_T>1)=1;
 end
 
-if (min(trirgbLinCalFormat_T(:))<1)
+if (min(trirgbLinCalFormat_T(:))<0)
     trirgbLinCalFormat_T(trirgbLinCalFormat_T<1)=0;
 end
 
@@ -168,187 +160,5 @@ triRGBCalFormat_T = rgbLin2RGB(trirgbLinCalFormat_T,Disp);
 
 % Get LMS values to output
 triLMSCalFormatOpt = Disp.M_rgb2cones * trirgbLinCalFormat_T;
-
-%% Functions
-
-% OBJECTIVE FUNCTION
-    function [loss, info, infoNormalized] = loss_function(useLambdaOrTargetInfo,lambdaOrTargetInfo,t_vec, LMSCalFormat, dichromatType, infoFnc, distortionFcn, Disp, imgParams)
-        T = reshape(t_vec, 3, 3);       % RESHAPE x_vec INTO 3x3 MATRIX
-
-        % I - LMS
-        % O - linear RGB
-        % M - LMS2RGB
-        % T - RGB TRANSFORMATION
-        % [nPizels x 3]     = [3 x nPixels] x [3 x 3] x [3 x 3]
-
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Transformation matrix tips %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % M_rgb2cones = Disp.T_cones*Disp.P_monitor;
-        % M_cones2rgb = inv(M_rgb2cones)
-        % M_rgb2cones -->     [3 x nPixels] x [nPixels x 3]  APPLY ON LEFT OF RGB VALUES WHEN IN CAL FORMAT
-        % M_cones2rgb --> inv([3 x nPixels] x [nPixels x 3]) APPLY ON LEFT OF LMS VALUES WHEN IN CAL FORMAT
-        %
-        % Must apply M on RIGHT with a TRANSPOSE when LMS is in cal format TRANSPOSE
-        % LMSCalFormatTran * M_cones2rgb' --> converts LMS to RGB values
-        % T scales the RGB values
-        % altogether, (LMSCalFormatTran * M_cones2rgb' * T) returns scaled RGB values in calFormatTransposed format
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-        % Convert into RGB where gray is removed
-        RGBCalFormat = Disp.M_cones2rgb * LMSCalFormat;
-
-        % Create original contrast image
-        RGBContrastCalFormat     = (RGBCalFormat - Disp.grayRGB)./Disp.grayRGB;
-        
-        % Convert original LMS to contrast image
-        LMSContrastCalFormat = (LMSCalFormat-Disp.grayLMS) ./ Disp.grayLMS;
-
-        %%%%%%%% Transformation on gray subtracted image %%%%%%%%
-        newRGBContrastCalFormat = T * RGBContrastCalFormat;
-
-        % Add gray back in
-        newRGBCalFormat = (newRGBContrastCalFormat.*Disp.grayRGB) + Disp.grayRGB;
-
-        % Convert to LMS excitations 
-        newLMSCalFormat = inv(Disp.M_cones2rgb)*newRGBCalFormat;
-
-        % Convert to LMS contrast 
-        newLMSContrastCalFormat =  (newLMSCalFormat-Disp.grayLMS) ./ Disp.grayLMS;
-
-        % Which cones are missing? available?
-        switch (dichromatType)
-            case 'Deuteranopia' % m cone deficiency
-                index = [1 3];
-                missingIdx = 2;
-            case 'Protanopia'   % l cone deficiency
-                index = [2 3];
-                missingIdx = 1;
-            case 'Tritanopia'   % s cone deficiency
-                index = [1 2];
-                missingIdx = 3;
-        end
-
-        % What values are used to determine (1) info amount and (2)
-        % distortion amount? Here, we decide that it is LMS contrast:
-        LMSold = LMSContrastCalFormat;
-        LMSnew = newLMSContrastCalFormat;
-
-        % infoFnc used to be infoType, which determined which function to call
-        paramsStruct = struct();
-        [info,infoNormalized] = infoFnc(LMSold, LMSnew, dichromatType, Disp, imgParams, paramsStruct);
-
-        %%%%%%%%%%%%%%%%%%%%%%%%%% Info term %%%%%%%%%%%%%%%%%%%%%%%%%%
-        % switch (infoType)
-        %     case 'LMdifferenceContrast'  % use contrast
-        % 
-        %         LMSold = LMSContrastCalFormat;
-        %         LMSnew = newLMSContrastCalFormat;
-        %         % availableConesContrast_old = LMSold(index,:);
-        %         % availableConesContrast_new = LMSnew(index,:);
-        %         % Lcontrast_old = LMSold(1,:);
-        %         % Mcontrast_old = LMSold(2,:);
-        %         % Compute information available
-        %         info = computeInfo_LMdifference(LMSold, LMSnew, dichromatType, normalizingValue, Disp, imgParams, paramsStruct);
-        %         % info = computeInfo_LMdifference(availableConesContrast_old, availableConesContrast_new,Lcontrast_old,Mcontrast_old);
-        % 
-        %     case 'regress'  % use LMS contrast
-        % 
-        %         LMSold = LMSContrastCalFormat;
-        %         LMSnew = newLMSContrastCalFormat;
-        %         % availableConesContrast_old = LMSold(index,:);
-        %         % availableConesContrast_new = LMSnew(index,:);
-        %         % missingConeContrast_old    = LMSold(missingIdx,:);
-        %         % Compute information available
-        %         % info = computeInfo_regress(availableConesContrast_old, availableConesContrast_new, missingConeContrast_old);
-        %         info = computeInfo_regress(LMSold, LMSnew, dichromatType, normalizingValue, Disp, imgParams, paramsStruct);
-        %     case 'delta'   % use LMS contrast
-        % 
-        %         LMSold = LMSContrastCalFormat;
-        %         LMSnew = newLMSContrastCalFormat;
-        %         % availableConesContrast_old = LMSold(index,:);
-        %         % availableConesContrast_new = LMSnew(index,:);
-        %         % missingConeContrast_old    = LMSold(missingIdx,:);
-        %         % Compute information available
-        %         info = computeInfo_delta(LMSold, LMSnew, dichromatType, normalizingValue, Disp, imgParams, paramsStruct);
-        %         % info = computeInfo_delta(availableConesContrast_old, availableConesContrast_new, missingConeContrast_old);
-        % 
-        %     case 'newConeVar' % use LMS excitations
-        % 
-        %         LMSold = LMSCalFormat;
-        %         LMSnew = newLMSCalFormat;
-        %         % availableCones_new = LMSnew(index,:);
-        %         % Compute information available
-        %         info = computeInfo_newConeVar(LMSold, LMSnew, dichromatType, normalizingValue, Disp, imgParams, paramsStruct);
-        %         % info = computeInfo_newConeVar(availableCones_new);
-        % 
-        % end
-              
-        % You need to decide whether the distortion term will be calculated
-        % in terms of LMS excitations or contrast. Info is calculated with
-        % contrast. Currently, distortion is calculated with excitations:
-        LMSold = LMSCalFormat;
-        LMSnew = newLMSCalFormat;
-        [distortion, distortionNormalized] = distortionFcn(LMSold, LMSnew, imgParams);
-
-        %%%%%%%%%%%%%%%%%%%%%%%%%% Distortion term %%%%%%%%%%%%%%%%%%%%%%%%%%
-        % DISTORTION IN CONTRAST OR REGULAR LMS???
-        % switch (distortionType)
-        %     case 'squared'
-        % 
-        %         LMSold = LMSCalFormat;
-        %         LMSnew = newLMSCalFormat;
-        %         % Compute distortion
-        %         distortion = computeDistortion_squared(LMSold, LMSnew);
-        % 
-        %     case 'luminance'  
-        % 
-        %         LMSold = LMSCalFormat;
-        %         LMSnew = newLMSCalFormat;
-        %         % Compute distortion
-        %         distortion = computeDistortion_luminance(LMSold, LMSnew);
-        % 
-        % end
-
-        % Weight by lambda 
-        if strcmp(useLambdaOrTargetInfo,'lambda')
-            % info, normalized according to the image AND weighted by lambda
-            infoWeighted = lambdaOrTargetInfo*infoNormalized;
-            % distortion, normalized according to the image AND weighted by (1 - lambda)
-            distortion_weighted = (1-lambdaOrTargetInfo)*distortionNormalized;
-        end
-
-        % Maybe next we normalize by something else:
-        % Compute similarity and variance normalizing constants by taking
-        % the original image, getting the daltonized version (L cone
-        % deficient as well as S cone deficient) then computing the
-        % similarity and variance scores between the original and those.
-        % This could be a good reference point for scale.
-
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Loss %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % Scale loss so that it is small enough to make fmincon happy but not
-        % so small that it is unhappy. How to determine this?
-        fminconFactor = 1e8;
-
-        % To enforce a certain variance value, put it into the loss function
-        if strcmp(useLambdaOrTargetInfo,'targetInfo')
-
-            % should this be info or info normalized?
-            info_diff = info - lambdaOrTargetInfo;
-            % Scale the difference by some amount so that fmincon prioritizes it
-            info_scalar = 1e20;
-
-            loss = fminconFactor*((info_scalar*(info_diff.^2)));
-
-        elseif strcmp(useLambdaOrTargetInfo,'lambda') % Otherwise, just minimize this loss
-            % want low loss
-            % want +info_diff small
-            % want info big, so -info small, min (-)
-            % want distortion small
-            % when distortion is "squared", it is big positive when bad, so
-            % min (+); when distortion is luminance, is 0 when good, is big
-            % positive when bad - so min (+)
-            loss = fminconFactor*((-infoWeighted) + distortion_weighted);
-        end
-
-    end
 
 end

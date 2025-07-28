@@ -31,8 +31,8 @@ dichromatType = 'Deuteranopia';
 Disp = loadDisplay();
 
 %% Load image parameters
-m = 64;
-n = 64;
+m = 32;
+n = 32;
 
 %% Loop through each image and generate all:
 for idx = 1:length(whichType)
