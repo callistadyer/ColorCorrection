@@ -89,11 +89,7 @@ if isempty(triLMSCalFormat)
     triLMSCalFormat = [x; y; z];
 end
 
-%% Find optimal transformation matrix
-
-% -------------------------------------------------------------------------
-% PARSE OPTIONAL PARAMETERS
-% -------------------------------------------------------------------------
+%% Key value pairs
 parser = inputParser;
 parser.addParameter('T_init', eye(3), @(x) isnumeric(x) && isequal(size(x), [3 3]));
 parser.parse(varargin{:});
@@ -104,16 +100,13 @@ rng(1);
 % Get linear constraints
 [A_total, b_total, M_triRGBc2diRGBc] = buildGamutConstraints(triLMSCalFormat, dichromatType, Disp);
 
-% Initial guess at transformation matrix - start with identity
-T_I    = eye(3, 3);
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% OPTIMIZATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 disp('Just reached optimization')
 % Optimization - start with identity transformation matrix
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
 [transformRGB_opt_TI, fval] = fmincon(@(transformRGB) lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat, dichromatType,infoFnc,distortionFcn,infoNormalizer, distortionNormalizer, Disp,imgParams), ...
-    T_I(:), A_total, b_total, [], [], [], [], [], options);
+    T_init(:), A_total, b_total, [], [], [], [], [], options);
 % Test loss function with final transformation matrix values
 [fValOpt_TI, info, infoNormalized] = lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt_TI, triLMSCalFormat,dichromatType,infoFnc,distortionFcn,infoNormalizer, distortionNormalizer, Disp,imgParams);
 transformRGB_opt = transformRGB_opt_TI;
@@ -145,17 +138,19 @@ triRGBContrastCalFormat_T = transformRGBmatrix_opt * triRGBContrastCalFormat;
 diRGBContrastCalFormat_T  = M_triRGBc2diRGBc * triRGBContrastCalFormat_T;
 
 % Add back in gray before outputting the image
-% diRGBCalFormat_T = (diRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
 % min(min(diRGBCalFormat_T(:)))
 % max(max(diRGBCalFormat_T(:)))
-
+diRGBCalFormat_T = (diRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
 trirgbLinCalFormat_T = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
-if (max(trirgbLinCalFormat_T(:))>1)
+
+% Cut off values outside of gamut, when there is some weird numerical out
+% of bounds 
+if (max(trirgbLinCalFormat_T(:))>1 && max(trirgbLinCalFormat_T(:))<1+1e-3)
     trirgbLinCalFormat_T(trirgbLinCalFormat_T>1)=1;
 end
 
-if (min(trirgbLinCalFormat_T(:))<0)
-    trirgbLinCalFormat_T(trirgbLinCalFormat_T<1)=0;
+if (min(trirgbLinCalFormat_T(:))<0 && min(trirgbLinCalFormat_T(:))>0-1e-3)
+    trirgbLinCalFormat_T(trirgbLinCalFormat_T<0)=0;
 end
 
 triRGBCalFormat_T = rgbLin2RGB(trirgbLinCalFormat_T,Disp);

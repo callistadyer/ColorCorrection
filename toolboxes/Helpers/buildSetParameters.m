@@ -34,63 +34,42 @@ function imgParams = buildSetParameters(img,setType,m,n)
     setParams = buildSetParameters('flower.png', [], [], []);
 %}
 
-% Initialize empty struct
+% Initialize
 imgParams = struct();
+describe = struct();
 
-if isempty(m)
-    m = 128;
-end
+% Default size
+if isempty(m), m = 128; end
+if isempty(n), n = 128; end
 
-if isempty(n)
-    n = 128;
-end
-
+% Set image description depending on image type
 if strcmpi(img, 'gray')
-    % For gray stimuli
     if isempty(setType), setType = 1; end
-    switch setType
-        case {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-            imgParams.nSquares = setType;
-        otherwise
-            error('ERROR: undefined setType for gray. Choose setType between 1–5.');
+    if ~ismember(setType, 1:10)
+        error('ERROR: undefined setType for gray. Choose setType between 1–10.');
     end
+    describe.imgType   = 'gray';
+    describe.nSquares  = setType;
 
 elseif strcmpi(img, 'ishihara')
-    % For Ishihara plates
     if isempty(setType), setType = 1; end
-    switch setType
-        case {1, 2, 3, 4}
-            imgParams.plateType = setType;
-        otherwise
-            error('ERROR: undefined setType for ishihara. Choose setType between 1–4.');
+    if ~ismember(setType, 1:4)
+        error('ERROR: undefined setType for ishihara. Choose setType between 1–4.');
     end
-
+    describe.imgType   = 'ishihara';
+    describe.plateType = setType;
 
 elseif endsWith(img, {'.png', '.jpg'}, 'IgnoreCase', true)
-    % For external images
     if isempty(setType), setType = 1; end
-    switch setType
-        case 1
-            imgParams.plateType = setType;
-        case 2
-            imgParams.plateType = setType;
-        otherwise
-            error('ERROR: undefined setType for ishihara. Choose setType between 1–4.');
-    end
+    describe.imgType   = 'natural image (.png or .jpg)';
+    describe.filename  = img;
 
 else
     error('ERROR: Unrecognized img type "%s".', img);
 end
 
-% Size of image
 imgParams.m = m;
 imgParams.n = n;
-
-imgParams.img = img;
-imgParams.setType = setType;
-
-% Get normalizer for information and distortion
-%????
-
+imgParams.describe = describe;
 
 end
