@@ -92,7 +92,7 @@ classdef daltonize < handle
         % Compute method
         [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj, ...
             LMSCalFormat, renderType, imgParams, options);
-
+        % Compute info sweep method 
         [triLMSCalFormatOpt, triRGBCalFormat_T, info, infoNormalized, transformRGBmatrix_opt, targetInfoVals] = ...
             computeInfoSweep(obj, LMSCalFormat, dichromatType, imgParams, nSteps);
 
