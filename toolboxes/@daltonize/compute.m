@@ -16,14 +16,16 @@ function  [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, LMSDaltonizedRende
 % Inputs:
 %    obj                    - the @daltonze object
 %    LMSCalFormat           - the LMS excitations to daltonize in PTB CalFormat (3 by npixels matrix)
+%    imgParams              - struct containing ancilliary information about the image.
 %    dichromatType          - type of dichromat to daltonize for:
 %                                       'Protaniopia'
 %                                       'Deuteranopia'
 %                                       'Tritanopia'
-%    imgParams              - struct containing ancilliary information about the image.
+%    useLambdaOrTargetInfo
+%    lambdaOrTargetInfo
 %
 % Optional key/value input arguments:
-%    None.
+%    T_init -> defaults to identity eye(3,3)
 %
 % Outputs:
 %   LMSDaltonizedCalFormat - the daltonized image LMS excitations in PTB CalFormat
