@@ -15,16 +15,20 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
 %   lambdaOrTargetInfo        Scalar lambda (0–1) or target info value
 %   t_vec                     9×1 vectorized transformation matrix
 %   LMSCalFormat              3×N LMS values in PTB CalFormat
+%   imgParams                 Struct with image and normalization info
 %   dichromatType             String: 'Protanopia', 'Deuteranopia', or 'Tritanopia'
 %   infoFcn                   Function handle to information metric
 %   distortionFcn             Function handle to distortion metric
+%   infoNormalizer
+%   distortionNormalizer
 %   Disp                      Display structure
-%   imgParams                 Struct with image and normalization info
 %
 % Outputs:
 %   loss                      Scalar loss to minimize
 %   info                      Raw info value
 %   infoNormalized            Normalized info value
+%   distortion                Raw distortion value
+%   distortionNormalized      Normalized distortion value
 
     % Reshape transformation matrix
     T = reshape(t_vec, 3, 3);

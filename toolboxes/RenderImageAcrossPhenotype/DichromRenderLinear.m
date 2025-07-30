@@ -1,9 +1,9 @@
-function [calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromSimulateLinear(calFormatLMS, dichromatType, Disp)
+function [calFormatDiLMS,calFormatDirgbLin,M_triToDi] = DichromRenderLinear(calFormatLMS, dichromatType, Disp)
 % Simulates color vision for dichromatic viewers by projecting onto a plane
 % in LMS space
 %
 % Syntax:
-%    [calFormatDiLMS] = DichromSimulateLinear(calFormatLMS, dichromatType, Disp)
+%    [calFormatDiLMS] = DichromRenderLinear(calFormatLMS, dichromatType, Disp)
 %
 % Inputs:
 %   calFormatLMS:   Input LMS image

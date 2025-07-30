@@ -8,7 +8,15 @@
 %% Generate input image
 %
 % 'Disp' is defined here
-colorCorrectionGenerateImages;
+imgType = 'flower1.png';
+setType = 1;
+dichromatType = 'Deuteranopia';
+clearFlag     = 1;
+m = 32;
+n = 32;
+
+[LMSCalFormat, rgbLinCalFormat, LMSCalFormatRendered, rgbLinCalFormatRendered, Disp, imgParams, pathName] = ...
+    colorCorrectionGenerateImages(imgType, setType, m, n, dichromatType,clearFlag);
 
 %% Define objective functions
 %
@@ -21,7 +29,7 @@ distortionFcn = @computeDistortion_squared;
 distortionParams = struct();  % Add fields if needed
 
 % Render: Simulates dichromatic vision
-renderFcn = @DichromSimulateLinear;
+renderFcn = @DichromRenderLinear;
 renderParams = struct();  % Add fields if needed
 
 %% Set up daltonizer object
@@ -33,13 +41,12 @@ theDaltonizer = daltonize( ...
 
 %% Set sweep parameters and run optimization
 nSteps = 30;  % Number of interpolation steps in info space
-dichromatType = 'Deuteranopia';  % 'Protanopia', 'Deuteranopia', 'Tritanopia'
 
 % Run sweep: for each info target, compute optimized transformation
 [LMSDaltonizedCalFormatSweep, rgbLinDaltonizedCalFormatSweep,...
     LMSDaltonizedRenderedCalFormatSweep,rgbLinDaltonizedRenderedCalFormatSweep,...
     transformRGBmatrixSweep, targetInfoNormalized, infoNormalized, distortionNormalized] = ...
-    theDaltonizer.computeInfoSweep(triLMSCalFormat, imgParams, dichromatType, nSteps);
+    theDaltonizer.computeInfoSweep(LMSCalFormat, imgParams, dichromatType, nSteps);
 
 %% Visualize trichromat renderings
 figure('Name', 'Trichromat Renderings');
