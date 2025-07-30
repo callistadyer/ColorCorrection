@@ -28,7 +28,7 @@ function [triLMSCalFormatOpt, trirgbLinCalFormatOpt,diLMSCalFormatOpt,dirgbLinCa
 %   transformRGBmatrix_opt  - Cell array of 3x3 transformation matrices
 %   targetInfoVals          - Vector of target info values used
 
-if nargin < 5
+if isempty(nSteps)
     nSteps = 10;
 end
 
