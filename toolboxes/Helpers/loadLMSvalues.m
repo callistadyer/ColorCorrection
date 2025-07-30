@@ -153,7 +153,7 @@ end
 
  
 % Create dichromat simulation
-[diLMSCalFormat,  dirgbLinCalFormat] = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
+[diLMSCalFormat,  dirgbLinCalFormat] = DichromRenderLinear(triLMSCalFormat, renderType, Disp);
 
 % What if you use im2double on the gamma corrected version? this actually
 % seems to create a gray image, unlike when we perform it on the

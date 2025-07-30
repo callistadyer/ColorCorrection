@@ -44,7 +44,7 @@ b_tri = [ones(nPix * 3, 1); ones(nPix * 3, 1)];
 
 % Step 4: Simulate dichromat LMS and get M_triToDi (conversion from
 % trichromat LMS constrat to dichromat LMS contrast)
-[~, ~, M_triToDi] = DichromSimulateLinear(triLMSCalFormat, renderType, Disp);
+[~, ~, M_triToDi] = DichromRenderLinear(triLMSCalFormat, renderType, Disp);
 
 % Step 5: Build M_triRGBc2diRGBc that transforms tri RGB contrast to di RGB contrast
 M_conesC2rgbC = diag(1 ./ Disp.grayRGB) * inv(Disp.M_rgb2cones) * diag(Disp.grayLMS);
