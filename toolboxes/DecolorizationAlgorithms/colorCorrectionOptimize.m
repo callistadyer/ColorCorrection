@@ -1,13 +1,12 @@
-function [triLMSCalFormatOpt, trirgbLinCalFormatOpt, info, infoNormalized, transformRGBmatrix_opt] = ...
+function [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, transformRGBmatrix, info, infoNormalized, distortion, distortionNormalized] = ...
     colorCorrectionOptimize(useLambdaOrTargetInfo, lambdaOrTargetInfo, ...
     triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, infoNormalizer, distortionNormalizer, Disp, varargin)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
 % % Syntax:
-% [triLMSCalFormatOpt, trirgbLinCalFormat_T, info, infoNormalized, transformRGBmatrix_opt] = ...
+% [triLMSCalFormatOpt, trirgbLinCalFormatOpt, transformRGBmatrix, info, infoNormalized, distortion, distortionNormalized] = ...
 %     colorCorrectionOptimize(useLambdaOrTargetInfo, lambdaOrTargetInfo, ...
 %     triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, infoNormalizer, distortionNormalizer, Disp, varargin)
-
 % Inputs:
 %   useLambdaOrTargetInfo: String. Optimization mode:
 %                           'lambda'       – vary tradeoff weight lambda (0 to 1)
@@ -22,6 +21,8 @@ function [triLMSCalFormatOpt, trirgbLinCalFormatOpt, info, infoNormalized, trans
 %
 %   triLMSCalFormat:    Nx3 matrix of original LMS-calibrated image data to be transformed.
 %
+%   imgParams:          image parameters
+%
 %   dichromatType:      String. Type of color vision deficiency:
 %                           'Deuteranopia' (M-cone missing)
 %                           'Protanopia'   (L-cone missing)
@@ -35,28 +36,20 @@ function [triLMSCalFormatOpt, trirgbLinCalFormatOpt, info, infoNormalized, trans
 %   infoNormalizer:     normalizing constant
 %   distortionNormalizer:  normalizing constant
 %
-%   constraintWL:       Scalar. Wavelength (in nm) used to define the confusion plane
-%                       for dichromat projection (e.g., 585 for Deuteranopia).
-%
-%   T_prev:             3×3 matrix. Initial RGB transformation matrix. Usually start with eye(3).
-%                       Useful for warm-starting optimization across a lambda sweep.
-%
 %   Disp:               Struct with display parameters. Must include:
 %                           .M_cones2rgb  – Matrix to convert LMS to RGB
 %                           .T_cones      – Cone fundamentals
 %                           .P_monitor    – Monitor spectral power distribution
 %                           .wls          – Wavelength sampling
 %
-%   imgParams:          Struct with image parameters
-%
 % Outputs:
-%   triLMSCalFormatOpt: Transformed LMS-calibrated image optimized for colorblind viewing.
-%   s_raw:              Similarity of original image to itself (baseline).
-%   v_raw:              Variance of original image (baseline).
-%   s_bal:              Similarity of optimized image to original.
-%   v_bal:              Variance of optimized image.
-%   transformRGBmatrix_opt:
-%                       3×3 transformation matrix that maps original RGB values to corrected RGB.
+%   LMSDaltonizedCalFormat:    daltonized LMS rendering for trichromat
+%   rgbLinDaltonizedCalFormat: daltonized rgb Linear rendering for trichromat
+%   transformRGBmatrix:        transformation matrix
+%   info:                      info from infoFcn
+%   infoNormalized:            info from infoFcn, normalized
+%   distortion:                distortion from distortionFcn
+%   distortionNormalized:      distortion from distortionFcn, normalized 
 %
 % Constraints:
 %   - RGB values must be between 0 and 1
@@ -71,12 +64,6 @@ function [triLMSCalFormatOpt, trirgbLinCalFormatOpt, info, infoNormalized, trans
 %
 % Examples:
 %{
-Disp = loadDisplay()
-% Load LMS values for this image
-imgParams = buildSetParameters('gray',1,128,128);
-[triLMSCalFormat,trirgbLinCalFormat,diLMSCalFormat,dirgbLinCalFormat,pathName] = loadLMSvalues('gray','Deuteranopia',Disp,imgParams);
-T_prev = eye(3);
-[triLMSOpt, s0, v0, s1, v1, T_opt] = colorCorrectionOptimize('lambda', 0.5, triLMSCalFormat,'Deuteranopia', 'LMdifferenceContrast', 'squared', T_prev, Disp,imgParams,[],[]);
 %}
 
 % Sample data to see how code works
@@ -105,11 +92,10 @@ disp('Just reached optimization')
 % Optimization - start with identity transformation matrix
 options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'ConstraintTolerance', 1e-10, 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
 % fmincon
-[transformRGB_opt_TI, fval] = fmincon(@(transformRGB) lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat,imgParams,dichromatType,infoFnc,distortionFcn,infoNormalizer, distortionNormalizer, Disp), ...
+[transformRGB_opt, fval] = fmincon(@(transformRGB) lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat,imgParams,dichromatType,infoFnc,distortionFcn,infoNormalizer, distortionNormalizer, Disp), ...
     T_init(:), A_total, b_total, [], [], [], [], [], options);
 % Test loss function with final transformation matrix values
-[fValOpt_TI, info, infoNormalized] = lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt_TI, triLMSCalFormat,imgParams,dichromatType,infoFnc,distortionFcn,infoNormalizer, distortionNormalizer, Disp);
-transformRGB_opt = transformRGB_opt_TI;
+[loss, info, infoNormalized, distortion, distortionNormalized] = lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt, triLMSCalFormat,imgParams,dichromatType,infoFnc,distortionFcn,infoNormalizer, distortionNormalizer, Disp);
 
 disp('Just finished optimization')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -121,7 +107,7 @@ if (any(bCheck > b_total))
 end  
  
 % Reshape optimal solution into matrix
-transformRGBmatrix_opt = reshape(transformRGB_opt, 3, 3);
+transformRGBmatrix = reshape(transformRGB_opt, 3, 3);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% STEP 7: TRANSFORM CONTRAST IMAGE W OPTIMAL %%%%%%%
@@ -134,28 +120,28 @@ triRGBCalFormat = Disp.M_cones2rgb * triLMSCalFormat;
 triRGBContrastCalFormat = (triRGBCalFormat - Disp.grayRGB) ./ Disp.grayRGB;
 
 % Transform RGB contrast image
-triRGBContrastCalFormat_T = transformRGBmatrix_opt * triRGBContrastCalFormat;
+triRGBContrastCalFormat_T = transformRGBmatrix * triRGBContrastCalFormat;
 diRGBContrastCalFormat_T  = M_triRGBc2diRGBc * triRGBContrastCalFormat_T;
 
 % Add back in gray before outputting the image
 % min(min(diRGBCalFormat_T(:)))
 % max(max(diRGBCalFormat_T(:)))
 diRGBCalFormatOpt = (diRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
-trirgbLinCalFormatOpt = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
+rgbLinDaltonizedCalFormat = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
 
 % Cut off values outside of gamut, when there is some weird numerical out
 % of bounds 
-if (max(trirgbLinCalFormatOpt(:))>1)% && max(trirgbLinCalFormat_T(:))<1+1e-2)
-    trirgbLinCalFormatOpt(trirgbLinCalFormatOpt>1)=1;
+if (max(rgbLinDaltonizedCalFormat(:))>1)% && max(trirgbLinCalFormat_T(:))<1+1e-2)
+    rgbLinDaltonizedCalFormat(rgbLinDaltonizedCalFormat>1)=1;
 end
 
-if (min(trirgbLinCalFormatOpt(:))<0)% && min(trirgbLinCalFormat_T(:))>0-1e-2)
-    trirgbLinCalFormatOpt(trirgbLinCalFormatOpt<0)=0;
+if (min(rgbLinDaltonizedCalFormat(:))<0)% && min(trirgbLinCalFormat_T(:))>0-1e-2)
+    rgbLinDaltonizedCalFormat(rgbLinDaltonizedCalFormat<0)=0;
 end
 
-triRGBCalFormatOpt = rgbLin2RGB(trirgbLinCalFormatOpt,Disp);
+triRGBCalFormatOpt = rgbLin2RGB(rgbLinDaltonizedCalFormat,Disp);
 
 % Get LMS values to output
-triLMSCalFormatOpt = Disp.M_rgb2cones * trirgbLinCalFormatOpt;
+LMSDaltonizedCalFormat = Disp.M_rgb2cones * rgbLinDaltonizedCalFormat;
 
 end

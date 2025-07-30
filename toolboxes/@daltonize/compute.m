@@ -1,4 +1,4 @@
-function  [LMSDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat] = compute(obj, ...
+function  [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat,rgbLinDaltonizedRenderedCalFormat] = compute(obj, ...
     LMSCalFormat, imgParams, dichromatType, ...
     useLambdaOrTargetInfo, lambdaOrTargetInfo, varargin)
 % Generic compute method for the @daltonize class.
@@ -81,7 +81,7 @@ infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_ne
 distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams,          normalizerValueToGetRawValue, obj.distortionParams);
 
 % Optimization function
-[triLMSCalFormatOpt, triRGBCalFormat_T, info, infoNormalized, transformRGBmatrix_opt] = ...
+[LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, info, infoNormalized, transformRGBmatrix_opt] = ...
     colorCorrectionOptimize( ...
     useLambdaOrTargetInfo, lambdaOrTargetInfo, ... % Choose lambda or target info, then set the value
     LMSCalFormat, ...                              % LMS image to be transformed
@@ -91,10 +91,6 @@ distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFor
     Disp, imgParams, ...                           % Display and image parameters
     'T_init', T_init);                             % Starting point for transformation matrix search
 
-% Daltonized image (LMS)
-LMSDaltonizedCalFormat = triLMSCalFormatOpt;
-[calFormatDiLMS,~,~] = DichromSimulateLinear(LMSDaltonizedCalFormat, dichromatType, Disp);
+[LMSDaltonizedRenderedCalFormat,rgbLinDaltonizedRenderedCalFormat,~] = DichromSimulateLinear(LMSDaltonizedCalFormat, dichromatType, Disp);
 
-% Dichromat rendering of daltonized image (LMS)
-LMSDaltonizedRenderedCalFormat = calFormatDiLMS;
 end

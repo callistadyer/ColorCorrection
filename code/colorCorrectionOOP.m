@@ -36,9 +36,9 @@ nSteps = 30;  % Number of interpolation steps in info space
 dichromatType = 'Deuteranopia';  % 'Protanopia', 'Deuteranopia', 'Tritanopia'
 
 % Run sweep: for each info target, compute optimized transformation
-[triLMSCalFormatOpt, trirgbLinCalFormatOpt, ...
- diLMSCalFormatOpt, dirgbLinCalFormatOpt, ...
- infoVals, infoNormVals, Tmatrices, targetInfoVals] = ...
+[LMSDaltonizedCalFormatSweep, rgbLinDaltonizedCalFormatSweep,...
+    LMSDaltonizedRenderedCalFormatSweep,rgbLinDaltonizedRenderedCalFormatSweep,...
+    transformRGBmatrixSweep, targetInfoNormalized, infoNormalized, distortionNormalized] = ...
     theDaltonizer.computeInfoSweep(triLMSCalFormat, imgParams, dichromatType, nSteps);
 
 %% Visualize trichromat renderings
@@ -49,23 +49,23 @@ nRows = ceil(nSteps / nCols);
 
 for i = 1:nSteps
     subplot(nRows, nCols, i);
-    triRGBCalFormat{i} = rgbLin2RGB(trirgbLinCalFormatOpt{i},Disp);
+    triRGBCalFormat{i} = rgbLin2RGB(rgbLinDaltonizedCalFormatSweep{i},Disp);
     rgbTri = CalFormatToImage(triRGBCalFormat{i}, imgParams.m, imgParams.n);
     imshow(rgbTri);
-    title(sprintf('Tri Info %.2f', targetInfoVals(i)), 'FontSize', 8);
+    title(sprintf('Tri Info %.2f', targetInfoNormalized(i)), 'FontSize', 8);
 end
 
 sgtitle(sprintf('Trichromat Renderings — Daltonization Sweep (%s)', dichromatType), ...
     'FontWeight', 'bold');
 
-%% Visualize simulated dichromat views
+%% Visualize rendered dichromat views
 figure('Name', 'Dichromat Simulations');
 for i = 1:nSteps
     subplot(nRows, nCols, i);
-    diRGBCalFormat{i} = rgbLin2RGB(dirgbLinCalFormatOpt{i},Disp);
+    diRGBCalFormat{i} = rgbLin2RGB(rgbLinDaltonizedRenderedCalFormatSweep{i},Disp);
     rgbDi = CalFormatToImage(diRGBCalFormat{i}, imgParams.m, imgParams.n);
     imshow(rgbDi);
-    title(sprintf('Dich Sim %.2f', targetInfoVals(i)), 'FontSize', 8);
+    title(sprintf('Dich Sim %.2f', targetInfoNormalized(i)), 'FontSize', 8);
 end
 
 sgtitle(sprintf('Dichromat Simulated View — Daltonization Sweep (%s)', dichromatType), ...
