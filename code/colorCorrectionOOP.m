@@ -6,12 +6,12 @@
 % close all;
 
 %% Generate input image
-
+%
 % 'Disp' is defined here
 colorCorrectionGenerateImages;
 
 %% Define objective functions
-
+%
 % Info: Measures useful information retained after correction
 infoFcn = @computeInfo_regress;
 infoParams = struct();  
@@ -60,7 +60,6 @@ sgtitle(sprintf('Trichromat Renderings — Daltonization Sweep (%s)', dichromatT
 
 %% Visualize simulated dichromat views
 figure('Name', 'Dichromat Simulations');
-
 for i = 1:nSteps
     subplot(nRows, nCols, i);
     diRGBCalFormat{i} = rgbLin2RGB(dirgbLinCalFormatOpt{i},Disp);
