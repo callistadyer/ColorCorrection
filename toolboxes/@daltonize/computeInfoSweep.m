@@ -42,9 +42,9 @@ end
 Disp = obj.Disp;
 LMSContrastCalFormat = (LMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
 
-[calFormatLMS_prot, ~, ~] = DichromSimulateLinear(LMSCalFormat, 'Protanopia', Disp);
-[calFormatLMS_deut, ~, ~] = DichromSimulateLinear(LMSCalFormat, 'Deuteranopia', Disp);
-[calFormatLMS_trit, ~, ~] = DichromSimulateLinear(LMSCalFormat, 'Tritanopia', Disp);
+[calFormatLMS_prot, ~, ~] = DichromRenderLinear(LMSCalFormat, 'Protanopia', Disp);
+[calFormatLMS_deut, ~, ~] = DichromRenderLinear(LMSCalFormat, 'Deuteranopia', Disp);
+[calFormatLMS_trit, ~, ~] = DichromRenderLinear(LMSCalFormat, 'Tritanopia', Disp);
 LMSCalFormat_new = [calFormatLMS_prot(1,:); calFormatLMS_deut(2,:); calFormatLMS_trit(3,:)];
 LMSContrastCalFormat_new = (LMSCalFormat_new - Disp.grayLMS) ./ Disp.grayLMS;
 
@@ -114,6 +114,6 @@ transformRGBmatrixSweep  = cell(1, nSteps);
             T_prev = T_Tprev;  % Update T_prev based on previous step 
         end
          
-        [LMSDaltonizedRenderedCalFormatSweep{i},rgbLinDaltonizedRenderedCalFormatSweep{i},~] = DichromSimulateLinear(LMSDaltonizedCalFormatSweep{i},dichromatType,Disp);
+        [LMSDaltonizedRenderedCalFormatSweep{i},rgbLinDaltonizedRenderedCalFormatSweep{i},~] = DichromRenderLinear(LMSDaltonizedCalFormatSweep{i},dichromatType,Disp);
     end
 end

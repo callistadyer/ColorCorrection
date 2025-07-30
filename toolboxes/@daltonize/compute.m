@@ -68,9 +68,9 @@ normalizerValueToGetRawValue = 1;
 %
 % Here we need to produce those three simulations to build the second
 % image to compare to the original.
-[calFormatLMS_prot,~,~] = DichromSimulateLinear(LMSCalFormat, 'Protanopia', Disp);
-[calFormatLMS_deut,~,~] = DichromSimulateLinear(LMSCalFormat, 'Deuteranopia', Disp);
-[calFormatLMS_trit,~,~] = DichromSimulateLinear(LMSCalFormat, 'Tritanopia', Disp);
+[calFormatLMS_prot,~,~] = DichromRenderLinear(LMSCalFormat, 'Protanopia', Disp);
+[calFormatLMS_deut,~,~] = DichromRenderLinear(LMSCalFormat, 'Deuteranopia', Disp);
+[calFormatLMS_trit,~,~] = DichromRenderLinear(LMSCalFormat, 'Tritanopia', Disp);
 
 % Build new LMS to compare to old LMS
 LMSCalFormat_new = [calFormatLMS_prot(1,:); calFormatLMS_deut(2,:); calFormatLMS_trit(3,:)];
@@ -93,6 +93,6 @@ distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFor
     Disp, imgParams, ...                           % Display and image parameters
     'T_init', T_init);                             % Starting point for transformation matrix search
 
-[LMSDaltonizedRenderedCalFormat,rgbLinDaltonizedRenderedCalFormat,~] = DichromSimulateLinear(LMSDaltonizedCalFormat, dichromatType, Disp);
+[LMSDaltonizedRenderedCalFormat,rgbLinDaltonizedRenderedCalFormat,~] = DichromRenderLinear(LMSDaltonizedCalFormat, dichromatType, Disp);
 
 end
