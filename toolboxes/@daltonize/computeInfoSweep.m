@@ -31,9 +31,9 @@ function [LMSDaltonizedCalFormatSweep, rgbLinDaltonizedCalFormatSweep,...
 %   rgbLinDaltonizedRenderedCalFormatSweep - Cell array of
 %                                            rgbLinDaltonizedCalFormatSweep rendered for a dichromat 
 %   transformRGBmatrixSweep - Cell array of 3x3 transformation matrices
-%   info                    - Cell array of info values at each step
+%   targetInfoNormalized    - Vector of target info values used
 %   infoNormalized          - Cell array of normalized info values
-%   targetInfoVals          - Vector of target info values used
+%   distortionNormalized    - Cell array of normalized distortion values
 
 if isempty(nSteps)
     nSteps = 10;
