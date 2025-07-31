@@ -8,12 +8,15 @@
 %% Generate input image
 %
 % 'Disp' is defined here
-imgType = 'flower1.png';
+%                       'gray', 'ishihara', 'flower1.png', 'flower2.png',
+%                       'flower3.png', 'fruit.png', 'map.png', 'painting.png',
+%                       'pool.png', 'tree.png'
+imgType = 'tree.png';
 setType = 1;
 dichromatType = 'Deuteranopia';
 clearFlag     = 1;
-m = 32;
-n = 32;
+m = 128;
+n = 128;
 
 [LMSCalFormat, rgbLinCalFormat, LMSCalFormatRendered, rgbLinCalFormatRendered, Disp, imgParams, pathName] = ...
     colorCorrectionGenerateImages(imgType, setType, m, n, dichromatType,clearFlag);
@@ -21,7 +24,7 @@ n = 32;
 %% Define objective functions
 %
 % Info: Measures useful information retained after correction
-infoFcn = @computeInfo_regress;
+infoFcn = @computeInfo_Wade;
 infoParams = struct();  
 
 % Distortion: Measures image distortion after correction
