@@ -1,12 +1,12 @@
 function [LMSDaltonizedCalFormatSweep, rgbLinDaltonizedCalFormatSweep,...
-          LMSDaltonizedRenderedCalFormatSweep,rgbLinDaltonizedRenderedCalFormatSweep,...
-          transformRGBmatrixSweep, targetInfoNormalized, infoNormalized, distortionNormalized] = computeInfoSweep(obj,...
-          LMSCalFormat, imgParams, dichromatType, nSteps)
+    LMSDaltonizedRenderedCalFormatSweep,rgbLinDaltonizedRenderedCalFormatSweep,...
+    transformRGBmatrixSweep, targetInfoNormalized, infoNormalized, distortionNormalized] = computeInfoSweep(obj,...
+    LMSCalFormat, imgParams, dichromatType, nSteps,pathName)
 % computeInfoSweep  Sweep through target info values and optimize color correction.
 %
 % Syntax:
 %    [LMSDaltonizedCalFormatSweep, rgbLinDaltonizedCalFormatSweep,...
-%           LMSDaltonizedRenderedCalFormatSweep,rgbLinDaltonizedRenderedCalFormatSweep,...
+%           LMSDaltonizedRenderedCalFiormatSweep,rgbLinDaltonizedRenderedCalFormatSweep,...
 %           transformRGBmatrixSweep, infoNormalized, distortionNormalized, targetInfoNormalized] = computeInfoSweep(obj,...
 %           LMSCalFormat, imgParams, dichromatType, nSteps)
 % Description:
@@ -21,24 +21,68 @@ function [LMSDaltonizedCalFormatSweep, rgbLinDaltonizedCalFormatSweep,...
 %                            'Tritanopia'
 %   imgParams      - Struct with image-related params
 %   nSteps         - Number of target info steps to interpolate (default: 10).
+%   pathName       - where the original photo is stored:
+%                   e.g., pathName = 'Deuteranopia/flower2.png/s1_m32_n32'
 %
 % Outputs:
 %   LMSDaltonizedCalFormatSweep            - Cell array of optimized LMS images (this is
 %                                            the size of 1xnSteps)
 %   rgbLinDaltonizedCalFormatSweep         - Cell array of optimized RGB images
 %   LMSDaltonizedRenderedCalFormatSweep    - Cell array of
-%                                            LMSDaltonizedCalFormatSweep rendered for a dichromat 
+%                                            LMSDaltonizedCalFormatSweep rendered for a dichromat
 %   rgbLinDaltonizedRenderedCalFormatSweep - Cell array of
-%                                            rgbLinDaltonizedCalFormatSweep rendered for a dichromat 
+%                                            rgbLinDaltonizedCalFormatSweep rendered for a dichromat
 %   transformRGBmatrixSweep - Cell array of 3x3 transformation matrices
 %   targetInfoNormalized    - Vector of target info values used
 %   infoNormalized          - Cell array of normalized info values
 %   distortionNormalized    - Cell array of normalized distortion values
+%
 
 if isempty(nSteps)
     nSteps = 10;
 end
 
+% Check to see if this output already exists, and then load it
+projectName = 'ColorCorrection';
+outputDir   = getpref(projectName, 'outputDir');
+saveBase    = fullfile(outputDir, 'testImagesTransformed');
+infoFcnName = func2str(obj.infoFcn);
+distFcnName = func2str(obj.distortionFcn);
+metricFolder = sprintf('%s_%s', infoFcnName, distFcnName);
+runFolder = sprintf('%dsteps', nSteps);
+saveSubdir = fullfile(saveBase, pathName, metricFolder, runFolder);
+saveFile = fullfile(saveSubdir, 'sweepOutputs.mat');
+
+if exist(saveFile, 'file')
+    fprintf('[computeInfoSweep] Loading cached sweep from: %s\n', saveFile);
+    loaded = load(saveFile);
+    outputs = loaded.outputs;
+
+    % Extract individual fields back to output variables
+    nSteps = numel(outputs);
+    LMSDaltonizedCalFormatSweep = cell(1,nSteps);
+    rgbLinDaltonizedCalFormatSweep = cell(1,nSteps);
+    LMSDaltonizedRenderedCalFormatSweep = cell(1,nSteps);
+    rgbLinDaltonizedRenderedCalFormatSweep = cell(1,nSteps);
+    transformRGBmatrixSweep = cell(1,nSteps);
+    targetInfoNormalized = zeros(1,nSteps);
+    infoNormalized = cell(1,nSteps);
+    distortionNormalized = cell(1,nSteps);
+
+    for i = 1:nSteps
+        LMSDaltonizedCalFormatSweep{i}            = outputs{i}.LMSDaltonizedCalFormat;
+        rgbLinDaltonizedCalFormatSweep{i}         = outputs{i}.rgbLinDaltonizedCalFormat;
+        LMSDaltonizedRenderedCalFormatSweep{i}    = outputs{i}.LMSDaltonizedRenderedCalFormat;
+        rgbLinDaltonizedRenderedCalFormatSweep{i} = outputs{i}.rgbLinDaltonizedRenderedCalFormat;
+        transformRGBmatrixSweep{i}                = outputs{i}.transformRGBmatrix;
+        targetInfoNormalized(i)                   = outputs{i}.targetInfoNormalized;
+        infoNormalized{i}                         = outputs{i}.infoNormalized;
+        distortionNormalized{i}                   = outputs{i}.distortionNormalized;
+    end
+    return;
+end
+
+% Otherwise, go ahead and compute the transformation as normal
 Disp = obj.Disp;
 LMSContrastCalFormat = (LMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
 
@@ -61,7 +105,7 @@ distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFor
 [~,~,~,info_1,infoNormalized_1,distortion1, distortionNormalized1] = colorCorrectionOptimize("lambda", 1, LMSCalFormat, imgParams, dichromatType, ...
     obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
 
-% Get target info values interpolated between lambdas 0 and 1 
+% Get target info values interpolated between lambdas 0 and 1
 targetInfoNormalized = linspace(infoNormalized_0, infoNormalized_1, nSteps);
 
 % Preallocate outputs
@@ -73,47 +117,66 @@ infoNormalized           = cell(1, nSteps);
 distortionNormalized     = cell(1, nSteps);
 transformRGBmatrixSweep  = cell(1, nSteps);
 
-    %% Sweep through target infos 
-    T_I = eye(3);
-    T_prev = eye(3);
-    for i = 1:nSteps
-        thisTargetInfo = targetInfoNormalized(i);
+%% Sweep through target infos
+T_I = eye(3);
+T_prev = eye(3);
+for i = 1:nSteps
+    thisTargetInfo = targetInfoNormalized(i);
 
-        % Optimize from identity starting point
-        [LMS_TI, RGB_TI, T_TI, info_TI,normInfo_TI,distortion_TI, normDistortion_TI] = colorCorrectionOptimize( ...
-            "targetInfo", thisTargetInfo, LMSCalFormat, imgParams, ...
-            dichromatType, obj.infoFcn, obj.distortionFcn, ...
-            infoNormalizer, distortionNormalizer,...
-            Disp,'T_init',T_I);
+    % Optimize from identity starting point
+    [LMS_TI, rgbLin_TI, T_TI, info_TI,normInfo_TI,distortion_TI, normDistortion_TI] = colorCorrectionOptimize( ...
+        "targetInfo", thisTargetInfo, LMSCalFormat, imgParams, ...
+        dichromatType, obj.infoFcn, obj.distortionFcn, ...
+        infoNormalizer, distortionNormalizer,...
+        Disp,'T_init',T_I);
 
-        % Optimize from T_prev starting point
-        [LMS_Tprev, RGB_Tprev, T_Tprev, info_Tprev, normInfo_Tprev,distortion_Tprev, normDistortion_Tprev] = colorCorrectionOptimize( ...
-            "targetInfo", thisTargetInfo, LMSCalFormat, imgParams, ...
-            dichromatType, obj.infoFcn, obj.distortionFcn, ...
-            infoNormalizer, distortionNormalizer,...
-            Disp,'T_init',T_prev);
+    % Optimize from T_prev starting point
+    [LMS_Tprev, rgbLin_Tprev, T_Tprev, info_Tprev, normInfo_Tprev,distortion_Tprev, normDistortion_Tprev] = colorCorrectionOptimize( ...
+        "targetInfo", thisTargetInfo, LMSCalFormat, imgParams, ...
+        dichromatType, obj.infoFcn, obj.distortionFcn, ...
+        infoNormalizer, distortionNormalizer,...
+        Disp,'T_init',T_prev);
 
-        % Compare losses
-        loss_TI    = lossFunction("targetInfo", thisTargetInfo, T_TI(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
-        loss_Tprev = lossFunction("targetInfo", thisTargetInfo, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
+    % Compare losses
+    loss_TI    = lossFunction("targetInfo", thisTargetInfo, T_TI(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
+    loss_Tprev = lossFunction("targetInfo", thisTargetInfo, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
 
-        % Select better of the two
-        if loss_TI <= loss_Tprev
-            LMSDaltonizedCalFormatSweep{i}     = LMS_TI;
-            rgbLinDaltonizedCalFormatSweep{i}  = RGB_TI;
-            infoNormalized{i}          = normInfo_TI;
-            distortionNormalized{i}    = normDistortion_TI;
-            transformRGBmatrixSweep{i} = T_TI;
-            T_prev = T_TI;  % Update T_prev based on previous step 
-        else
-            LMSDaltonizedCalFormatSweep{i}     = LMS_Tprev;
-            rgbLinDaltonizedCalFormatSweep{i}  = RGB_Tprev;
-            infoNormalized{i}          = normInfo_Tprev;
-            distortionNormalized{i}    = normDistortion_Tprev;
-            transformRGBmatrixSweep{i} = T_Tprev;
-            T_prev = T_Tprev;  % Update T_prev based on previous step 
-        end
-         
-        [LMSDaltonizedRenderedCalFormatSweep{i},rgbLinDaltonizedRenderedCalFormatSweep{i},~] = DichromRenderLinear(LMSDaltonizedCalFormatSweep{i},dichromatType,Disp);
+    % Select better of the two
+    if loss_TI <= loss_Tprev
+        LMSDaltonizedCalFormatSweep{i}     = LMS_TI;
+        rgbLinDaltonizedCalFormatSweep{i}  = rgbLin_TI;
+        infoNormalized{i}          = normInfo_TI;
+        distortionNormalized{i}    = normDistortion_TI;
+        transformRGBmatrixSweep{i} = T_TI;
+        T_prev = T_TI;  % Update T_prev based on previous step
+    else
+        LMSDaltonizedCalFormatSweep{i}     = LMS_Tprev;
+        rgbLinDaltonizedCalFormatSweep{i}  = rgbLin_Tprev;
+        infoNormalized{i}          = normInfo_Tprev;
+        distortionNormalized{i}    = normDistortion_Tprev;
+        transformRGBmatrixSweep{i} = T_Tprev;
+        T_prev = T_Tprev;  % Update T_prev based on previous step
     end
+
+    [LMSDaltonizedRenderedCalFormatSweep{i},rgbLinDaltonizedRenderedCalFormatSweep{i},~] = DichromRenderLinear(LMSDaltonizedCalFormatSweep{i},dichromatType,Disp);
+end
+
+outputs = cell(nSteps, 1);  % NSTEPS × 1 CELL ARRAY
+
+for i = 1:nSteps
+    outputs{i} = struct( ...
+        'LMSDaltonizedCalFormat',            LMSDaltonizedCalFormatSweep{i}, ...
+        'rgbLinDaltonizedCalFormat',         rgbLinDaltonizedCalFormatSweep{i}, ...
+        'LMSDaltonizedRenderedCalFormat',    LMSDaltonizedRenderedCalFormatSweep{i}, ...
+        'rgbLinDaltonizedRenderedCalFormat', rgbLinDaltonizedRenderedCalFormatSweep{i}, ...
+        'transformRGBmatrix',                transformRGBmatrixSweep{i}, ...
+        'targetInfoNormalized',              targetInfoNormalized(i), ...
+        'infoNormalized',                    infoNormalized{i}, ...
+        'distortionNormalized',              distortionNormalized{i},...
+        'imgParams',imgParams);
+end
+
+% Save the outputs
+saveTransformedOutputs(outputs, pathName, nSteps, true, obj.infoFcn, obj.distortionFcn, Disp);
+
 end

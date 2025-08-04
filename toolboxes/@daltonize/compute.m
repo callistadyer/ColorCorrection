@@ -1,5 +1,6 @@
-function  [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat,rgbLinDaltonizedRenderedCalFormat] = compute(obj, ...
-    LMSCalFormat, imgParams, dichromatType, ...
+function  [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, LMSDaltonizedRenderedCalFormat,rgbLinDaltonizedRenderedCalFormat, transformRGBmatrix_opt,...
+    info, infoNormalized, distortion, distortionNormalized]...
+    = compute(obj, LMSCalFormat, imgParams, dichromatType, ...
     useLambdaOrTargetInfo, lambdaOrTargetInfo, varargin)
 % Generic compute method for the @daltonize class.
 %
@@ -41,6 +42,8 @@ function  [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, LMSDaltonizedRende
 parser = inputParser;
 parser.addParameter('T_init', eye(3), @(x) isnumeric(x) && isequal(size(x), [3 3]));
 parser.addParameter('options', struct(), @isstruct);  % optional
+parser.addParameter('infoNormalizer', [], @isnumeric);
+parser.addParameter('distortionNormalizer', [], @isnumeric);
 parser.parse(varargin{:});
 
 T_init  = parser.Results.T_init;
@@ -78,20 +81,34 @@ LMSCalFormat_new = [calFormatLMS_prot(1,:); calFormatLMS_deut(2,:); calFormatLMS
 % Get contrast LMS for info and distortion functions
 LMSContrastCalFormat_new = (LMSCalFormat_new - Disp.grayLMS)./Disp.grayLMS;
 
+
+
+if isempty(parser.Results.infoNormalizer)
+    % Compute normalizers as usual
+    infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, dichromatType, normalizerValueToGetRawValue, Disp, obj.infoParams);
+    distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams,          normalizerValueToGetRawValue, obj.distortionParams);
+
+else
+    % Use pre-passed normalizers
+    infoNormalizer = parser.Results.infoNormalizer;
+    distortionNormalizer = parser.Results.distortionNormalizer;
+end
+
 % Calculate normalizers
-infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, dichromatType, normalizerValueToGetRawValue, Disp, obj.infoParams);
-distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams,          normalizerValueToGetRawValue, obj.distortionParams);
+% infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, dichromatType, normalizerValueToGetRawValue, Disp, obj.infoParams);
+% distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams,          normalizerValueToGetRawValue, obj.distortionParams);
 
 % Optimization function
-[LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, info, infoNormalized, transformRGBmatrix_opt] = ...
+[LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, transformRGBmatrix_opt, info, infoNormalized, distortion, distortionNormalized] = ...
     colorCorrectionOptimize( ...
     useLambdaOrTargetInfo, lambdaOrTargetInfo, ... % Choose lambda or target info, then set the value
-    LMSCalFormat, ...                              % LMS image to be transformed
+    LMSCalFormat,imgParams, ...                    % LMS image to be transformed
     dichromatType, ...                             % Dichromat type
     obj.infoFcn, obj.distortionFcn, ...            % info and distortion functions
     infoNormalizer, distortionNormalizer,...       % info and distortion normalizers
-    Disp, imgParams, ...                           % Display and image parameters
+    Disp, ...                                      % Display  parameters
     'T_init', T_init);                             % Starting point for transformation matrix search
+
 
 [LMSDaltonizedRenderedCalFormat,rgbLinDaltonizedRenderedCalFormat,~] = DichromRenderLinear(LMSDaltonizedCalFormat, dichromatType, Disp);
 

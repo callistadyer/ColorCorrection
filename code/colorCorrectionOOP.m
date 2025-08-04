@@ -11,12 +11,12 @@
 %                       'gray', 'ishihara', 'flower1.png', 'flower2.png',
 %                       'flower3.png', 'fruit.png', 'map.png', 'painting.png',
 %                       'pool.png', 'tree.png'
-imgType = 'tree.png';
+imgType = 'flower1.png';
 setType = 1;
 dichromatType = 'Deuteranopia';
-clearFlag     = 1;
-m = 128;
-n = 128;
+clearFlag     = 0;
+m = 64;
+n = 64;
 
 [LMSCalFormat, rgbLinCalFormat, LMSCalFormatRendered, rgbLinCalFormatRendered, Disp, imgParams, pathName] = ...
     colorCorrectionGenerateImages(imgType, setType, m, n, dichromatType,clearFlag);
@@ -43,13 +43,14 @@ theDaltonizer = daltonize( ...
     Disp);
 
 %% Set sweep parameters and run optimization
-nSteps = 30;  % Number of interpolation steps in info space
+nSteps = 20;  % Number of interpolation steps in info space
 
 % Run sweep: for each info target, compute optimized transformation
 [LMSDaltonizedCalFormatSweep, rgbLinDaltonizedCalFormatSweep,...
     LMSDaltonizedRenderedCalFormatSweep,rgbLinDaltonizedRenderedCalFormatSweep,...
     transformRGBmatrixSweep, targetInfoNormalized, infoNormalized, distortionNormalized] = ...
-    theDaltonizer.computeInfoSweep(LMSCalFormat, imgParams, dichromatType, nSteps);
+    theDaltonizer.computeInfoSweep(LMSCalFormat, imgParams, dichromatType, nSteps, pathName);
+
 
 %% Visualize trichromat renderings
 figure('Name', 'Trichromat Renderings');
