@@ -177,6 +177,6 @@ for i = 1:nSteps
 end
 
 % Save the outputs
-saveTransformedOutputs(outputs, pathName, nSteps, true, obj.infoFcn, obj.distortionFcn, Disp);
+saveTransformedOutputs(outputs, pathName, nSteps, obj.infoFcn, obj.distortionFcn, Disp);
 
 end

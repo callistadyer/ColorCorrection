@@ -1,4 +1,4 @@
-function saveTransformedOutputs(outputs, pathName, nSteps, isSweep, infoFcn, distortionFcn, Disp)
+function saveTransformedOutputs(outputs, pathName, nSteps, infoFcn, distortionFcn, Disp)
 % saveTransformedOutputs  Save outputs, per-step images, and sweep montages.
 %
 % Inputs:

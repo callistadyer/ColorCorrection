@@ -11,12 +11,12 @@
 %                       'gray', 'ishihara', 'flower1.png', 'flower2.png',
 %                       'flower3.png', 'fruit.png', 'map.png', 'painting.png',
 %                       'pool.png', 'tree.png'
-imgType = 'flower1.png';
+imgType = 'map.png';
 setType = 1;
 dichromatType = 'Deuteranopia';
 clearFlag     = 0;
-m = 64;
-n = 64;
+m = 128;
+n = 128;
 
 [LMSCalFormat, rgbLinCalFormat, LMSCalFormatRendered, rgbLinCalFormatRendered, Disp, imgParams, pathName] = ...
     colorCorrectionGenerateImages(imgType, setType, m, n, dichromatType,clearFlag);
@@ -24,7 +24,7 @@ n = 64;
 %% Define objective functions
 %
 % Info: Measures useful information retained after correction
-infoFcn = @computeInfo_Wade;
+infoFcn = @computeInfo_LMdifference;
 infoParams = struct();  
 
 % Distortion: Measures image distortion after correction
@@ -43,7 +43,7 @@ theDaltonizer = daltonize( ...
     Disp);
 
 %% Set sweep parameters and run optimization
-nSteps = 20;  % Number of interpolation steps in info space
+nSteps = 30;  % Number of interpolation steps in info space
 
 % Run sweep: for each info target, compute optimized transformation
 [LMSDaltonizedCalFormatSweep, rgbLinDaltonizedCalFormatSweep,...
