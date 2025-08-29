@@ -34,7 +34,7 @@ LM_orig = L_old - M_old;
 delta_LplusM = (L_new + M_new) - (L_old + M_old);  % (L+M)new - (L+M)old
 delta_S      = S_new - S_old;                      % Snew - Sold
 
-% Get best fitting scalar coefficients that explain how much of the original 
+% Get best fitting coefficients that explain how much of the original 
 % L–M contrast (LM_orig) appears in the delta(L+M) and delta(S) directions.
 % Basically a linear regression with no intercept:
 % delta ≈ coefficient × LM_orig.
@@ -50,7 +50,7 @@ b = LM_orig' \ delta_S';      % how much L–M shows up in S plane
 % a = dot(LM_orig, delta_LplusM) / dot(LM_orig, LM_orig);  % Projection onto (L+M)
 % b = dot(LM_orig, delta_S)      / dot(LM_orig, LM_orig);  % Projection onto S
 
-% Total info is sum of both projections (squared to emphasize stronger effects)
+% Total info is sum of both projections
 info = a^2 + b^2;
 
 % Normalize
