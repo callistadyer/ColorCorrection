@@ -41,15 +41,6 @@ delta_S      = S_new - S_old;                      % Snew - Sold
 a = LM_orig' \ delta_LplusM'; % how much L–M shows up in L+M plane
 b = LM_orig' \ delta_S';      % how much L–M shows up in S plane
 
-% Alternatively, compute inner product: how much of LM_orig predicts each delta
-% Intuitively, the numerator dot(LM_orig, delta) measures how aligned the two vectors are—
-% it’s large when both vectors vary together across pixels. The denominator dot(LM_orig, LM_orig)
-% normalizes by the total energy (squared length) of the LM_orig vector.
-% So the ratio gives the scalar that best projects LM_orig onto the delta direction,
-% minimizing squared error: delta ≈ coefficient × LM_orig.
-% a = dot(LM_orig, delta_LplusM) / dot(LM_orig, LM_orig);  % Projection onto (L+M)
-% b = dot(LM_orig, delta_S)      / dot(LM_orig, LM_orig);  % Projection onto S
-
 % Total info is sum of both projections
 info = a^2 + b^2;
 
