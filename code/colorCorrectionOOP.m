@@ -11,7 +11,7 @@
 %                       'gray', 'ishihara', 'flower1.png', 'flower2.png',
 %                       'flower3.png', 'fruit.png', 'map.png', 'painting.png',
 %                       'pool.png', 'tree.png'
-imgType = 'flower1.png';
+imgType = 'ishi45.png';
 setType = 1;
 dichromatType = 'Deuteranopia';
 clearFlag     = 0;
@@ -25,8 +25,25 @@ n = 64;
 %
 % Info: Measures useful information retained after correction
 % infoFcn = @computeInfo_LMdifference;
+% infoFcn = @computeInfo_regress;
 infoFcn = @computeInfo_Wade;
 infoParams = struct();  
+
+% infoParams = struct( ...
+%     'predictingWhat',     'M', ...          % options: 'M' | 'L-M' | 'L,M, and S'
+%     'predictingFromWhat', 'L and S' ...     % options: 'L and S' | 'deltaL and deltaS' | 'deltaL+M and delta S'
+% );
+
+if isequal(func2str(infoFcn), 'computeInfo_regress') && isempty(fieldnames(infoParams))
+    error(['If infoFcn is computeInfo_regress, then infoParams cannot be empty.' newline ...
+        'Please specify what information you are predicting (predictingWhat) ' ...
+        'as well as what information you are using to make the prediction (predictingFromWhat).' newline newline ...
+        'Valid options are:' newline ...
+        '   predictingWhat:     ''M''   | ''L-M''   | ''L,M, and S''' newline ...
+        '   predictingFromWhat: ''L and S''   | ''deltaL and deltaS''   | ''deltaL+M and delta S''' newline newline ...
+        'Example call:' newline ...
+        '   infoParams = struct(''predictingWhat'', ''M'', ''predictingFromWhat'', ''L and S'');' ]);
+end
 
 % Distortion: Measures image distortion after correction
 distortionFcn = @computeDistortion_squared;

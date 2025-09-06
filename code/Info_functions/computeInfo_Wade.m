@@ -31,18 +31,41 @@ S_new = LMSContrastCalFormat_new(3, :);
 LM_orig = L_old - M_old;
 
 % Delta in (L+M) and S planes
-delta_LplusM = (L_new + M_new) - (L_old + M_old);  % (L+M)new - (L+M)old
+% delta_LplusM = (L_new + M_new) - (L_old + M_old);  % (L+M)new - (L+M)old
+delta_LplusM = (L_new) - (L_old);  % (L+M)new - (L+M)old
+
 delta_S      = S_new - S_old;                      % Snew - Sold
 
 % Get best fitting coefficients that explain how much of the original 
 % L–M contrast (LM_orig) appears in the delta(L+M) and delta(S) directions.
 % Basically a linear regression with no intercept:
 % delta ≈ coefficient × LM_orig.
-a = LM_orig' \ delta_LplusM'; % how much L–M shows up in L+M plane
-b = LM_orig' \ delta_S';      % how much L–M shows up in S plane
+% a = LM_orig' \ delta_LplusM'; % how much L–M shows up in L+M plane
+% b = LM_orig' \ delta_S';      % how much L–M shows up in S plane
+
+x = LM_orig(:);                               % Nx1
+Y = [delta_LplusM(:)  delta_S(:)];            % Nx2
+
+ab = x \ Y;                                   % 1×2 slopes [a b]
+a  = ab(1);  % how much L–M shows up in L+M plane
+b  = ab(2);  % how much L–M shows up in S plane
+
 
 % Total info is sum of both projections
 info = a^2 + b^2;
+
+% Prediction error on LM_orig
+% predictionError = sum( (delta_LplusM - a * LM_orig).^2 + (delta_S      - b * LM_orig).^2 );
+% Vector length of LM_orig
+% LMnorm = norm(LM_orig);
+% info = 1 - ((predictionError)./(LMnorm).^2);
+
+% Add penalty for negative b. We want positive b because that means if L-M
+% is big, then there is more L, and if there is more L, we probably want
+% that to be converted to bluer as opposed to greener. 
+% if b<0
+%     info = info - b^2;
+% end
 
 % Normalize
 infoNormalized = info / normalizingValue;

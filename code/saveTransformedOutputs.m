@@ -61,9 +61,10 @@ for i = 1:nSteps
     triRGB = CalFormatToImage(rgbLin2RGB(outputs{i}.rgbLinDaltonizedCalFormat, Disp), ...
                               outputs{i}.imgParams.m, outputs{i}.imgParams.n);
     imshow(triRGB);
-    title(sprintf('Info %.2f', outputs{i}.targetInfoNormalized), 'FontSize', 8);
+    title(LiteralUnderscore(sprintf('Info %.2f', outputs{i}.targetInfoNormalized)), 'FontSize', 8);
 end
-sgtitle('Trichromat Sweep');
+% sgtitle('Trichromat Sweep');
+sgtitle(sprintf('Trichromat Sweep – %s, %s', infoFcnName, distortionFcnName));
 saveas(gcf, fullfile(figureSaveDir, 'trichromatSweep.png'));
 close(gcf);
 
@@ -74,9 +75,10 @@ for i = 1:nSteps
     diRGB = CalFormatToImage(rgbLin2RGB(outputs{i}.rgbLinDaltonizedRenderedCalFormat, Disp), ...
                              outputs{i}.imgParams.m, outputs{i}.imgParams.n);
     imshow(diRGB);
-    title(sprintf('Info %.2f', outputs{i}.targetInfoNormalized), 'FontSize', 8);
+    title(LiteralUnderscore(sprintf('Info %.2f', outputs{i}.targetInfoNormalized)), 'FontSize', 8);
 end
-sgtitle('Dichromat Sweep');
+% sgtitle('Dichromat Sweep');
+sgtitle(LiteralUnderscore(sprintf('Dichromat Sweep – %s, %s', infoFcnName, distortionFcnName)));
 saveas(gcf, fullfile(figureSaveDir, 'dichromatSweep.png'));
 close(gcf);
 
