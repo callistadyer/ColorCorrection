@@ -1,4 +1,4 @@
-function saveTransformedOutputs(outputs, pathName, nSteps, infoFcn, distortionFcn, Disp)
+function saveTransformedOutputs(outputs, pathName, nSteps, infoFcn, infoParams, distortionFcn, Disp)
 % saveTransformedOutputs  Save outputs, per-step images, and sweep montages.
 %
 % Inputs:
@@ -17,12 +17,26 @@ saveBase    = fullfile(outputDir, 'testImagesTransformed');
 
 infoFcnName       = func2str(infoFcn);
 distortionFcnName = func2str(distortionFcn);
-metricFolder      = sprintf('%s_%s', infoFcnName, distortionFcnName);
-stepFolder        = sprintf('%dsteps', nSteps);
 
-saveSubdir    = fullfile(saveBase, pathName, metricFolder, stepFolder);
-imageSaveDir  = fullfile(saveSubdir, 'IndividualImages');
-figureSaveDir = fullfile(saveSubdir, 'MontageFigures');
+% ---- build metric folder (include infoParams ONLY for computeInfo_regress) ----
+if strcmp(infoFcnName,'computeInfo_regress')
+    % Expect fields: predictingWhat, predictingFromWhat
+    if ~isfield(infoParams,'predictingWhat') || ~isfield(infoParams,'predictingFromWhat')
+        error('infoParams must include predictingWhat and predictingFromWhat for computeInfo_regress.');
+    end
+    paramsStrRaw = sprintf('%s-from-%s', infoParams.predictingWhat, infoParams.predictingFromWhat);
+    paramsSlug   = regexprep(paramsStrRaw, '[^A-Za-z0-9]+', '_');  % keep A–Z as-is
+    paramsSlug   = regexprep(paramsSlug, '^_+|_+$', '');           % trim leading/trailing "_"
+    metricFolder = sprintf('%s__%s__%s', infoFcnName, paramsSlug, distortionFcnName);
+
+else
+    metricFolder = sprintf('%s__%s', infoFcnName, distortionFcnName);
+end
+
+stepFolder        = sprintf('%dsteps', nSteps);
+saveSubdir        = fullfile(saveBase, pathName, metricFolder, stepFolder);
+imageSaveDir      = fullfile(saveSubdir, 'IndividualImages');
+figureSaveDir     = fullfile(saveSubdir, 'MontageFigures');
 
 if ~exist(saveSubdir, 'dir'),    mkdir(saveSubdir); end
 if ~exist(imageSaveDir, 'dir'),  mkdir(imageSaveDir); end
@@ -54,8 +68,7 @@ end
 % Save montage figures
 % Trichromat montage
 figure('Name', 'Trichromat Sweep', 'Visible', 'off');
-nCols = ceil(sqrt(nSteps));
-nRows = ceil(nSteps / nCols);
+nCols = ceil(sqrt(nSteps)); nRows = ceil(nSteps / nCols);
 for i = 1:nSteps
     subplot(nRows, nCols, i);
     triRGB = CalFormatToImage(rgbLin2RGB(outputs{i}.rgbLinDaltonizedCalFormat, Disp), ...
@@ -63,8 +76,8 @@ for i = 1:nSteps
     imshow(triRGB);
     title(LiteralUnderscore(sprintf('Info %.2f', outputs{i}.targetInfoNormalized)), 'FontSize', 8);
 end
-% sgtitle('Trichromat Sweep');
-sgtitle(sprintf('Trichromat Sweep – %s, %s', infoFcnName, distortionFcnName));
+triTitle = sprintf('Trichromat Sweep – %s', metricFolder);
+sgtitle(LiteralUnderscore(triTitle));
 saveas(gcf, fullfile(figureSaveDir, 'trichromatSweep.png'));
 close(gcf);
 
@@ -77,9 +90,8 @@ for i = 1:nSteps
     imshow(diRGB);
     title(LiteralUnderscore(sprintf('Info %.2f', outputs{i}.targetInfoNormalized)), 'FontSize', 8);
 end
-% sgtitle('Dichromat Sweep');
-sgtitle(LiteralUnderscore(sprintf('Dichromat Sweep – %s, %s', infoFcnName, distortionFcnName)));
+diTitle = sprintf('Dichromat Sweep – %s', metricFolder);
+sgtitle(LiteralUnderscore(diTitle));
 saveas(gcf, fullfile(figureSaveDir, 'dichromatSweep.png'));
 close(gcf);
-
 end
