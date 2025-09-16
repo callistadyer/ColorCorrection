@@ -32,7 +32,7 @@ LM_orig = L_old - M_old;
 
 % Delta in (L+M) and S planes
 % delta_LplusM = (L_new + M_new) - (L_old + M_old);  % (L+M)new - (L+M)old
-delta_LplusM = (L_new) - (L_old);  % (L+M)new - (L+M)old
+delta_L = (L_new) - (L_old);  % (L+M)new - (L+M)old
 
 delta_S      = S_new - S_old;                      % Snew - Sold
 
@@ -44,15 +44,21 @@ delta_S      = S_new - S_old;                      % Snew - Sold
 % b = LM_orig' \ delta_S';      % how much L–M shows up in S plane
 
 x = LM_orig(:);                               % Nx1
-Y = [delta_LplusM(:)  delta_S(:)];            % Nx2
+Y = [delta_L(:)  delta_S(:)];            % Nx2
 
-ab = x \ Y;                                   % 1×2 slopes [a b]
-a  = ab(1);  % how much L–M shows up in L+M plane
-b  = ab(2);  % how much L–M shows up in S plane
+
+projection_deltaL = dot(x,delta_L(:))./(norm(x));
+projection_deltaS = dot(x,delta_S(:))./(norm(x));
+
+info = projection_deltaL.^2 + projection_deltaS.^2;
+
+% ab = x \ Y;                                   % 1×2 slopes [a b]
+% a  = ab(1);  % how much L–M shows up in L+M plane
+% b  = ab(2);  % how much L–M shows up in S plane
 
 
 % Total info is sum of both projections
-info = a^2 + b^2;
+% info = a^2 + b^2;
 
 % Prediction error on LM_orig
 % predictionError = sum( (delta_LplusM - a * LM_orig).^2 + (delta_S      - b * LM_orig).^2 );

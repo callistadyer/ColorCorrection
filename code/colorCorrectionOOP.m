@@ -5,13 +5,26 @@
 % clear;
 % close all;
 
+
 %% Generate input image
 %
 % 'Disp' is defined here
-%                       'gray', 'ishihara', 'flower1.png', 'flower2.png',
-%                       'flower3.png', 'fruit.png', 'map.png', 'painting.png',
-%                       'pool.png', 'tree.png'
-imgType = 'flower1.png';
+%                       'cell.png'
+%                       'flower1.png'
+%                       'flower2.png'
+%                       'flower3.png'
+%                       'fruit.png'
+%                       'Gaugin.png'
+%                       'gray'
+%                       'ishi45.png'
+%                       'ishihara'
+%                       'map.png'
+%                       'painting.png'
+%                       'pool.png'
+%                       'tree.png'
+% 
+
+imgType = 'flower2.png';
 setType = 1;
 dichromatType = 'Deuteranopia';
 clearFlag     = 0;
@@ -30,8 +43,8 @@ infoFcn = @computeInfo_regress;
 % infoParams = struct();  
 
 infoParams = struct( ...
-    'predictingWhat',     'L-M', ...          % options: 'M' | 'L-M' | 'L,M, and S'
-    'predictingFromWhat', 'L and S' ...     % options: 'L and S' | 'deltaL and deltaS' | 'deltaL+M and delta S'
+    'predictingWhat',     'M', ...          % options: 'M' or 'L-M' or 'L,M, and S'
+    'predictingFromWhat', 'deltaL and deltaS' ...     % options: 'L and S' or 'deltaL and deltaS' or 'deltaL+M and delta S'
 );
 
 if isequal(func2str(infoFcn), 'computeInfo_regress') && isempty(fieldnames(infoParams))
@@ -99,6 +112,9 @@ end
 
 sgtitle(sprintf('Dichromat Simulated View — Daltonization Sweep (%s)', dichromatType), ...
     'FontWeight', 'bold');
+
+%% Summary figure
+makeTestImageSummary(imgType,dichromatType,m,n,setType)
 
 %% STEP 7: Single compute call 
 % Uncomment and configure if you want to run a single optimization directly.

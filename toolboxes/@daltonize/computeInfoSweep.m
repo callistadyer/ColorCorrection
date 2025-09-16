@@ -46,28 +46,45 @@ end
 projectName = 'ColorCorrection';
 outputDir   = getpref(projectName, 'outputDir');
 saveBase    = fullfile(outputDir, 'testImagesTransformed');
-infoFcnName = func2str(obj.infoFcn);
-distFcnName = func2str(obj.distortionFcn);
-metricFolder = sprintf('%s_%s', infoFcnName, distFcnName);
+
+% NEW: build the metric folder EXACTLY like saveTransformedOutputs
+metricFolder = buildMetricFolderName(obj.infoFcn, obj.infoParams, obj.distortionFcn);
+
 runFolder = sprintf('%dsteps', nSteps);
 saveSubdir = fullfile(saveBase, pathName, metricFolder, runFolder);
-saveFile = fullfile(saveSubdir, 'sweepOutputs.mat');
+saveFile   = fullfile(saveSubdir, 'sweepOutputs.mat');
+
+% --- Optional: backward-compatibility to older folder names (pre-regress change) ---
+if ~exist(saveFile, 'file')
+    % Old naming variants you used before (adjust if you had others)
+    old1_metricFolder = sprintf('%s_%s', func2str(obj.infoFcn), func2str(obj.distortionFcn));   % single underscore
+    old2_metricFolder = sprintf('%s__%s', func2str(obj.infoFcn), func2str(obj.distortionFcn));  % double underscore
+
+    old1_saveFile = fullfile(saveBase, pathName, old1_metricFolder, runFolder, 'sweepOutputs.mat');
+    old2_saveFile = fullfile(saveBase, pathName, old2_metricFolder, runFolder, 'sweepOutputs.mat');
+
+    if exist(old1_saveFile, 'file')
+        saveFile = old1_saveFile;
+    elseif exist(old2_saveFile, 'file')
+        saveFile = old2_saveFile;
+    end
+end
 
 if exist(saveFile, 'file')
     fprintf('[computeInfoSweep] Loading cached sweep from: %s\n', saveFile);
-    loaded = load(saveFile);
+    loaded  = load(saveFile);
     outputs = loaded.outputs;
 
     % Extract individual fields back to output variables
     nSteps = numel(outputs);
-    LMSDaltonizedCalFormatSweep = cell(1,nSteps);
-    rgbLinDaltonizedCalFormatSweep = cell(1,nSteps);
-    LMSDaltonizedRenderedCalFormatSweep = cell(1,nSteps);
+    LMSDaltonizedCalFormatSweep            = cell(1,nSteps);
+    rgbLinDaltonizedCalFormatSweep         = cell(1,nSteps);
+    LMSDaltonizedRenderedCalFormatSweep    = cell(1,nSteps);
     rgbLinDaltonizedRenderedCalFormatSweep = cell(1,nSteps);
-    transformRGBmatrixSweep = cell(1,nSteps);
-    targetInfoNormalized = zeros(1,nSteps);
-    infoNormalized = cell(1,nSteps);
-    distortionNormalized = cell(1,nSteps);
+    transformRGBmatrixSweep                = cell(1,nSteps);
+    targetInfoNormalized                   = zeros(1,nSteps);
+    infoNormalized                         = cell(1,nSteps);
+    distortionNormalized                   = cell(1,nSteps);
 
     for i = 1:nSteps
         LMSDaltonizedCalFormatSweep{i}            = outputs{i}.LMSDaltonizedCalFormat;
@@ -181,4 +198,21 @@ end
 saveTransformedOutputs(outputs, pathName, nSteps, obj.infoFcn, obj.infoParams, obj.distortionFcn, Disp);
 % saveTransformedOutputs(outputs, pathName, nSteps, obj.infoFcn, obj.distortionFcn, Disp);
 
+end
+
+function metricFolder = buildMetricFolderName(infoFcn, infoParams, distortionFcn)
+    infoFcnName       = func2str(infoFcn);
+    distortionFcnName = func2str(distortionFcn);
+
+    if strcmp(infoFcnName, 'computeInfo_regress')
+        if ~isfield(infoParams,'predictingWhat') || ~isfield(infoParams,'predictingFromWhat')
+            error('infoParams must include predictingWhat and predictingFromWhat for computeInfo_regress.');
+        end
+        paramsStrRaw = sprintf('%s-from-%s', infoParams.predictingWhat, infoParams.predictingFromWhat);
+        paramsSlug   = regexprep(paramsStrRaw, '[^A-Za-z0-9]+', '_');  % keep alnum + underscores
+        paramsSlug   = regexprep(paramsSlug, '^_+|_+$', '');           % trim leading/trailing "_"
+        metricFolder = sprintf('%s__%s__%s', infoFcnName, paramsSlug, distortionFcnName);
+    else
+        metricFolder = sprintf('%s__%s', infoFcnName, distortionFcnName);
+    end
 end
