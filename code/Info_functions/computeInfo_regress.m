@@ -44,15 +44,22 @@ L_old = LMSContrastCalFormat_old(1,:);  M_old = LMSContrastCalFormat_old(2,:);  
 L_new = LMSContrastCalFormat_new(1,:);  M_new = LMSContrastCalFormat_new(2,:);  S_new = LMSContrastCalFormat_new(3,:);
 
 % Build target y 
-y = buildTarget(paramsStruct.predictingWhat, L_old, M_old, S_old).';
+y = buildTarget(paramsStruct.predictingWhat, L_old, M_old, S_old);
 
 % Build predictors X 
 X = buildPredictors(paramsStruct.predictingFromWhat, ...
                     L_old, M_old, S_old, L_new, M_new, S_new);
 
-% numerical nicety: clamp tiny magnitudes
 smallestInterestingContrast = 1e-5;
 X(abs(X) < smallestInterestingContrast) = 0;
+
+N = size(X,1);
+if size(y,1) ~= N && size(y,2) == N
+    y = y.';  % transpose 1xN -> Nx1 or 3xN -> Nx3
+end
+if size(y,1) ~= N
+    error('Row mismatch: size(X)=%s, size(y)=%s', mat2str(size(X)), mat2str(size(y)));
+end
 
 if all(X == 0, 'all')                 % If all predictors are zero, can't do regression
     residual = y;                     % ... so use the full missing cone contrast as residual

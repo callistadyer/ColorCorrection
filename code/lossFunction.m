@@ -78,6 +78,16 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
         info_scalar = 1e20;
         loss = fminconFactor * (info_scalar * info_diff^2);
 
+        % want to bake in distortion here a little bit
+        % nonlinear constraint, take parameter, compute info 
+        % minimize distortion, subject to the constraint that the info is
+        % what i just found here 
+        % nonlinear constraint function that computes the info from
+        % whatever parameters its passed, takes abs(target-actualinfo) and
+        % have some tolerance to deviate from that targetInfo
+        % - abs(target-actualinfo) < tolerance
+        % 
+        
     elseif strcmp(useLambdaOrTargetInfo, 'lambda')
         % Lambda-weighted loss function
         infoWeighted       = lambdaOrTargetInfo   * infoNormalized;

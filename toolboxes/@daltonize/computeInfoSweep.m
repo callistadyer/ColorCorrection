@@ -1,7 +1,7 @@
 function [LMSDaltonizedCalFormatSweep, rgbLinDaltonizedCalFormatSweep,...
     LMSDaltonizedRenderedCalFormatSweep,rgbLinDaltonizedRenderedCalFormatSweep,...
     transformRGBmatrixSweep, targetInfoNormalized, infoNormalized, distortionNormalized] = computeInfoSweep(obj,...
-    LMSCalFormat, imgParams, dichromatType, nSteps,pathName)
+    LMSCalFormat, imgParams, dichromatType, nSteps,pathName,sweepAxis)
 % computeInfoSweep  Sweep through target info values and optimize color correction.
 %
 % Syntax:
@@ -25,21 +25,22 @@ function [LMSDaltonizedCalFormatSweep, rgbLinDaltonizedCalFormatSweep,...
 %                   e.g., pathName = 'Deuteranopia/flower2.png/s1_m32_n32'
 %
 % Outputs:
-%   LMSDaltonizedCalFormatSweep            - Cell array of optimized LMS images (this is
-%                                            the size of 1xnSteps)
-%   rgbLinDaltonizedCalFormatSweep         - Cell array of optimized RGB images
-%   LMSDaltonizedRenderedCalFormatSweep    - Cell array of
-%                                            LMSDaltonizedCalFormatSweep rendered for a dichromat
-%   rgbLinDaltonizedRenderedCalFormatSweep - Cell array of
-%                                            rgbLinDaltonizedCalFormatSweep rendered for a dichromat
-%   transformRGBmatrixSweep - Cell array of 3x3 transformation matrices
-%   targetInfoNormalized    - Vector of target info values used
-%   infoNormalized          - Cell array of normalized info values
-%   distortionNormalized    - Cell array of normalized distortion values
+%   LMSDaltonizedCalFormatSweep            - Cell of optimized LMS images (this is the size of 1xnSteps)
+%   rgbLinDaltonizedCalFormatSweep         - Cell of optimized RGB images
+%   LMSDaltonizedRenderedCalFormatSweep    - Cell of LMSDaltonizedCalFormatSweep rendered for a dichromat
+%   rgbLinDaltonizedRenderedCalFormatSweep - Cell of rgbLinDaltonizedCalFormatSweep rendered for a dichromat
+%   transformRGBmatrixSweep                - Cell of 3x3 transformation matrices
+%   targetInfoNormalized                   - Vector of target info values used
+%   infoNormalized                         - Cell of normalized info values
+%   distortionNormalized                   - Cell of normalized distortion values
 %
 
 if isempty(nSteps)
     nSteps = 10;
+end
+
+if ~exist('sweepAxis','var') || isempty(sweepAxis)
+    sweepAxis = 'info';
 end
 
 % Check to see if this output already exists, and then load it
@@ -47,35 +48,25 @@ projectName = 'ColorCorrection';
 outputDir   = getpref(projectName, 'outputDir');
 saveBase    = fullfile(outputDir, 'testImagesTransformed');
 
-% NEW: build the metric folder EXACTLY like saveTransformedOutputs
+% Build the metric folder 
 metricFolder = buildMetricFolderName(obj.infoFcn, obj.infoParams, obj.distortionFcn);
 
 runFolder = sprintf('%dsteps', nSteps);
 saveSubdir = fullfile(saveBase, pathName, metricFolder, runFolder);
 saveFile   = fullfile(saveSubdir, 'sweepOutputs.mat');
 
-% --- Optional: backward-compatibility to older folder names (pre-regress change) ---
-if ~exist(saveFile, 'file')
-    % Old naming variants you used before (adjust if you had others)
-    old1_metricFolder = sprintf('%s_%s', func2str(obj.infoFcn), func2str(obj.distortionFcn));   % single underscore
-    old2_metricFolder = sprintf('%s__%s', func2str(obj.infoFcn), func2str(obj.distortionFcn));  % double underscore
-
-    old1_saveFile = fullfile(saveBase, pathName, old1_metricFolder, runFolder, 'sweepOutputs.mat');
-    old2_saveFile = fullfile(saveBase, pathName, old2_metricFolder, runFolder, 'sweepOutputs.mat');
-
-    if exist(old1_saveFile, 'file')
-        saveFile = old1_saveFile;
-    elseif exist(old2_saveFile, 'file')
-        saveFile = old2_saveFile;
-    end
-end
-
 if exist(saveFile, 'file')
-    fprintf('[computeInfoSweep] Loading cached sweep from: %s\n', saveFile);
+    fprintf('[computeInfoSweep] Loading old sweep from: %s\n', saveFile);
     loaded  = load(saveFile);
     outputs = loaded.outputs;
 
-    % Extract individual fields back to output variables
+    if isfield(outputs{1}, 'useLambdaOrTargetInfo')
+        useLambdaOrTargetInfo = outputs{1}.useLambdaOrTargetInfo;  % 'lambda' or 'targetInfo'
+    else
+        useLambdaOrTargetInfo = 'targetInfo'; % If it doesn't specify, it's gonna be target info because I only added this after incorporating lambda
+    end
+
+    % Extract these important outputs
     nSteps = numel(outputs);
     LMSDaltonizedCalFormatSweep            = cell(1,nSteps);
     rgbLinDaltonizedCalFormatSweep         = cell(1,nSteps);
@@ -85,6 +76,7 @@ if exist(saveFile, 'file')
     targetInfoNormalized                   = zeros(1,nSteps);
     infoNormalized                         = cell(1,nSteps);
     distortionNormalized                   = cell(1,nSteps);
+    useLambdaOrTargetInfo                  = cell(1,nSteps);
 
     for i = 1:nSteps
         LMSDaltonizedCalFormatSweep{i}            = outputs{i}.LMSDaltonizedCalFormat;
@@ -95,14 +87,20 @@ if exist(saveFile, 'file')
         targetInfoNormalized(i)                   = outputs{i}.targetInfoNormalized;
         infoNormalized{i}                         = outputs{i}.infoNormalized;
         distortionNormalized{i}                   = outputs{i}.distortionNormalized;
+        useLambdaOrTargetInfo{i}                  = outputs{1}.useLambdaOrTargetInfo;
+
     end
     return;
 end
 
-% Otherwise, go ahead and compute the transformation as normal
+% If it doesn't already exist, go ahead and compute the transformation as normal:
+
+% Get display
 Disp = obj.Disp;
+% Get the contrast LMS values
 LMSContrastCalFormat = (LMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
 
+% Get the dichromat renderings of the original, which is used for the normalizer
 [calFormatLMS_prot, ~, ~] = DichromRenderLinear(LMSCalFormat, 'Protanopia', Disp);
 [calFormatLMS_deut, ~, ~] = DichromRenderLinear(LMSCalFormat, 'Deuteranopia', Disp);
 [calFormatLMS_trit, ~, ~] = DichromRenderLinear(LMSCalFormat, 'Tritanopia', Disp);
@@ -133,30 +131,45 @@ rgbLinDaltonizedRenderedCalFormatSweep   = cell(1, nSteps);
 infoNormalized           = cell(1, nSteps);
 distortionNormalized     = cell(1, nSteps);
 transformRGBmatrixSweep  = cell(1, nSteps);
+targetInfoVsAchievedInfo = cell(1, nSteps);
 
 %% Sweep through target infos
 T_I = eye(3);
 T_prev = eye(3);
+
+% This part lets us sweep through lambda OR through target info values. I
+% want to sweep through info values because it works. I want to sweep
+% through lambda values to show people that it doesn't work. 
+switch lower(sweepAxis)
+    case 'info'
+        xVec = targetInfoNormalized;                
+        useLambdaOrTargetInfo = "targetInfo";
+    case 'lambda'
+        xVec = linspace(0,1,nSteps);               
+        useLambdaOrTargetInfo = "lambda";
+end
+
 for i = 1:nSteps
-    thisTargetInfo = targetInfoNormalized(i);
+    % thisTargetInfo = targetInfoNormalized(i);
+    thisTargetInfo = xVec(i);
 
     % Optimize from identity starting point
     [LMS_TI, rgbLin_TI, T_TI, info_TI,normInfo_TI,distortion_TI, normDistortion_TI] = colorCorrectionOptimize( ...
-        "targetInfo", thisTargetInfo, LMSCalFormat, imgParams, ...
+        useLambdaOrTargetInfo, thisTargetInfo, LMSCalFormat, imgParams, ...
         dichromatType, obj.infoFcn, obj.distortionFcn, ...
         infoNormalizer, distortionNormalizer,...
         Disp,'T_init',T_I);
 
     % Optimize from T_prev starting point
     [LMS_Tprev, rgbLin_Tprev, T_Tprev, info_Tprev, normInfo_Tprev,distortion_Tprev, normDistortion_Tprev] = colorCorrectionOptimize( ...
-        "targetInfo", thisTargetInfo, LMSCalFormat, imgParams, ...
+        useLambdaOrTargetInfo, thisTargetInfo, LMSCalFormat, imgParams, ...
         dichromatType, obj.infoFcn, obj.distortionFcn, ...
         infoNormalizer, distortionNormalizer,...
         Disp,'T_init',T_prev);
 
     % Compare losses
-    loss_TI    = lossFunction("targetInfo", thisTargetInfo, T_TI(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
-    loss_Tprev = lossFunction("targetInfo", thisTargetInfo, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
+    loss_TI    = lossFunction(useLambdaOrTargetInfo, thisTargetInfo, T_TI(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
+    loss_Tprev = lossFunction(useLambdaOrTargetInfo, thisTargetInfo, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
 
     % Select better of the two
     if loss_TI <= loss_Tprev
@@ -166,6 +179,13 @@ for i = 1:nSteps
         distortionNormalized{i}    = normDistortion_TI;
         transformRGBmatrixSweep{i} = T_TI;
         T_prev = T_TI;  % Update T_prev based on previous step
+
+        achievedInfoVal = double(normInfo_TI);
+        achievedDistVal = double(normDistortion_TI);
+
+        targetInfoVsAchievedInfo{i} = [achievedInfoVal, thisTargetInfo];
+
+
     else
         LMSDaltonizedCalFormatSweep{i}     = LMS_Tprev;
         rgbLinDaltonizedCalFormatSweep{i}  = rgbLin_Tprev;
@@ -173,10 +193,30 @@ for i = 1:nSteps
         distortionNormalized{i}    = normDistortion_Tprev;
         transformRGBmatrixSweep{i} = T_Tprev;
         T_prev = T_Tprev;  % Update T_prev based on previous step
+
+        achievedInfoVal = double(normInfo_Tprev);
+        achievedDistVal = double(normDistortion_Tprev);
+
+        targetInfoVsAchievedInfo{i} = [achievedInfoVal, thisTargetInfo];
+
     end
 
     [LMSDaltonizedRenderedCalFormatSweep{i},rgbLinDaltonizedRenderedCalFormatSweep{i},~] = DichromRenderLinear(LMSDaltonizedCalFormatSweep{i},dichromatType,Disp);
+
+
+    % In lambda mode, collect the achieved info values
+    if strcmpi(sweepAxis,'lambda')
+        achievedInfoVec(i) = achievedInfoVal;
+        achievedDistVec(i) = achievedDistVal;
+    end
 end
+
+% Just call the achieved info values target so that downstream "info vs. distortion" 
+% plots work unchanged
+if strcmpi(sweepAxis,'lambda')
+    targetInfoNormalized = achievedInfoVec;  
+end
+
 
 outputs = cell(nSteps, 1);  % NSTEPS × 1 CELL ARRAY
 
@@ -191,28 +231,48 @@ for i = 1:nSteps
         'infoNormalized',                    infoNormalized{i}, ...
         'distortionNormalized',              distortionNormalized{i},...
         'imgParams',                         imgParams,...
-        'Disp',                              Disp);
+        'Disp',                              Disp,...
+        'useLambdaOrTargetInfo',             char(useLambdaOrTargetInfo),... 
+        'targetInfoVsAchievedInfo',          targetInfoVsAchievedInfo{i});
 end
 
 % Save the outputs
 saveTransformedOutputs(outputs, pathName, nSteps, obj.infoFcn, obj.infoParams, obj.distortionFcn, Disp);
-% saveTransformedOutputs(outputs, pathName, nSteps, obj.infoFcn, obj.distortionFcn, Disp);
 
 end
 
 function metricFolder = buildMetricFolderName(infoFcn, infoParams, distortionFcn)
+    % Convert the function handle for the info function into a string name
     infoFcnName       = func2str(infoFcn);
+
+    % Convert the function handle for the distortion function into a string name
     distortionFcnName = func2str(distortionFcn);
 
+    % Regression case is a little annoying...
     if strcmp(infoFcnName, 'computeInfo_regress')
+
+        % Regression mode needs to know what is being predicted from what
         if ~isfield(infoParams,'predictingWhat') || ~isfield(infoParams,'predictingFromWhat')
+            % If either field is missing, throw an error
             error('infoParams must include predictingWhat and predictingFromWhat for computeInfo_regress.');
         end
+
+        % Build a string describing the regression relationship
+        % Example: "L-from-M"
         paramsStrRaw = sprintf('%s-from-%s', infoParams.predictingWhat, infoParams.predictingFromWhat);
-        paramsSlug   = regexprep(paramsStrRaw, '[^A-Za-z0-9]+', '_');  % keep alnum + underscores
-        paramsSlug   = regexprep(paramsSlug, '^_+|_+$', '');           % trim leading/trailing "_"
-        metricFolder = sprintf('%s__%s__%s', infoFcnName, paramsSlug, distortionFcnName);
+
+        % Add some underscores, make it pretty
+        paramsString   = regexprep(paramsStrRaw, '[^A-Za-z0-9]+', '_');  
+        paramsString   = regexprep(paramsString, '^_+|_+$', '');           
+
+        % Construct the folder name in the form:
+        %   "<infoFcnName>__<paramsString>__<distortionFcnName>"
+        % Example: "computeInfo_regress__L_from_M__computeDistortion_squared"
+        metricFolder = sprintf('%s__%s__%s', infoFcnName, paramsString, distortionFcnName);
+
     else
+        % For non-regression info functions, just join the function names with "__"
+        % Example: "computeInfo_Wade__computeDistortion_squared"
         metricFolder = sprintf('%s__%s', infoFcnName, distortionFcnName);
     end
 end
