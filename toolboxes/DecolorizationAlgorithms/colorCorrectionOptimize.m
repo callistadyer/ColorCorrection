@@ -79,8 +79,14 @@ end
 %% Key value pairs
 parser = inputParser;
 parser.addParameter('T_init', eye(3), @(x) isnumeric(x) && isequal(size(x), [3 3]));
+parser.addParameter('targetDistortion', [], @(x) isempty(x) || isscalar(x));
+parser.addParameter('epsDistortion',    1e-4, @(x) isnumeric(x) && isscalar(x) && x>=0);
+
+
 parser.parse(varargin{:});
 T_init = parser.Results.T_init;
+targetDist_opt = parser.Results.targetDistortion;   % [] means just min distortion
+epsDist_opt    = parser.Results.epsDistortion;     
 
 rng(1);
 
@@ -142,7 +148,7 @@ switch lower(useLambdaOrTargetInfo)
 
         % Nonlinear constraint
         % (infoNormalized(t) - targetInfo)^2 - epsInfo^2 <= 0
-        nonlcon = @(t_vec) infoBandConstraint( ...
+        nonlcon_info = @(t_vec) infoBandConstraint( ...
             t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
             infoNormalizer, distortionNormalizer, Disp, targetInfo, epsInfo);
 
@@ -157,6 +163,22 @@ switch lower(useLambdaOrTargetInfo)
         %     % No linear constraint here
         %     ceq = [];
         % end
+       
+        % Add distortion band
+        % If user inputs targetDistortion, also need to constrain distortion near that target
+        % Combine both constraints into a single nonlcon by stacking inequality constraints.
+        if ~isempty(targetDist_opt)
+            nonlcon_dist = @(t_vec) distortionBandConstraint( ...
+                t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+                infoNormalizer, distortionNormalizer, Disp, targetDist_opt, epsDist_opt);
+
+            % Build one combined constraint: concatenate c and ceq from both bands.
+            nonlcon = @(t_vec) localCombine(t_vec, nonlcon_info, nonlcon_dist);
+
+        else
+            % Original behavior: only the info band
+            nonlcon = nonlcon_info;
+        end
 
 end
 
@@ -250,4 +272,26 @@ function [c,ceq] = infoBandConstraint(t_vec, triLMSCalFormat, imgParams, dichrom
 
 c   = (infoNorm_here - targetInfo).^2 - (epsInfo.^2);
 ceq = [];
+end
+
+% distortionBandConstraint 
+% Inequality band on normalized distortion around the targetDistortion
+function [c,ceq] = distortionBandConstraint(t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+    infoNormalizer, distortionNormalizer, Disp, targetDistortionNorm, epsDistortion)
+
+[~, ~, ~, ~, distortionNorm_here] = lossFunction('lambda', 0.0, t_vec, ...
+    triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+    infoNormalizer, distortionNormalizer, Disp);
+
+% Band inequality: (dist - target)^2 - eps^2 <= 0
+c   = (distortionNorm_here - targetDistortionNorm).^2 - (epsDistortion.^2);
+ceq = [];
+end
+
+% combiner constraints
+function [c_all, ceq_all] = localCombine(t_vec_local, f1, f2)
+[c1, ceq1] = f1(t_vec_local);
+[c2, ceq2] = f2(t_vec_local);
+c_all   = [c1(:); c2(:)];
+ceq_all = [ceq1(:); ceq2(:)];
 end

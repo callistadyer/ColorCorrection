@@ -86,7 +86,6 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
         % whatever parameters its passed, takes abs(target-actualinfo) and
         % have some tolerance to deviate from that targetInfo
         % - abs(target-actualinfo) < tolerance
-        % 
         
     elseif strcmp(useLambdaOrTargetInfo, 'lambda')
         % Lambda-weighted loss function
