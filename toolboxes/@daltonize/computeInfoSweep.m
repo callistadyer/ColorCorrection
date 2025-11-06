@@ -114,10 +114,10 @@ infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_ne
 distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, normalizerValueToGetRawValue, obj.distortionParams);
 
 % Get info values for lambda = 0 and lambda = 1
-[~,~,~,info_0,infoNormalized_0,distortion0, distortionNormalized0] = colorCorrectionOptimize("lambda", 0, LMSCalFormat, imgParams, dichromatType, ...
+[~,~,~,info_0,infoNormalized_0,distortion0, distortionNormalized0] = colorCorrectionOptimize("lambda", 0, [], [], LMSCalFormat, imgParams, dichromatType, ...
     obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
 
-[~,~,~,info_1,infoNormalized_1,distortion1, distortionNormalized1] = colorCorrectionOptimize("lambda", 1, LMSCalFormat, imgParams, dichromatType, ...
+[~,~,~,info_1,infoNormalized_1,distortion1, distortionNormalized1] = colorCorrectionOptimize("lambda", 1, [], [], LMSCalFormat, imgParams, dichromatType, ...
     obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
 
 % Get target info values interpolated between lambdas 0 and 1
@@ -151,25 +151,31 @@ end
 
 for i = 1:nSteps
     % thisTargetInfo = targetInfoNormalized(i);
-    thisTargetInfo = xVec(i);
+    thisX = xVec(i);
+
+    if strcmpi(useLambdaOrTargetInfo,'targetInfo')
+        % info sweep: lambda=[], targetInfo=thisX
+        lamArg = []; tgtInfoArg = thisX; tgtDistArg = [];
+    else % 'lambda'
+        % lambda sweep: lambda=thisX, targetInfo=[]
+        lamArg = thisX; tgtInfoArg = []; tgtDistArg = [];
+    end
 
     % Optimize from identity starting point
-    [LMS_TI, rgbLin_TI, T_TI, info_TI,normInfo_TI,distortion_TI, normDistortion_TI] = colorCorrectionOptimize( ...
-        useLambdaOrTargetInfo, thisTargetInfo, LMSCalFormat, imgParams, ...
-        dichromatType, obj.infoFcn, obj.distortionFcn, ...
-        infoNormalizer, distortionNormalizer,...
-        Disp,'T_init',T_I);
+    [LMS_TI, rgbLin_TI, T_TI, info_TI, normInfo_TI, distortion_TI, normDistortion_TI] = colorCorrectionOptimize( ...
+        useLambdaOrTargetInfo, lamArg, tgtInfoArg, tgtDistArg, ...
+        LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
+        infoNormalizer, distortionNormalizer, Disp, 'T_init', T_I);
 
     % Optimize from T_prev starting point
-    [LMS_Tprev, rgbLin_Tprev, T_Tprev, info_Tprev, normInfo_Tprev,distortion_Tprev, normDistortion_Tprev] = colorCorrectionOptimize( ...
-        useLambdaOrTargetInfo, thisTargetInfo, LMSCalFormat, imgParams, ...
-        dichromatType, obj.infoFcn, obj.distortionFcn, ...
-        infoNormalizer, distortionNormalizer,...
-        Disp,'T_init',T_prev);
+    [LMS_Tprev, rgbLin_Tprev, T_Tprev, info_Tprev, normInfo_Tprev, distortion_Tprev, normDistortion_Tprev] = colorCorrectionOptimize( ...
+        useLambdaOrTargetInfo, lamArg, tgtInfoArg, tgtDistArg, ...
+        LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
+        infoNormalizer, distortionNormalizer, Disp, 'T_init', T_prev);
 
-    % Compare losses
-    loss_TI    = lossFunction(useLambdaOrTargetInfo, thisTargetInfo, T_TI(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
-    loss_Tprev = lossFunction(useLambdaOrTargetInfo, thisTargetInfo, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
+    % Compare losses (second arg is the same scalar you optimized on)
+    loss_TI    = lossFunction(useLambdaOrTargetInfo, thisX, T_TI(:),    LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
+    loss_Tprev = lossFunction(useLambdaOrTargetInfo, thisX, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
 
     % Select better of the two
     if loss_TI <= loss_Tprev
@@ -183,7 +189,7 @@ for i = 1:nSteps
         achievedInfoVal = double(normInfo_TI);
         achievedDistVal = double(normDistortion_TI);
 
-        targetInfoVsAchievedInfo{i} = [achievedInfoVal, thisTargetInfo];
+        targetInfoVsAchievedInfo{i} = [achievedInfoVal, thisX];
 
 
     else
@@ -197,7 +203,7 @@ for i = 1:nSteps
         achievedInfoVal = double(normInfo_Tprev);
         achievedDistVal = double(normDistortion_Tprev);
 
-        targetInfoVsAchievedInfo{i} = [achievedInfoVal, thisTargetInfo];
+        targetInfoVsAchievedInfo{i} = [achievedInfoVal, thisX];
 
     end
 

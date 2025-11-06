@@ -1,4 +1,4 @@
-function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFunction(useLambdaOrTargetInfo, lambdaOrTargetInfo,... 
+function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFunction(useLambdaOrTarget, lambdaOrTarget,... 
     t_vec, LMSCalFormat, imgParams, dichromatType, infoFcn, distortionFcn, infoNormalizer, distortionNormalizer, Disp)
 % lossFunction  Objective for color correction optimization
 %
@@ -72,9 +72,9 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
     % Loss functions
     fminconFactor = 1e8;
 
-    if strcmp(useLambdaOrTargetInfo, 'targetInfo')
+    if strcmp(lower(useLambdaOrTarget), 'targetinfo')
         % Squared difference from the desired info value
-        info_diff = infoNormalized - lambdaOrTargetInfo;
+        info_diff = infoNormalized - lambdaOrTarget;
         info_scalar = 1e20;
         loss = fminconFactor * (info_scalar * info_diff^2);
 
@@ -87,10 +87,17 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
         % have some tolerance to deviate from that targetInfo
         % - abs(target-actualinfo) < tolerance
         
-    elseif strcmp(useLambdaOrTargetInfo, 'lambda')
+
+        % CHANGE THE useLambdaOrTargetInfo TO useLambdaOrTarget
+    elseif strcmp(lower(useLambdaOrTarget), 'targetdist')
+        distortion_diff = distortionNormalized - lambdaOrTarget;
+        distortion_scalar = 1e20;
+        loss = fminconFactor * (distortion_scalar * distortion_diff^2);
+
+    elseif strcmp(lower(useLambdaOrTarget), 'lambda')
         % Lambda-weighted loss function
-        infoWeighted       = lambdaOrTargetInfo   * infoNormalized;
-        distortionWeighted = (1 - lambdaOrTargetInfo) * distortionNormalized;
+        infoWeighted       = lambdaOrTarget   * infoNormalized;
+        distortionWeighted = (1 - lambdaOrTarget) * distortionNormalized;
         
         % Want info to be big. So minimize negative of info. Distortion you
         % want to be small, so minimize the regular positive distortion.

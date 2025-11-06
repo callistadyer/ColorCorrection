@@ -1,5 +1,5 @@
 function [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, transformRGBmatrix, info, infoNormalized, distortion, distortionNormalized] = ...
-    colorCorrectionOptimize(useLambdaOrTargetInfo, lambdaOrTargetInfo, ...
+    colorCorrectionOptimize(useLambdaOrTarget, lambda, targetInfo, targetDist, ...
     triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, infoNormalizer, distortionNormalizer, Disp, varargin)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
@@ -13,10 +13,10 @@ function [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, transformRGBmatrix,
 %                           'targetInfo'   – vary based on target contrast info  
 %
 %   lambdaOrTargetInfo:   Either the lambda or the var value, depending on useLambdaOrTargetInfo 
-%                                 If 'lambdaOrTargetInfo' = 'lambda': (0 ≤ lambda ≤ 1). 
+%                                 If 'lambdaOrTargetInfo' = 'lambda': (0 < lambda < 1). 
 %                                    Tradeoff weight balancing contrast maximization
 %                                    and similarity to the original image.
-%                                 If 'lambdaOrTargetInfo' = 'targetInfo', this specifies
+%                                 If 'lambdaOrTargetInfo' = 'targetinfo', this specifies
 %                                    a contrast info target
 %
 %   triLMSCalFormat:    Nx3 matrix of original LMS-calibrated image data to be transformed.
@@ -78,15 +78,25 @@ end
 
 %% Key value pairs
 parser = inputParser;
-parser.addParameter('T_init', eye(3), @(x) isnumeric(x) && isequal(size(x), [3 3]));
-parser.addParameter('targetDistortion', [], @(x) isempty(x) || isscalar(x));
-parser.addParameter('epsDistortion',    1e-4, @(x) isnumeric(x) && isscalar(x) && x>=0);
-
-
+parser.addParameter('T_init', eye(3), @(x) isnumeric(x) && isequal(size(x),[3 3]));
+parser.addParameter('epsInfo', 1e-6, @(x) isnumeric(x) && isscalar(x) && x>=0);
 parser.parse(varargin{:});
-T_init = parser.Results.T_init;
-targetDist_opt = parser.Results.targetDistortion;   % [] means just min distortion
-epsDist_opt    = parser.Results.epsDistortion;     
+T_init  = parser.Results.T_init;
+epsInfo = parser.Results.epsInfo;
+
+
+switch lower(useLambdaOrTarget)
+    case 'lambda'
+        if isempty(lambda), error('Mode ''lambda'' requires a scalar lambda.'); end
+    case 'targetinfo'
+        if isempty(targetInfo), error('Mode ''targetinfo'' requires targetInfo.'); end
+    case 'targetdist'
+        if isempty(targetInfo) || isempty(targetDist)
+            error('Mode ''targetdist'' requires both targetInfo and targetDist.');
+        end
+    otherwise
+        error('useMode must be ''lambda'', ''targetinfo'', or ''targetdist''.');
+end
 
 rng(1);
 
@@ -107,36 +117,34 @@ options = optimoptions('fmincon', ...
 %%% NEW! Attempt to add in nonlinear constraint where we keep info a constant
 %%% value and search over distortion values (want to keep info as the
 %%% target info and then get the transformation that minimizes distortion
-switch lower(useLambdaOrTargetInfo)
+switch lower(useLambdaOrTarget)
     case 'lambda'
-        fun     = @(t) lossFunction('lambda', lambdaOrTargetInfo, t, ...
+        lambdaOrTarget = lambda;
+        fun     = @(t) lossFunction('lambda', lambda, t, ...
             triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
             infoNormalizer, distortionNormalizer, Disp);
         nonlcon = [];
 
-    case 'targetinfo'
-        % Desired normalized info value
-        targetInfo = lambdaOrTargetInfo;
+    case 'targetdist'
+        lambdaOrTarget = targetDist;
 
-        % Small epsilon tolerance around target info
-        epsInfo_default = 1e-6;
-
-        % Evaluate info at T_init. If the deviation exceeds eps, expand
-        % eps to include the start so it doesn't get stuck right away
-        [~, ~, infoNorm_start] = lossFunction('lambda', 0.0, T_init(:), ...
+        % Minimize the difference between the target distortion and the
+        % actual distortion achieved
+        fun = @(t_vec) lossFunction('targetdist', targetDist, t_vec, ...
             triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
             infoNormalizer, distortionNormalizer, Disp);
 
-        % dev_start = abs(infoNorm_start - targetInfo);   % Deviation at the start
-        epsInfo   = epsInfo_default;
+        % Nonlinear constraint keeping info at a specified value
+        % (infoNormalized(t) - targetInfo)^2 - epsInfo^2 <= 0
+        nonlcon = @(t_vec) infoBandConstraint( ...
+            t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+            infoNormalizer, distortionNormalizer, Disp, targetInfo, epsInfo);
 
-        % If the deviation at the start is bigger than the tolerance, then
-        % make the tolerance a little bigger so that the starting point
-        % doesnt get stuck
-        % if dev_start > epsInfo
-        %     epsInfo = 1.05*dev_start + 1e-8;
-        %     fprintf('colorCorrectionOptimize expanded epsilon ...\n');
-        % end
+    case 'targetinfo'
+
+        lambdaOrTarget = targetInfo;
+        % Small epsilon tolerance around target info
+        epsInfo = 1e-6;
 
         % We want to minimize distortion at this fixed info level
         % lambda == 0 actually just prioritizes distortion only, so
@@ -148,37 +156,9 @@ switch lower(useLambdaOrTargetInfo)
 
         % Nonlinear constraint
         % (infoNormalized(t) - targetInfo)^2 - epsInfo^2 <= 0
-        nonlcon_info = @(t_vec) infoBandConstraint( ...
+        nonlcon = @(t_vec) infoBandConstraint( ...
             t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
             infoNormalizer, distortionNormalizer, Disp, targetInfo, epsInfo);
-
-        % Function defined later (at end of function):
-        % function [c, ceq] = infoBandConstraint(t_vec)
-        %     [~, ~, currentInfoNormalized] = lossFunction('lambda', 0.0, t_vec, ...
-        %         triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-        %         infoNormalizer, distortionNormalizer, Disp);
-        % 
-        %     % Nonlinear constraint
-        %     c   = (currentInfoNormalized - targetInfo).^2 - (epsInfo.^2);
-        %     % No linear constraint here
-        %     ceq = [];
-        % end
-       
-        % Add distortion band
-        % If user inputs targetDistortion, also need to constrain distortion near that target
-        % Combine both constraints into a single nonlcon by stacking inequality constraints.
-        if ~isempty(targetDist_opt)
-            nonlcon_dist = @(t_vec) distortionBandConstraint( ...
-                t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-                infoNormalizer, distortionNormalizer, Disp, targetDist_opt, epsDist_opt);
-
-            % Build one combined constraint: concatenate c and ceq from both bands.
-            nonlcon = @(t_vec) localCombine(t_vec, nonlcon_info, nonlcon_dist);
-
-        else
-            % Original behavior: only the info band
-            nonlcon = nonlcon_info;
-        end
 
 end
 
@@ -211,12 +191,10 @@ disp('Just finished optimization')
 % Compute the info and distortion values for the transformation matrix that
 % ultimately was chosen after the optimization
 [loss, info, infoNormalized, distortion, distortionNormalized] = ...
-    lossFunction(useLambdaOrTargetInfo, lambdaOrTargetInfo, transformRGB_opt, ...
+    lossFunction(useLambdaOrTarget, lambdaOrTarget, transformRGB_opt, ...
         triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
         infoNormalizer, distortionNormalizer, Disp);
 
-lambdaOrTargetInfo 
-infoNormalized
 % See if constraint worked
 bCheck = A_total*transformRGB_opt(:);
 if (any(bCheck > b_total))
@@ -272,26 +250,4 @@ function [c,ceq] = infoBandConstraint(t_vec, triLMSCalFormat, imgParams, dichrom
 
 c   = (infoNorm_here - targetInfo).^2 - (epsInfo.^2);
 ceq = [];
-end
-
-% distortionBandConstraint 
-% Inequality band on normalized distortion around the targetDistortion
-function [c,ceq] = distortionBandConstraint(t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-    infoNormalizer, distortionNormalizer, Disp, targetDistortionNorm, epsDistortion)
-
-[~, ~, ~, ~, distortionNorm_here] = lossFunction('lambda', 0.0, t_vec, ...
-    triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-    infoNormalizer, distortionNormalizer, Disp);
-
-% Band inequality: (dist - target)^2 - eps^2 <= 0
-c   = (distortionNorm_here - targetDistortionNorm).^2 - (epsDistortion.^2);
-ceq = [];
-end
-
-% combiner constraints
-function [c_all, ceq_all] = localCombine(t_vec_local, f1, f2)
-[c1, ceq1] = f1(t_vec_local);
-[c2, ceq2] = f2(t_vec_local);
-c_all   = [c1(:); c2(:)];
-ceq_all = [ceq1(:); ceq2(:)];
 end
