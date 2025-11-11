@@ -7,40 +7,32 @@ function [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, transformRGBmatrix,
 % [triLMSCalFormatOpt, trirgbLinCalFormatOpt, transformRGBmatrix, info, infoNormalized, distortion, distortionNormalized] = ...
 %     colorCorrectionOptimize(useLambdaOrTargetInfo, lambdaOrTargetInfo, ...
 %     triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, infoNormalizer, distortionNormalizer, Disp, varargin)
+%
 % Inputs:
-%   useLambdaOrTargetInfo: String. Optimization mode:
-%                           'lambda'       – vary tradeoff weight lambda (0 to 1)
-%                           'targetInfo'   – vary based on target contrast info  
+%   target                     Are you looking for a specific 'lambda','info', or 'distortion'?
+%   lambda                     Tradeoff weight in [0,1] when target='lambda'.
+%                                   lambda=1 means maximize information
+%                                   lambda=0 means minimize distortion
+%                              
+%   targetInfo                 Desired normalized information when target='info'.
+%   targetDist                 Desired normalized distortion value when target='distortion'.
 %
-%   lambdaOrTargetInfo:   Either the lambda or the var value, depending on useLambdaOrTargetInfo 
-%                                 If 'lambdaOrTargetInfo' = 'lambda': (0 < lambda < 1). 
-%                                    Tradeoff weight balancing contrast maximization
-%                                    and similarity to the original image.
-%                                 If 'lambdaOrTargetInfo' = 'targetinfo', this specifies
-%                                    a contrast info target
-%
-%   triLMSCalFormat:    Nx3 matrix of original LMS-calibrated image data to be transformed.
-%
-%   imgParams:          image parameters
-%
-%   dichromatType:      String. Type of color vision deficiency:
-%                           'Deuteranopia' (M-cone missing)
-%                           'Protanopia'   (L-cone missing)
-%                           'Tritanopia'   (S-cone missing)
-%
-%   infoFnc:            Function handle used to define how much info is in the image.
-%
-%   distortionFcn:      Function handle used to define similarity metric to preserve naturalness.
-%                           "squared"   -> sum of squared error
-%                           "luminance" -> keep chromaticity similar only
-%   infoNormalizer:     normalizing constant
-%   distortionNormalizer:  normalizing constant
-%
-%   Disp:               Struct with display parameters. Must include:
-%                           .M_cones2rgb  – Matrix to convert LMS to RGB
-%                           .T_cones      – Cone fundamentals
-%                           .P_monitor    – Monitor spectral power distribution
-%                           .wls          – Wavelength sampling
+%   triLMSCalFormat            Trichromatic LMS data in CalFormat
+%   imgParams                  Image/metric params used by infoFnc and distortionFcn.
+%   dichromatType              Dichromat type
+%                                   'Deuteranopia'
+%                                   'Protanopia'
+%                                   'Tritanopia'.
+%   infoFnc                    Handle for the information metric.
+%   distortionFcn              Handle for similarity metric to preserve naturalness.
+%                                   'squared' (sum of squared error),
+%   infoNormalizer             Scalar to normalize the info metric.
+%   distortionNormalizer       Scalar to normalize the distortion metric.
+%   Disp:                      Struct with display parameters. Must include:
+%                                   .M_cones2rgb  – Matrix to convert LMS to RGB
+%                                   .T_cones      – Cone fundamentals
+%                                   .P_monitor    – Monitor spectral power distribution
+%                                   .wls          – Wavelength sampling
 %
 % Outputs:
 %   LMSDaltonizedCalFormat:    daltonized LMS rendering for trichromat
@@ -60,7 +52,7 @@ function [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, transformRGBmatrix,
 % Examples are included within the code
 
 % History
-%   09/14/2024  cmd  Initial go.
+%   11/03?/2025  cmd  Initial go.
 %
 % Examples:
 %{
@@ -85,17 +77,17 @@ T_init  = parser.Results.T_init;
 
 switch lower(target)
     case 'lambda'
-        if isempty(lambda), error('Mode ''lambda'' requires a scalar lambda.'); end
+        if isempty(lambda), error('target ''lambda'' requires a lambda.'); end
     case 'info'
-        if isempty(targetInfo), error('Mode ''targetinfo'' requires targetInfo.'); end
+        if isempty(targetInfo), error('target ''info'' requires target info.'); end
     case 'distortion'
         if isempty(targetDist)
-            error('Mode ''targetdist'' requires both targetInfo and targetDist.');
+            error('target ''distortion'' requires target distortion');
         end
     otherwise
-        error('useMode must be ''lambda'', ''targetinfo'', or ''targetdist''.');
+        error('target must be ''lambda'', ''targetinfo'', or ''targetdist''.');
 end
-
+ 
 rng(1);
 
 % Get linear constraints
@@ -140,8 +132,8 @@ switch lower(target)
 
     case 'distortion'
         % Maximize info subject to distortion constraint (=targetDist)
-        % epsDist = 1e-8;
-        epsDist = max(1e-6, 0.02*abs(targetDist));
+        epsDist = 1e-4;
+        % epsDist = max(1e-6, 0.02*abs(targetDist));
 
 
         % Maximize info only (lambda=1)
@@ -215,8 +207,6 @@ triRGBContrastCalFormat_T = transformRGBmatrix * triRGBContrastCalFormat;
 diRGBContrastCalFormat_T  = M_triRGBc2diRGBc * triRGBContrastCalFormat_T;
 
 % Add back in gray before outputting the image
-% min(min(diRGBCalFormat_T(:)))
-% max(max(diRGBCalFormat_T(:)))
 diRGBCalFormatOpt = (diRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
 rgbLinDaltonizedCalFormat = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.grayRGB;
 
@@ -237,54 +227,26 @@ LMSDaltonizedCalFormat = Disp.M_rgb2cones * rgbLinDaltonizedCalFormat;
 
 end
 
-% function [c,ceq] = infoBandConstraint(t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-%     infoNormalizer, distortionNormalizer, Disp, targetInfo, epsInfo)
-% 
-% [~, ~, infoNorm_here] = lossFunction('lambda', 0.0, t_vec, ...
-%     triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-%     infoNormalizer, distortionNormalizer, Disp);
-% 
-% c   = (infoNorm_here - targetInfo).^2 - (epsInfo.^2);
-% ceq = [];
-% end
-
-% function [c,ceq] = infoBandConstraint(t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-%     infoNormalizer, distortionNormalizer, Disp, targetInfo, epsInfo)
-% 
-% [~, ~, infoNorm_here,distortionNorm_here] = lossFunction('lambda', 0.0, t_vec, ...
-%     triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-%     infoNormalizer, distortionNormalizer, Disp);
-% 
-% c   = (infoNorm_here - targetInfo).^2 - (epsInfo.^2);
-% ceq = [];
-% end
-
 function [c, ceq] = constraintBand(t_vec, triLMSCalFormat, imgParams, dichromatType,infoFnc, distortionFcn, infoNormalizer, distortionNormalizer, Disp, whichMetric, targetVal, epsBand)
-% Inputs:
-%   whichMetric : 'info' or 'distortion' (case-insensitive)
-%   targetVal   : desired normalized metric value
-%   epsBand     : half-width of the allowed band around targetVal
-%
-% Output for fmincon:
-%   c   : inequality vector, must be <= 0
-%   ceq : equality vector 
 
-    % Doesn't really matter what the loss is here, I just want to grab the
-    % info and distortion norm vals from the loss function
-    [~, ~, infoNorm, distNorm] = lossFunction('lambda', 0.0, t_vec, ...
-        triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-        infoNormalizer, distortionNormalizer, Disp);
+% Doesn't really matter what the loss is here, I just want to grab the
+% info and distortion norm vals from the loss function
+[~, ~, infoNorm, distNorm] = lossFunction('lambda', 0.0, t_vec, ...
+    triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+    infoNormalizer, distortionNormalizer, Disp);
 
-    switch lower(whichMetric)
-        case {'info','information'}
-            metricVal = infoNorm;
-        case {'dist','distortion'}
-            metricVal = distNorm;
-        otherwise
-            error('constraintBand: whichMetric must be ''info'' or ''distortion''.');
-    end
+switch lower(whichMetric)
+    case {'info','information'}
+        metricVal = infoNorm;
+    case {'dist','distortion'}
+        metricVal = distNorm;
+    otherwise
+        error('constraintBand: whichMetric must be ''info'' or ''distortion''.');
+end
 
-    % Band inequality: (metric - target)^2 - eps^2 <= 0
-    c   = (metricVal - targetVal).^2 - (epsBand.^2);
-    ceq = [];
+% Try to keep the distortion or info value as close as possible to the
+% target value (epsBand gives some wiggle room)
+% Band inequality: (metric - target)^2 - eps^2 <= 0
+c   = (metricVal - targetVal).^2 - (epsBand.^2);
+ceq = [];
 end

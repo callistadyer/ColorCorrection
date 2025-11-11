@@ -101,7 +101,9 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
         
         % Want info to be big. So minimize negative of info. Distortion you
         % want to be small, so minimize the regular positive distortion.
-        loss = fminconFactor * (-infoWeighted + distortionWeighted);
+        loss = (fminconFactor) * (-infoWeighted + distortionWeighted);
+
+    % Use this distortion one when you do an unconstrained info search:
     elseif strcmp(lower(useLambdaOrTarget), 'distortion')
         
         % The distortion sweep is having a hard time. Try getting the
@@ -109,7 +111,7 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
         % then start your search at that T value.
         distDiff = (distortionNormalized - lambdaOrTarget).^2;
 
-        loss = fminconFactor * distDiff * 100000;
+        loss = fminconFactor * distDiff * 10000;
     else
         % error('Invalid option for useLambdaOrTargetInfo: must be ''lambda'' or ''targetInfo''');
         error('gotta use lambda?')

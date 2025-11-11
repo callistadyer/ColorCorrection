@@ -42,6 +42,7 @@ if ~exist('sweepAxis','var') || isempty(sweepAxis)
     sweepAxis = 'info';
 end
 
+%%%%%%%%%%%%%%%%%%%%%%% Load it %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Check to see if this output already exists, and then load it
 projectName = 'ColorCorrection';
 outputDir   = getpref(projectName, 'outputDir');
@@ -90,9 +91,9 @@ if exist(saveFile, 'file')
     end
     return;
 end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % If it doesn't already exist, go ahead and compute the transformation as normal:
-
 % Get display
 Disp = obj.Disp;
 % Get the contrast LMS values
@@ -107,7 +108,6 @@ LMSContrastCalFormat_new = (LMSCalFormat_new - Disp.grayLMS) ./ Disp.grayLMS;
 
 % Normalize distortion and info
 normalizerValueToGetRawValue = 1;
-
 infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, dichromatType, normalizerValueToGetRawValue, Disp, obj.infoParams);
 distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, normalizerValueToGetRawValue, obj.distortionParams);
 
@@ -121,6 +121,8 @@ distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFor
 % Get target info values interpolated between lambdas 0 and 1
 targetInfoNormalized       = linspace(infoNormalized_0, infoNormalized_1, nSteps);
 targetDistortionNormalized = linspace(distortionNormalized0, distortionNormalized1, nSteps);
+% start with the biggest distortion
+% targetDistortionNormalized = fliplr(targetDistortionNormalized);
 
 % Preallocate outputs
 LMSDaltonizedCalFormatSweep              = cell(1, nSteps);
@@ -131,12 +133,8 @@ transformRGBmatrixSweep                  = cell(1, nSteps);
 infoNormalizedAchievedSweep              = zeros(1, nSteps);
 distortionNormalizedAchievedSweep        = zeros(1, nSteps);
 
-%% Sweep through target infos
+%% Sweep through target vals
 
-
-% This part lets us sweep through lambda OR through target info OR target distortion values. I
-% want to sweep through info values because it works. I want to sweep
-% through lambda values to show people that it doesn't work. 
 switch lower(sweepAxis)
     case 'info'
         xVec = targetInfoNormalized;                
@@ -152,8 +150,8 @@ T_prev = eye(3);
 for i = 1:nSteps
     thisX = xVec(i);
 
-
-    % ======== Distortion feasibility pre-solve (unconstrained on info) ========
+     
+    % Find a good starting point for the distortion sweep (unconstrained on info) 
     % Minimize (distortionNorm - target)^2 to get a feasible T close to the band,
     % then use that T as the starting point for the real constrained maximize-info step.
     if strcmpi(sweepAxis,'distortion')
@@ -163,15 +161,25 @@ for i = 1:nSteps
         feas_opts = optimoptions('fmincon', 'Algorithm','interior-point', ...
                                  'Display','none','MaxIterations',60, ...
                                  'ConstraintTolerance',1e-10,'StepTolerance',1e-10);
-        % start from previous T to keep continuity
-        [A_total, b_total, M_triRGBc2diRGBc] = buildGamutConstraints(LMSCalFormat, dichromatType, Disp);
+
+        % Constraints
+        [A_total, b_total,~] = buildGamutConstraints(LMSCalFormat, dichromatType, Disp);
 
         T_feas_vec = fmincon(feas_fun, T_prev(:), A_total, b_total, [], [], [], [], [], feas_opts);
+
+        % Check to see if we achieved the target distortion when there is
+        % no info constraint
+        [~, ~, ~, ~, distNorm_feas] = lossFunction('lambda', 0.0, T_feas_vec, ...
+            LMSCalFormat, imgParams, dichromatType, ...
+            obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
+        fprintf('[pre-solve] step %2d: targetDist=%.6g  achieved=%.6g  =%.3g\n', ...
+            i, thisX, distNorm_feas);
+
         T_I = reshape(T_feas_vec,3,3);
     else
         T_I = eye(3);
     end
-    % ==========================================================================
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
     if strcmpi(sweepAxis,'info')
@@ -228,8 +236,8 @@ for i = 1:nSteps
         % Update T_prev based on previous step
         T_prev = T_TI;  
 
-        % targetInfoVsAchievedInfo{i} = [normInfo_TI, thisX];
-        % targetDistVsAchievedDist{i} = [normInfo_TI, thisX];
+        targetInfoVsAchievedInfo{i} = [normInfo_TI, thisX];
+        targetDistVsAchievedDist{i} = [normInfo_TI, thisX];
 
 
     else
