@@ -1,5 +1,5 @@
 function [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, transformRGBmatrix, info, infoNormalized, distortion, distortionNormalized] = ...
-    colorCorrectionOptimize(useLambdaOrTarget, lambda, targetInfo, targetDist, ...
+    colorCorrectionOptimize(target, lambda, targetInfo, targetDist, ...
     triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, infoNormalizer, distortionNormalizer, Disp, varargin)
 % Optimizes a linear transformation to enhance color contrast for dichromats
 %
@@ -79,19 +79,17 @@ end
 %% Key value pairs
 parser = inputParser;
 parser.addParameter('T_init', eye(3), @(x) isnumeric(x) && isequal(size(x),[3 3]));
-parser.addParameter('epsInfo', 1e-6, @(x) isnumeric(x) && isscalar(x) && x>=0);
 parser.parse(varargin{:});
 T_init  = parser.Results.T_init;
-epsInfo = parser.Results.epsInfo;
 
 
-switch lower(useLambdaOrTarget)
+switch lower(target)
     case 'lambda'
         if isempty(lambda), error('Mode ''lambda'' requires a scalar lambda.'); end
-    case 'targetinfo'
+    case 'info'
         if isempty(targetInfo), error('Mode ''targetinfo'' requires targetInfo.'); end
-    case 'targetdist'
-        if isempty(targetInfo) || isempty(targetDist)
+    case 'distortion'
+        if isempty(targetDist)
             error('Mode ''targetdist'' requires both targetInfo and targetDist.');
         end
     otherwise
@@ -117,65 +115,63 @@ options = optimoptions('fmincon', ...
 %%% NEW! Attempt to add in nonlinear constraint where we keep info a constant
 %%% value and search over distortion values (want to keep info as the
 %%% target info and then get the transformation that minimizes distortion
-switch lower(useLambdaOrTarget)
+switch lower(target)
+
     case 'lambda'
-        lambdaOrTarget = lambda;
-        fun     = @(t) lossFunction('lambda', lambda, t, ...
-            triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-            infoNormalizer, distortionNormalizer, Disp);
+        % Trade off info vs distortion via lambda
+        fun     = @(t_vec) lossFunction('lambda', lambda, t_vec, ...
+                        triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+                        infoNormalizer, distortionNormalizer, Disp);
         nonlcon = [];
 
-    case 'targetdist'
-        lambdaOrTarget = targetDist;
-
-        % Minimize the difference between the target distortion and the
-        % actual distortion achieved
-        fun = @(t_vec) lossFunction('targetdist', targetDist, t_vec, ...
-            triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-            infoNormalizer, distortionNormalizer, Disp);
-
-        % Nonlinear constraint keeping info at a specified value
-        % (infoNormalized(t) - targetInfo)^2 - epsInfo^2 <= 0
-        nonlcon = @(t_vec) infoBandConstraint( ...
-            t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-            infoNormalizer, distortionNormalizer, Disp, targetInfo, epsInfo);
-
-    case 'targetinfo'
-
-        lambdaOrTarget = targetInfo;
-        % Small epsilon tolerance around target info
+    case 'info'
+        % Minimize distortion subject to info constraint (=targetInfo)
         epsInfo = 1e-6;
 
-        % We want to minimize distortion at this fixed info level
-        % lambda == 0 actually just prioritizes distortion only, so
-        % minimize the loss where you just minimize distortion, but with
-        % the nonlinear constraint (next line)
+        % Minimize distortion only (lambda=0)
         fun = @(t_vec) lossFunction('lambda', 0.0, t_vec, ...
-            triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-            infoNormalizer, distortionNormalizer, Disp);
+                        triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+                        infoNormalizer, distortionNormalizer, Disp);
+        % Nonlinear constraint on info
+        nonlcon = @(t_vec) constraintBand( ...
+                        t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+                        infoNormalizer, distortionNormalizer, Disp, ...
+                        'info', targetInfo, epsInfo);
 
-        % Nonlinear constraint
-        % (infoNormalized(t) - targetInfo)^2 - epsInfo^2 <= 0
-        nonlcon = @(t_vec) infoBandConstraint( ...
-            t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-            infoNormalizer, distortionNormalizer, Disp, targetInfo, epsInfo);
+    case 'distortion'
+        % Maximize info subject to distortion constraint (=targetDist)
+        % epsDist = 1e-8;
+        epsDist = max(1e-6, 0.02*abs(targetDist));
+
+
+        % Maximize info only (lambda=1)
+        fun = @(t_vec) lossFunction('lambda', 1.0, t_vec, ...
+                        triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+                        infoNormalizer, distortionNormalizer, Disp);
+        % Nonlinear constraint on distortion
+        nonlcon = @(t_vec) constraintBand( ...
+                        t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+                        infoNormalizer, distortionNormalizer, Disp, ...
+                        'distortion', targetDist, epsDist);
+        % options = optimoptions(options,'Algorithm','sqp');  % NEW
 
 end
 
 % Now do the minimization with that 
 [transformRGB_opt, fval] = fmincon(fun, T_init(:), ...            
     A_total, b_total, ...           % Linear inequality constraints (gamut)
-    [], [], [], [], ...             % Aeq, beq, lb, ub (unused here)
+    [], [], [], [], ...             % Aeq, beq, lb, ub 
     nonlcon, ...                    % Nonlinear constraint
     options);
 
 % Check that the constraint worked
-if ~isempty(nonlcon)
-    [cchk, ~] = nonlcon(transformRGB_opt);
-    if any(cchk > 1e-8)
-        warning('Info constraint not fully satisfied (max c = %.3g).', max(cchk));
-    end
-end
+% if ~isempty(nonlcon)
+%     [cchk, ~] = nonlcon(transformRGB_opt);
+%     if any(cchk > 1e-8)
+%         warning('Info constraint not fully satisfied (max c = %.3g).', max(cchk));
+%     end
+% end
+
 %%% OLD CODE FOR OPTIMIZATION:
 % % Optimization - start with identity transformation matrix
 % options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'ConstraintTolerance', 1e-10, 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
@@ -190,8 +186,8 @@ disp('Just finished optimization')
 
 % Compute the info and distortion values for the transformation matrix that
 % ultimately was chosen after the optimization
-[loss, info, infoNormalized, distortion, distortionNormalized] = ...
-    lossFunction(useLambdaOrTarget, lambdaOrTarget, transformRGB_opt, ...
+[~, info, infoNormalized, distortion, distortionNormalized] = ...
+    lossFunction('lambda', 0, transformRGB_opt, ...
         triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
         infoNormalizer, distortionNormalizer, Disp);
 
@@ -241,13 +237,54 @@ LMSDaltonizedCalFormat = Disp.M_rgb2cones * rgbLinDaltonizedCalFormat;
 
 end
 
-function [c,ceq] = infoBandConstraint(t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-    infoNormalizer, distortionNormalizer, Disp, targetInfo, epsInfo)
+% function [c,ceq] = infoBandConstraint(t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+%     infoNormalizer, distortionNormalizer, Disp, targetInfo, epsInfo)
+% 
+% [~, ~, infoNorm_here] = lossFunction('lambda', 0.0, t_vec, ...
+%     triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+%     infoNormalizer, distortionNormalizer, Disp);
+% 
+% c   = (infoNorm_here - targetInfo).^2 - (epsInfo.^2);
+% ceq = [];
+% end
 
-[~, ~, infoNorm_here] = lossFunction('lambda', 0.0, t_vec, ...
-    triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-    infoNormalizer, distortionNormalizer, Disp);
+% function [c,ceq] = infoBandConstraint(t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+%     infoNormalizer, distortionNormalizer, Disp, targetInfo, epsInfo)
+% 
+% [~, ~, infoNorm_here,distortionNorm_here] = lossFunction('lambda', 0.0, t_vec, ...
+%     triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+%     infoNormalizer, distortionNormalizer, Disp);
+% 
+% c   = (infoNorm_here - targetInfo).^2 - (epsInfo.^2);
+% ceq = [];
+% end
 
-c   = (infoNorm_here - targetInfo).^2 - (epsInfo.^2);
-ceq = [];
+function [c, ceq] = constraintBand(t_vec, triLMSCalFormat, imgParams, dichromatType,infoFnc, distortionFcn, infoNormalizer, distortionNormalizer, Disp, whichMetric, targetVal, epsBand)
+% Inputs:
+%   whichMetric : 'info' or 'distortion' (case-insensitive)
+%   targetVal   : desired normalized metric value
+%   epsBand     : half-width of the allowed band around targetVal
+%
+% Output for fmincon:
+%   c   : inequality vector, must be <= 0
+%   ceq : equality vector 
+
+    % Doesn't really matter what the loss is here, I just want to grab the
+    % info and distortion norm vals from the loss function
+    [~, ~, infoNorm, distNorm] = lossFunction('lambda', 0.0, t_vec, ...
+        triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+        infoNormalizer, distortionNormalizer, Disp);
+
+    switch lower(whichMetric)
+        case {'info','information'}
+            metricVal = infoNorm;
+        case {'dist','distortion'}
+            metricVal = distNorm;
+        otherwise
+            error('constraintBand: whichMetric must be ''info'' or ''distortion''.');
+    end
+
+    % Band inequality: (metric - target)^2 - eps^2 <= 0
+    c   = (metricVal - targetVal).^2 - (epsBand.^2);
+    ceq = [];
 end

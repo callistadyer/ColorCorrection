@@ -16,12 +16,12 @@ function outputsGrid = computeInfoDistortionGrid(obj, LMSCalFormat, imgParams, d
 %     (1) Find the min achievable distortion at that info
 %     (2) Find the max achievable distortion at that info
 %     (3) Interpolate a set of target distortion values between [min, max].
-%     (4) For each target distortion, solve for a transform that satisfies BOTH:
+%     (4) For each target distortion, solve for a transform that satisfies
 %           info = target info
-%           distortion = target distortion
+%           distortion = close to tgt info (in loss function)
 % Inputs:
 %   obj              - Daltonize/optimizer object. Must provide:
-%   LMSCalFormat     - 3×N LMS values of the ORIGINAL image (cal format)
+%   LMSCalFormat     - 3×N LMS values of the original image
 %   imgParams        - Struct of image-related parameters used by metric functions
 %   dichromatType    - type of dichromacy
 %                            'Protaniopia'
@@ -52,10 +52,8 @@ if isempty(nInfoSteps);  nInfoSteps = 10; end         % number of rows (info tar
 if isempty(nDistSteps);  nDistSteps = 7;  end         % number of cols (distortion targets)
 
 % These epsilons are the half-widths of the "stay near this target" bands.
-% epsInfo is tight: we want the achieved info to be as close to the row's
+% epsInfo is small: we want the achieved info to be as close to the row's
 % target info as possible.
-% epsDist is looser: it's generally harder to hit *exact* distortion, so we give
-% it breathing room to avoid infeasible problems (especially near MAX distortion).
 epsInfo = 1e-6;                                       
 
 % Output paths
@@ -99,7 +97,7 @@ normalizerValueToGetRawValue = 1;
 infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, ...
                            imgParams, dichromatType, normalizerValueToGetRawValue, Disp, obj.infoParams);
 distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, ...
-                           imgParams, normalizerValueToGetRawValue,                       obj.distortionParams);
+                           imgParams, normalizerValueToGetRawValue,                      obj.distortionParams);
 
 % Define the row targets (info values)
 % We reproduce your sweep's idea: use lambda endpoints to learn the info range.
@@ -134,18 +132,18 @@ targetDistortionNormalizedGrid        = zeros(nInfoSteps, nDistSteps);
 opts = optimoptions('fmincon','Algorithm','interior-point','Display','none', ...
     'ConstraintTolerance',1e-10,'StepTolerance',1e-10,'MaxIterations',200);
 
-%%%%%%%%%%%% Main loop over rows (info targets) %%%%%%%%%%%%
+%%%%%%%%%%%% Main loop info targets) %%%%%%%%%%%%
 for i = 1:nInfoSteps
     thisInfoTarget = targetInfoVec(i);
 
     % Find the min distortion at this info
     %   objective = minimize distortion (lambda==0)
-    %   constraints = info band (tight) + gamut (linear)
+    %   constraints = sta at target info + gamut constraints
     [~,~,T_min, ~, ~, ~, distN_min] = colorCorrectionOptimize( ...
         'targetinfo', [], thisInfoTarget, [], ...
         LMSCalFormat, imgParams, dichromatType, ...
-        obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, ...
-        'T_init', eye(3), 'epsInfo', epsInfo);
+        obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer,...
+        Disp,'T_init', eye(3), 'epsInfo', epsInfo);
 
     % Find the max distortion at this info 
     % Build the same info constraint as above so info stays near thisInfoTarget
@@ -154,8 +152,7 @@ for i = 1:nInfoSteps
         infoNormalizer, distortionNormalizer, Disp, thisInfoTarget, epsInfo);
 
     % Define a SCALAR objective that returns "normalized distortion"
-    % for a given transform vector t_vec. We need a scalar because
-    % fmincon minimizes a single-valued function.
+    % for a given transform vector t_vec
     %
     %   distOnly_norm(...) is a tiny file-scope helper at the bottom of this file.
     %   It calls your lossFunction and returns ONLY the normalized distortion (5th output).
@@ -175,20 +172,15 @@ for i = 1:nInfoSteps
     [T_max_vec, ~] = fmincon(@(t) -distOnly(t), T_min(:), A_total, b_total, [], [], [], [], nonl_info, opts);
     distN_max = distOnly(T_max_vec);
 
-    % Numerical guard: ensure [min, max] order (sometimes roundoff can flip them).
+    % Make sure [min, max] order is right
     if distN_max < distN_min
         tmp = distN_min; distN_min = distN_max; distN_max = tmp;
     end
 
-    % Build the column targets (distortion) 
+    % Build the distortion targets
     distTargets = linspace(distN_min, distN_max, nDistSteps);
 
     % Optimize with every (info, distortion) combination
-    % For each target distortion in this row, call colorCorrectionOptimize again
-    % with BOTH constraints active:
-    %    • info = thisInfoTarget  (epsInfo tight)
-    %    • distortion = thisDistTarget (epsDist looser)
-    %
     T_seed = eye(3);  
     for j = 1:nDistSteps
         thisDistTarget = distTargets(j);
@@ -199,12 +191,12 @@ for i = 1:nInfoSteps
             obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, ...
             'T_init', T_seed, 'epsInfo', epsInfo);
 
-        % Store the trichromat images & transform
+        % Store the trichromat images and transform
         LMSDaltonizedCalFormatGrid{i,j}    = LMS_ij;
         rgbLinDaltonizedCalFormatGrid{i,j} = rgbLin_ij;
         transformRGBmatrixGrid{i,j}        = T_ij;
 
-        % Store achieved metrics and the targets (to compare with desired)
+        % Store achieved info and distortion (to compare with desired target)
         infoNormalizedGrid{i,j}            = infoN_ij;
         distortionNormalizedGrid{i,j}      = distN_ij;
         targetInfoNormalizedGrid(i,j)      = thisInfoTarget;
@@ -272,40 +264,4 @@ function [c,ceq] = infoBandConstraint(t_vec, triLMSCalFormat, imgParams, dichrom
 
 c   = (infoNorm_here - targetInfo).^2 - (epsInfo.^2);
 ceq = [];
-end
-
-function metricFolder = buildMetricFolderName(infoFcn, infoParams, distortionFcn)
-    % Convert the function handle for the info function into a string name
-    infoFcnName       = func2str(infoFcn);
-
-    % Convert the function handle for the distortion function into a string name
-    distortionFcnName = func2str(distortionFcn);
-
-    % Regression case is a little annoying...
-    if strcmp(infoFcnName, 'computeInfo_regress')
-
-        % Regression mode needs to know what is being predicted from what
-        if ~isfield(infoParams,'predictingWhat') || ~isfield(infoParams,'predictingFromWhat')
-            % If either field is missing, throw an error
-            error('infoParams must include predictingWhat and predictingFromWhat for computeInfo_regress.');
-        end
-
-        % Build a string describing the regression relationship
-        % Example: "L-from-M"
-        paramsStrRaw = sprintf('%s-from-%s', infoParams.predictingWhat, infoParams.predictingFromWhat);
-
-        % Add some underscores, make it pretty
-        paramsString   = regexprep(paramsStrRaw, '[^A-Za-z0-9]+', '_');  
-        paramsString   = regexprep(paramsString, '^_+|_+$', '');           
-
-        % Construct the folder name in the form:
-        %   "<infoFcnName>__<paramsString>__<distortionFcnName>"
-        % Example: "computeInfo_regress__L_from_M__computeDistortion_squared"
-        metricFolder = sprintf('%s__%s__%s', infoFcnName, paramsString, distortionFcnName);
-
-    else
-        % For non-regression info functions, just join the function names with "__"
-        % Example: "computeInfo_Wade__computeDistortion_squared"
-        metricFolder = sprintf('%s__%s', infoFcnName, distortionFcnName);
-    end
 end

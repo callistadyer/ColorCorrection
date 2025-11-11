@@ -1,14 +1,23 @@
-function saveTransformedOutputs(outputs, pathName, nSteps, infoFcn, infoParams, distortionFcn, Disp)
+function saveTransformedOutputs(outputs, pathName, nSteps, infoFcn, infoParams, distortionFcn, Disp, varargin)
 % saveTransformedOutputs  Save outputs, per-step images, and sweep montages.
 %
 % Inputs:
-%   outputs        - Struct (with sweep cell array)
+%   outputs        - 1×nSteps cell of structs (each with fields saved in computeSweep)
 %   pathName       - Relative image path (e.g., 'Deuteranopia/flower/s1_m32_n32')
 %   nSteps         - Number of sweep steps
-%   isSweep        - True if this is a sweep, false if single output
 %   infoFcn        - Handle to the info function
+%   infoParams     - Struct passed to info function
 %   distortionFcn  - Handle to the distortion function
-%   Disp           - Display struct (for rendering)
+%   Disp           - Display struct
+%
+% Optional key/value:
+%   'sweepAxis'    - 'info' 'distortion' 'lambda' 
+
+% Parse options
+p = inputParser;
+addParameter(p,'sweepAxis','info',@(s) ischar(s) || isstring(s));
+parse(p,varargin{:});
+axisTag = lower(string(p.Results.sweepAxis));   % 'info' | 'distortion' | 'lambda'
 
 % Output folder structure
 projectName = 'ColorCorrection';
@@ -18,80 +27,212 @@ saveBase    = fullfile(outputDir, 'testImagesTransformed');
 infoFcnName       = func2str(infoFcn);
 distortionFcnName = func2str(distortionFcn);
 
-% ---- build metric folder (include infoParams ONLY for computeInfo_regress) ----
+% Build metric folder (include infoParams ONLY for computeInfo_regress)
 if strcmp(infoFcnName,'computeInfo_regress')
-    % Expect fields: predictingWhat, predictingFromWhat
     if ~isfield(infoParams,'predictingWhat') || ~isfield(infoParams,'predictingFromWhat')
         error('infoParams must include predictingWhat and predictingFromWhat for computeInfo_regress.');
     end
     paramsStrRaw = sprintf('%s-from-%s', infoParams.predictingWhat, infoParams.predictingFromWhat);
-    paramsSlug   = regexprep(paramsStrRaw, '[^A-Za-z0-9]+', '_');  % keep A–Z as-is
-    paramsSlug   = regexprep(paramsSlug, '^_+|_+$', '');           % trim leading/trailing "_"
+    paramsSlug   = regexprep(paramsStrRaw, '[^A-Za-z0-9]+', '_');
+    paramsSlug   = regexprep(paramsSlug, '^_+|_+$', '');
     metricFolder = sprintf('%s__%s__%s', infoFcnName, paramsSlug, distortionFcnName);
-
 else
     metricFolder = sprintf('%s__%s', infoFcnName, distortionFcnName);
 end
 
-stepFolder        = sprintf('%dsteps', nSteps);
-saveSubdir        = fullfile(saveBase, pathName, metricFolder, stepFolder);
-imageSaveDir      = fullfile(saveSubdir, 'IndividualImages');
-figureSaveDir     = fullfile(saveSubdir, 'MontageFigures');
+% Include sweep axis in the run folder
+stepFolder    = sprintf('%s_%dsteps', axisTag, nSteps);
+saveSubdir    = fullfile(saveBase, pathName, metricFolder, stepFolder);
+imageSaveDir  = fullfile(saveSubdir, 'IndividualImages');
+figureSaveDir = fullfile(saveSubdir, 'MontageFigures');
 
-if ~exist(saveSubdir, 'dir'),    mkdir(saveSubdir); end
-if ~exist(imageSaveDir, 'dir'),  mkdir(imageSaveDir); end
+if ~exist(saveSubdir,    'dir'), mkdir(saveSubdir);    end
+if ~exist(imageSaveDir,  'dir'), mkdir(imageSaveDir);  end
 if ~exist(figureSaveDir, 'dir'), mkdir(figureSaveDir); end
 
 % Save mat file
 save(fullfile(saveSubdir, 'sweepOutputs.mat'), 'outputs');
 fprintf('[saveTransformedOutputs] Saved sweep outputs to: %s\n', saveSubdir);
 
-% Save image of every step
+% Helper for CalFormat -> image
+CalFormatToImage = @(calRGB, m, n) permute(reshape(calRGB, [3, m, n]), [2 3 1]);
+
+% Save image of every step with axis-specific labels
 for i = 1:nSteps
-    stepOut = outputs{i};  % Assume outputs is nSteps×1 cell array of structs
+    stepOut = outputs{i};  % struct per step
+    m = stepOut.imgParams.m; n = stepOut.imgParams.n;
 
-    infoVal = stepOut.targetInfoNormalized;
+    % Axis-specific label value for filenames
+    switch axisTag
+        case 'info'
+            labelVal = stepOut.targetInfoNormalized;
+            labelStr = sprintf('Info%.2f', labelVal);
+        case 'distortion'
+            labelVal = stepOut.targetDistortionNormalized;
+            labelStr = sprintf('Dist%.2f', labelVal);
+        case 'lambda'
+            % Reconstruct lambda sweep value (uniform grid)
+            if nSteps>1, lam = (i-1)/(nSteps-1); else, lam = 0; end
+            labelStr = sprintf('Lam%.2f', lam);
+        otherwise
+            error('Unknown sweepAxis ''%s''.', axisTag);
+    end
 
-    % trichromat
-    triRGB = CalFormatToImage(rgbLin2RGB(stepOut.rgbLinDaltonizedCalFormat, Disp), ...
-                              stepOut.imgParams.m, stepOut.imgParams.n);
-    triName = sprintf('step%02d_Info%.2f_trichromat.png', i, infoVal);
-    imwrite(triRGB, fullfile(imageSaveDir, triName));
+    % Trichromat image
+    triRGB = CalFormatToImage(rgbLin2RGB(stepOut.rgbLinDaltonizedCalFormat, Disp), m, n);
+    triName = sprintf('step%02d_%s_trichromat.png', i, labelStr);
+    imwrite(min(max(triRGB,0),1), fullfile(imageSaveDir, triName));
 
-    % dichromat
-    diRGB = CalFormatToImage(rgbLin2RGB(stepOut.rgbLinDaltonizedRenderedCalFormat, Disp), ...
-                             stepOut.imgParams.m, stepOut.imgParams.n);
-    diName = sprintf('step%02d_Info%.2f_dichromat.png', i, infoVal);
-    imwrite(diRGB, fullfile(imageSaveDir, diName));
+    % Dichromat image
+    diRGB = CalFormatToImage(rgbLin2RGB(stepOut.rgbLinDaltonizedRenderedCalFormat, Disp), m, n);
+    diName = sprintf('step%02d_%s_dichromat.png', i, labelStr);
+    imwrite(min(max(diRGB,0),1), fullfile(imageSaveDir, diName));
 end
 
-% Save montage figures
-% Trichromat montage
-figure('Name', 'Trichromat Sweep', 'Visible', 'off');
+% Save montage figures (axis-specific titles)
 nCols = ceil(sqrt(nSteps)); nRows = ceil(nSteps / nCols);
+
+% Trichromat montage
+fig1 = figure('Name', 'Trichromat Sweep', 'Visible', 'off', 'Color','w');
 for i = 1:nSteps
     subplot(nRows, nCols, i);
-    triRGB = CalFormatToImage(rgbLin2RGB(outputs{i}.rgbLinDaltonizedCalFormat, Disp), ...
-                              outputs{i}.imgParams.m, outputs{i}.imgParams.n);
-    imshow(triRGB);
-    title(LiteralUnderscore(sprintf('Info %.2f', outputs{i}.targetInfoNormalized)), 'FontSize', 8);
+    m = outputs{i}.imgParams.m; n = outputs{i}.imgParams.n;
+    triRGB = CalFormatToImage(rgbLin2RGB(outputs{i}.rgbLinDaltonizedCalFormat, Disp), m, n);
+    imshow(min(max(triRGB,0),1));
+    switch axisTag
+        case 'info'
+            ttl = sprintf('Info %.2f', outputs{i}.targetInfoNormalized);
+        case 'distortion'
+            ttl = sprintf('Dist %.2f', outputs{i}.targetDistortionNormalized);
+        case 'lambda'
+            if nSteps>1, lam = (i-1)/(nSteps-1); else, lam = 0; end
+            ttl = sprintf('\\lambda %.2f', lam);
+    end
+    title(LiteralUnderscore(ttl), 'FontSize', 8);
 end
-triTitle = sprintf('Trichromat Sweep – %s', metricFolder);
+triTitle = sprintf('Trichromat Sweep – %s – %s', metricFolder, axisTag);
 sgtitle(LiteralUnderscore(triTitle));
-saveas(gcf, fullfile(figureSaveDir, 'trichromatSweep.png'));
-close(gcf);
+saveas(fig1, fullfile(figureSaveDir, sprintf('trichromatSweep_%s.png', axisTag)));
+close(fig1);
 
 % Dichromat montage
-figure('Name', 'Dichromat Sweep', 'Visible', 'off');
+fig2 = figure('Name', 'Dichromat Sweep', 'Visible', 'off', 'Color','w');
 for i = 1:nSteps
     subplot(nRows, nCols, i);
-    diRGB = CalFormatToImage(rgbLin2RGB(outputs{i}.rgbLinDaltonizedRenderedCalFormat, Disp), ...
-                             outputs{i}.imgParams.m, outputs{i}.imgParams.n);
-    imshow(diRGB);
-    title(LiteralUnderscore(sprintf('Info %.2f', outputs{i}.targetInfoNormalized)), 'FontSize', 8);
+    m = outputs{i}.imgParams.m; n = outputs{i}.imgParams.n;
+    diRGB = CalFormatToImage(rgbLin2RGB(outputs{i}.rgbLinDaltonizedRenderedCalFormat, Disp), m, n);
+    imshow(min(max(diRGB,0),1));
+    switch axisTag
+        case 'info'
+            ttl = sprintf('Info %.2f', outputs{i}.targetInfoNormalized);
+        case 'distortion'
+            ttl = sprintf('Dist %.2f', outputs{i}.targetDistortionNormalized);
+        case 'lambda'
+            if nSteps>1, lam = (i-1)/(nSteps-1); else, lam = 0; end
+            ttl = sprintf('\\lambda %.2f', lam);
+    end
+    title(LiteralUnderscore(ttl), 'FontSize', 8);
 end
-diTitle = sprintf('Dichromat Sweep – %s', metricFolder);
+diTitle = sprintf('Dichromat Sweep – %s – %s', metricFolder, axisTag);
 sgtitle(LiteralUnderscore(diTitle));
-saveas(gcf, fullfile(figureSaveDir, 'dichromatSweep.png'));
-close(gcf);
+saveas(fig2, fullfile(figureSaveDir, sprintf('dichromatSweep_%s.png', axisTag)));
+close(fig2);
 end
+
+% function saveTransformedOutputs(outputs, pathName, nSteps, infoFcn, infoParams, distortionFcn, Disp)
+% % saveTransformedOutputs  Save outputs, per-step images, and sweep montages.
+% %
+% % Inputs:
+% %   outputs        - Struct (with sweep cell array)
+% %   pathName       - Relative image path (e.g., 'Deuteranopia/flower/s1_m32_n32')
+% %   nSteps         - Number of sweep steps
+% %   isSweep        - True if this is a sweep, false if single output
+% %   infoFcn        - Handle to the info function
+% %   distortionFcn  - Handle to the distortion function
+% %   Disp           - Display struct (for rendering)
+% 
+% % Output folder structure
+% projectName = 'ColorCorrection';
+% outputDir   = getpref(projectName, 'outputDir');
+% saveBase    = fullfile(outputDir, 'testImagesTransformed');
+% 
+% infoFcnName       = func2str(infoFcn);
+% distortionFcnName = func2str(distortionFcn);
+% 
+% % ---- build metric folder (include infoParams ONLY for computeInfo_regress) ----
+% if strcmp(infoFcnName,'computeInfo_regress')
+%     % Expect fields: predictingWhat, predictingFromWhat
+%     if ~isfield(infoParams,'predictingWhat') || ~isfield(infoParams,'predictingFromWhat')
+%         error('infoParams must include predictingWhat and predictingFromWhat for computeInfo_regress.');
+%     end
+%     paramsStrRaw = sprintf('%s-from-%s', infoParams.predictingWhat, infoParams.predictingFromWhat);
+%     paramsSlug   = regexprep(paramsStrRaw, '[^A-Za-z0-9]+', '_');  % keep A–Z as-is
+%     paramsSlug   = regexprep(paramsSlug, '^_+|_+$', '');           % trim leading/trailing "_"
+%     metricFolder = sprintf('%s__%s__%s', infoFcnName, paramsSlug, distortionFcnName);
+% 
+% else
+%     metricFolder = sprintf('%s__%s', infoFcnName, distortionFcnName);
+% end
+% 
+% stepFolder        = sprintf('%dsteps', nSteps);
+% saveSubdir        = fullfile(saveBase, pathName, metricFolder, stepFolder);
+% imageSaveDir      = fullfile(saveSubdir, 'IndividualImages');
+% figureSaveDir     = fullfile(saveSubdir, 'MontageFigures');
+% 
+% if ~exist(saveSubdir, 'dir'),    mkdir(saveSubdir); end
+% if ~exist(imageSaveDir, 'dir'),  mkdir(imageSaveDir); end
+% if ~exist(figureSaveDir, 'dir'), mkdir(figureSaveDir); end
+% 
+% % Save mat file
+% save(fullfile(saveSubdir, 'sweepOutputs.mat'), 'outputs');
+% fprintf('[saveTransformedOutputs] Saved sweep outputs to: %s\n', saveSubdir);
+% 
+% % Save image of every step
+% for i = 1:nSteps
+%     stepOut = outputs{i};  % Assume outputs is nSteps×1 cell array of structs
+% 
+%     infoVal = stepOut.targetInfoNormalized;
+% 
+%     % trichromat
+%     triRGB = CalFormatToImage(rgbLin2RGB(stepOut.rgbLinDaltonizedCalFormat, Disp), ...
+%                               stepOut.imgParams.m, stepOut.imgParams.n);
+%     triName = sprintf('step%02d_Info%.2f_trichromat.png', i, infoVal);
+%     imwrite(triRGB, fullfile(imageSaveDir, triName));
+% 
+%     % dichromat
+%     diRGB = CalFormatToImage(rgbLin2RGB(stepOut.rgbLinDaltonizedRenderedCalFormat, Disp), ...
+%                              stepOut.imgParams.m, stepOut.imgParams.n);
+%     diName = sprintf('step%02d_Info%.2f_dichromat.png', i, infoVal);
+%     imwrite(diRGB, fullfile(imageSaveDir, diName));
+% end
+% 
+% % Save montage figures
+% % Trichromat montage
+% figure('Name', 'Trichromat Sweep', 'Visible', 'off');
+% nCols = ceil(sqrt(nSteps)); nRows = ceil(nSteps / nCols);
+% for i = 1:nSteps
+%     subplot(nRows, nCols, i);
+%     triRGB = CalFormatToImage(rgbLin2RGB(outputs{i}.rgbLinDaltonizedCalFormat, Disp), ...
+%                               outputs{i}.imgParams.m, outputs{i}.imgParams.n);
+%     imshow(triRGB);
+%     title(LiteralUnderscore(sprintf('Info %.2f', outputs{i}.targetInfoNormalized)), 'FontSize', 8);
+% end
+% triTitle = sprintf('Trichromat Sweep – %s', metricFolder);
+% sgtitle(LiteralUnderscore(triTitle));
+% saveas(gcf, fullfile(figureSaveDir, 'trichromatSweep.png'));
+% close(gcf);
+% 
+% % Dichromat montage
+% figure('Name', 'Dichromat Sweep', 'Visible', 'off');
+% for i = 1:nSteps
+%     subplot(nRows, nCols, i);
+%     diRGB = CalFormatToImage(rgbLin2RGB(outputs{i}.rgbLinDaltonizedRenderedCalFormat, Disp), ...
+%                              outputs{i}.imgParams.m, outputs{i}.imgParams.n);
+%     imshow(diRGB);
+%     title(LiteralUnderscore(sprintf('Info %.2f', outputs{i}.targetInfoNormalized)), 'FontSize', 8);
+% end
+% diTitle = sprintf('Dichromat Sweep – %s', metricFolder);
+% sgtitle(LiteralUnderscore(diTitle));
+% saveas(gcf, fullfile(figureSaveDir, 'dichromatSweep.png'));
+% close(gcf);
+% end

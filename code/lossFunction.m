@@ -72,29 +72,29 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
     % Loss functions
     fminconFactor = 1e8;
 
-    if strcmp(lower(useLambdaOrTarget), 'targetinfo')
-        % Squared difference from the desired info value
-        info_diff = infoNormalized - lambdaOrTarget;
-        info_scalar = 1e20;
-        loss = fminconFactor * (info_scalar * info_diff^2);
+    % if strcmp(lower(useLambdaOrTarget), 'info')
+    %     % Squared difference from the desired info value
+    %     info_diff = infoNormalized - lambdaOrTarget;
+    %     info_scalar = 1e20;
+    %     loss = fminconFactor * (info_scalar * info_diff^2);
+    % 
+    %     % want to bake in distortion here a little bit
+    %     % nonlinear constraint, take parameter, compute info 
+    %     % minimize distortion, subject to the constraint that the info is
+    %     % what i just found here 
+    %     % nonlinear constraint function that computes the info from
+    %     % whatever parameters its passed, takes abs(target-actualinfo) and
+    %     % have some tolerance to deviate from that targetInfo
+    %     % - abs(target-actualinfo) < tolerance
+    % 
+    % 
+    %     % CHANGE THE useLambdaOrTargetInfo TO useLambdaOrTarget
+    % elseif strcmp(lower(useLambdaOrTarget), 'distortion')
+    %     distortion_diff = distortionNormalized - lambdaOrTarget;
+    %     distortion_scalar = 1e20;
+    %     loss = fminconFactor * (distortion_scalar * distortion_diff^2);
 
-        % want to bake in distortion here a little bit
-        % nonlinear constraint, take parameter, compute info 
-        % minimize distortion, subject to the constraint that the info is
-        % what i just found here 
-        % nonlinear constraint function that computes the info from
-        % whatever parameters its passed, takes abs(target-actualinfo) and
-        % have some tolerance to deviate from that targetInfo
-        % - abs(target-actualinfo) < tolerance
-        
-
-        % CHANGE THE useLambdaOrTargetInfo TO useLambdaOrTarget
-    elseif strcmp(lower(useLambdaOrTarget), 'targetdist')
-        distortion_diff = distortionNormalized - lambdaOrTarget;
-        distortion_scalar = 1e20;
-        loss = fminconFactor * (distortion_scalar * distortion_diff^2);
-
-    elseif strcmp(lower(useLambdaOrTarget), 'lambda')
+    if strcmp(lower(useLambdaOrTarget), 'lambda')
         % Lambda-weighted loss function
         infoWeighted       = lambdaOrTarget   * infoNormalized;
         distortionWeighted = (1 - lambdaOrTarget) * distortionNormalized;
@@ -102,8 +102,16 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
         % Want info to be big. So minimize negative of info. Distortion you
         % want to be small, so minimize the regular positive distortion.
         loss = fminconFactor * (-infoWeighted + distortionWeighted);
+    elseif strcmp(lower(useLambdaOrTarget), 'distortion')
+        
+        % The distortion sweep is having a hard time. Try getting the
+        % transformation T that is able to achieve the correct distortion,
+        % then start your search at that T value.
+        distDiff = (distortionNormalized - lambdaOrTarget).^2;
 
+        loss = fminconFactor * distDiff * 100000;
     else
-        error('Invalid option for useLambdaOrTargetInfo: must be ''lambda'' or ''targetInfo''');
+        % error('Invalid option for useLambdaOrTargetInfo: must be ''lambda'' or ''targetInfo''');
+        error('gotta use lambda?')
     end
 end

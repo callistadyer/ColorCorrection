@@ -32,9 +32,8 @@ LM_orig = L_old - M_old;
 
 % Delta in (L+M) and S planes
 % delta_LplusM = (L_new + M_new) - (L_old + M_old);  % (L+M)new - (L+M)old
-delta_L = (L_new) - (L_old);  % (L+M)new - (L+M)old
-
-delta_S      = S_new - S_old;                      % Snew - Sold
+delta_L = (L_new) - (L_old);  
+delta_S = S_new - S_old;                 
 
 % Get best fitting coefficients that explain how much of the original 
 % L–M contrast (LM_orig) appears in the delta(L+M) and delta(S) directions.
