@@ -145,7 +145,6 @@ switch lower(target)
                         t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
                         infoNormalizer, distortionNormalizer, Disp, ...
                         'distortion', targetDist, epsDist);
-        % options = optimoptions(options,'Algorithm','sqp');  % NEW
 
 end
 

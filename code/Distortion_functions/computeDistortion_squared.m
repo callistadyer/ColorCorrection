@@ -23,5 +23,5 @@ distortion = sum(diff.^2);            % Sum of squared differences
 
 distortionNormalized = distortion/normalizingValue;
 
-distortionNormalized = distortionNormalized*100;
+% distortionNormalized = distortionNormalized/100;
 end

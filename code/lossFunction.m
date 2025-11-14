@@ -11,8 +11,8 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
 %   and distortion, and combining them based on the loss formulation.
 %
 % Inputs:
-%   useLambdaOrTargetInfo    'lambda' or 'targetInfo'
-%   lambdaOrTargetInfo        Scalar lambda (0–1) or target info value
+%   useLambdaOrTarget        
+%   lambdaOrTarget            Scalar lambda (0–1) or target info value
 %   t_vec                     9×1 vectorized transformation matrix
 %   LMSCalFormat              3×N LMS values in PTB CalFormat
 %   imgParams                 Struct with image and normalization info
@@ -111,7 +111,7 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
         % then start your search at that T value.
         distDiff = (distortionNormalized - lambdaOrTarget).^2;
 
-        loss = fminconFactor * distDiff * 10000;
+        loss = fminconFactor * distDiff;
     else
         % error('Invalid option for useLambdaOrTargetInfo: must be ''lambda'' or ''targetInfo''');
         error('gotta use lambda?')

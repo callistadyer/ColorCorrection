@@ -109,7 +109,7 @@ LMSContrastCalFormat_new = (LMSCalFormat_new - Disp.grayLMS) ./ Disp.grayLMS;
 % Normalize distortion and info
 normalizerValueToGetRawValue = 1;
 infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, dichromatType, normalizerValueToGetRawValue, Disp, obj.infoParams);
-distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, normalizerValueToGetRawValue, obj.distortionParams);
+distortionNormalizer = obj.distortionFcn(LMSCalFormat, LMSCalFormat_new, imgParams, normalizerValueToGetRawValue, obj.distortionParams);
 
 % Get info values for lambda = 0 and lambda = 1
 [~,~,~,info_0,infoNormalized_0,distortion0, distortionNormalized0] = colorCorrectionOptimize("lambda", 0, [], [], LMSCalFormat, imgParams, dichromatType, ...
@@ -150,9 +150,9 @@ T_prev = eye(3);
 for i = 1:nSteps
     thisX = xVec(i);
 
-     
+    
     % Find a good starting point for the distortion sweep (unconstrained on info) 
-    % Minimize (distortionNorm - target)^2 to get a feasible T close to the band,
+    % Minimize (distortionNorm - target)^2 to get a feasible T,
     % then use that T as the starting point for the real constrained maximize-info step.
     if strcmpi(sweepAxis,'distortion')
         feas_fun  = @(t_vec) lossFunction('distortion', thisX, t_vec, ...
@@ -169,15 +169,13 @@ for i = 1:nSteps
 
         % Check to see if we achieved the target distortion when there is
         % no info constraint
-        [~, ~, ~, ~, distNorm_feas] = lossFunction('lambda', 0.0, T_feas_vec, ...
+        [~, ~, ~, ~, distNorm_feas(i)] = lossFunction('lambda', 0.0, T_feas_vec, ...
             LMSCalFormat, imgParams, dichromatType, ...
             obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
         fprintf('[pre-solve] step %2d: targetDist=%.6g  achieved=%.6g  =%.3g\n', ...
-            i, thisX, distNorm_feas);
+            i, thisX, distNorm_feas(i));
 
-        T_I = reshape(T_feas_vec,3,3);
-    else
-        T_I = eye(3);
+        T_prev = reshape(T_feas_vec,3,3);
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -254,6 +252,9 @@ for i = 1:nSteps
     [LMSDaltonizedRenderedCalFormatSweep{i},rgbLinDaltonizedRenderedCalFormatSweep{i},~] = DichromRenderLinear(LMSDaltonizedCalFormatSweep{i},dichromatType,Disp);
 
 end
+% figure(); plot(distNorm_feas,xVec,'-o')
+% disp([distNorm_feas(:), xVec(:)]);
+
 
 outputs = cell(nSteps, 1);  
 

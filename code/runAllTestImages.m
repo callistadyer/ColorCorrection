@@ -50,7 +50,7 @@ for ii = 1:numel(imageTypes)
 %   (1) Run an info sweep (minimize distortion at each target info)
 %   (2) Run a distortion sweep (maximize info at each target distortion)
 
-nSteps = 2;                                % number of sweep steps
+nSteps = 11;                                % number of sweep steps
 nCols  = ceil(sqrt(nSteps));                % grid columns (near-square)
 nRows  = ceil(nSteps / nCols);              % grid rows
 
