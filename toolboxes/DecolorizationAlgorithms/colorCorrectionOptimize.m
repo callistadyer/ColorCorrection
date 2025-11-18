@@ -104,9 +104,10 @@ options = optimoptions('fmincon', ...
     'MaxIterations',200);
 
 
-%%% NEW! Attempt to add in nonlinear constraint where we keep info a constant
-%%% value and search over distortion values (want to keep info as the
-%%% target info and then get the transformation that minimizes distortion
+% Attempt to add in nonlinear constraint where we keep info a constant
+% value and search over distortion values (want to keep info as the
+% target info and then get the transformation that minimizes distortion, or
+% keep distortion fixed and maximize info)
 switch lower(target)
 
     case 'lambda'
@@ -133,8 +134,6 @@ switch lower(target)
     case 'distortion'
         % Maximize info subject to distortion constraint (=targetDist)
         epsDist = 1e-4;
-        % epsDist = max(1e-6, 0.02*abs(targetDist));
-
 
         % Maximize info only (lambda=1)
         fun = @(t_vec) lossFunction('lambda', 1.0, t_vec, ...

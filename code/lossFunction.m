@@ -94,7 +94,7 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
     %     distortion_scalar = 1e20;
     %     loss = fminconFactor * (distortion_scalar * distortion_diff^2);
 
-    if strcmp(lower(useLambdaOrTarget), 'lambda')
+    if strcmp(useLambdaOrTarget, 'lambda')
         % Lambda-weighted loss function
         infoWeighted       = lambdaOrTarget   * infoNormalized;
         distortionWeighted = (1 - lambdaOrTarget) * distortionNormalized;
@@ -104,7 +104,7 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
         loss = (fminconFactor) * (-infoWeighted + distortionWeighted);
 
     % Use this distortion one when you do an unconstrained info search:
-    elseif strcmp(lower(useLambdaOrTarget), 'distortion')
+    elseif strcmp(useLambdaOrTarget, 'distortion')
         
         % The distortion sweep is having a hard time. Try getting the
         % transformation T that is able to achieve the correct distortion,
