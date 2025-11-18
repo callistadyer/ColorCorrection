@@ -59,7 +59,7 @@ saveSubdir = fullfile(saveBase, pathName, metricFolder, runFolder);
 saveFile   = fullfile(saveSubdir, 'sweepOutputs.mat');
 
 if exist(saveFile, 'file')
-    fprintf('[computeSweep] Loading old sweep from: %s\n', saveFile);
+    fprintf('computeSweep Loading old sweep from: %s\n', saveFile);
     loaded  = load(saveFile);
     outputs = loaded.outputs;
 
