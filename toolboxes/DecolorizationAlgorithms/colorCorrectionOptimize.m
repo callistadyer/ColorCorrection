@@ -187,6 +187,15 @@ if (any(bCheck > b_total))
     fprintf('Failed to satisfy constraint\n');
 end  
  
+if strcmpi(target, 'distortion')
+    % Report target vs achieved normalized distortion
+    fprintf('[DISTORTION] targetDist = %.6f, achieved = %.6f, diff = %.6f\n', ...
+        targetDist, distortionNormalized, distortionNormalized - targetDist);
+end
+% the idea here was that maybe the constraint for distortion worked but
+% keeping it in gamut didn't? or maybe the attempt to keep it in gamut is
+% what's making it fail the search? 
+
 % Reshape optimal solution into matrix
 transformRGBmatrix = reshape(transformRGB_opt, 3, 3);
 
@@ -210,13 +219,13 @@ rgbLinDaltonizedCalFormat = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.gra
 
 % Cut off values outside of gamut, when there is some weird numerical out
 % of bounds 
-if (max(rgbLinDaltonizedCalFormat(:))>1)% && max(trirgbLinCalFormat_T(:))<1+1e-2)
-    rgbLinDaltonizedCalFormat(rgbLinDaltonizedCalFormat>1)=1;
-end
-
-if (min(rgbLinDaltonizedCalFormat(:))<0)% && min(trirgbLinCalFormat_T(:))>0-1e-2)
-    rgbLinDaltonizedCalFormat(rgbLinDaltonizedCalFormat<0)=0;
-end
+% if (max(rgbLinDaltonizedCalFormat(:))>1)% && max(trirgbLinCalFormat_T(:))<1+1e-2)
+%     rgbLinDaltonizedCalFormat(rgbLinDaltonizedCalFormat>1)=1;
+% end
+% 
+% if (min(rgbLinDaltonizedCalFormat(:))<0)% && min(trirgbLinCalFormat_T(:))>0-1e-2)
+%     rgbLinDaltonizedCalFormat(rgbLinDaltonizedCalFormat<0)=0;
+% end
 
 triRGBCalFormatOpt = rgbLin2RGB(rgbLinDaltonizedCalFormat,Disp);
 

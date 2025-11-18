@@ -110,6 +110,7 @@ LMSContrastCalFormat_new = (LMSCalFormat_new - Disp.grayLMS) ./ Disp.grayLMS;
 normalizerValueToGetRawValue = 1;
 infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, dichromatType, normalizerValueToGetRawValue, Disp, obj.infoParams);
 distortionNormalizer = obj.distortionFcn(LMSCalFormat, LMSCalFormat_new, imgParams, normalizerValueToGetRawValue, obj.distortionParams);
+% distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, normalizerValueToGetRawValue, obj.distortionParams);
 
 % Get info values for lambda = 0 and lambda = 1
 [~,~,~,info_0,infoNormalized_0,distortion0, distortionNormalized0] = colorCorrectionOptimize("lambda", 0, [], [], LMSCalFormat, imgParams, dichromatType, ...
@@ -254,6 +255,15 @@ for i = 1:nSteps
 end
 % figure(); plot(distNorm_feas,xVec,'-o')
 % disp([distNorm_feas(:), xVec(:)]);
+
+for i = 1:nSteps
+    rgbLin = rgbLinDaltonizedRenderedCalFormatSweep{i};
+    rgb = rgbLin2RGB(rgbLin,Disp);
+    rgbImg = CalFormatToImage(rgb,imgParams.m,imgParams.n);
+    figure();
+    imagesc(rgbImg)
+    axis square
+end
 
 
 outputs = cell(nSteps, 1);  
