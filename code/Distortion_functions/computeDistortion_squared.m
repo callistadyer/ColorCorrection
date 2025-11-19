@@ -1,8 +1,8 @@
-function [distortion, distortionNormalized] = computeDistortion_squared(LMS_old, LMS_new, imgParams, normalizingValue, paramsStruct)
+function [distortion, distortionNormalized] = computeDistortion_squared(LMS_oldCalFormat, LMS_newCalFormat, imgParams, normalizingValue, Disp, paramsStruct)
 % computeDistortion_squared  Computes sum of squared error between LMS images
 %
 % Syntax:
-%   [distortion, distortionNormalized] = computeDistortion_squared(LMS_old, LMS_new, imgParams, normalizingValue, paramsStruct)
+%   [distortion, distortionNormalized] = computeDistortion_squared(LMS_old, LMS_new, imgParams, normalizingValue, Disp, paramsStruct)
 %
 % Inputs:
 %   LMS_old:            3 x N matrix of original LMS values
@@ -18,7 +18,8 @@ function [distortion, distortionNormalized] = computeDistortion_squared(LMS_old,
 % Example:
 %   distortion = computeDistortion_squared(LMS_old, LMS_new);
 
-diff = LMS_new(:) - LMS_old(:);       % subtract LMS vectors
+
+diff = LMS_newCalFormat(:) - LMS_oldCalFormat(:);       % subtract LMS vectors
 distortion = sum(diff.^2);            % Sum of squared differences
 
 distortionNormalized = distortion/normalizingValue;

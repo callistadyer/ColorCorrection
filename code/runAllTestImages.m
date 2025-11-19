@@ -12,8 +12,8 @@ setType       = 1;
 dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
-m = 31;
-n = 31;
+m = 64;
+n = 64;
 
 % How many steps do you want in a transformation sweep?
 nSteps = 11;  
@@ -35,7 +35,8 @@ infoParams = struct( ...
 % infoParams = struct();
 
 %%%%%%% DISTORTION FUNCTION %%%%%%
-distortionFcn = @computeDistortion_squared;
+% distortionFcn = @computeDistortion_squared;
+distortionFcn = @computeDistortion_DE2000;
 distortionParams = struct();
 
 %%%%%%%%% RENDER FUNCTION %%%%%%%%

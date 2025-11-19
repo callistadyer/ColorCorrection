@@ -219,13 +219,13 @@ rgbLinDaltonizedCalFormat = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.gra
 
 % Cut off values outside of gamut, when there is some weird numerical out
 % of bounds 
-% if (max(rgbLinDaltonizedCalFormat(:))>1)% && max(trirgbLinCalFormat_T(:))<1+1e-2)
-%     rgbLinDaltonizedCalFormat(rgbLinDaltonizedCalFormat>1)=1;
-% end
-% 
-% if (min(rgbLinDaltonizedCalFormat(:))<0)% && min(trirgbLinCalFormat_T(:))>0-1e-2)
-%     rgbLinDaltonizedCalFormat(rgbLinDaltonizedCalFormat<0)=0;
-% end
+if (max(rgbLinDaltonizedCalFormat(:))>1)% && max(trirgbLinCalFormat_T(:))<1+1e-2)
+    rgbLinDaltonizedCalFormat(rgbLinDaltonizedCalFormat>1)=1;
+end
+
+if (min(rgbLinDaltonizedCalFormat(:))<0)% && min(trirgbLinCalFormat_T(:))>0-1e-2)
+    rgbLinDaltonizedCalFormat(rgbLinDaltonizedCalFormat<0)=0;
+end
 
 triRGBCalFormatOpt = rgbLin2RGB(rgbLinDaltonizedCalFormat,Disp);
 
@@ -238,7 +238,7 @@ function [c, ceq] = constraintBand(t_vec, triLMSCalFormat, imgParams, dichromatT
 
 % Doesn't really matter what the loss is here, I just want to grab the
 % info and distortion norm vals from the loss function
-[~, ~, infoNorm, distNorm] = lossFunction('lambda', 0.0, t_vec, ...
+[~, ~, infoNorm, ~, distNorm] = lossFunction('lambda', 0.0, t_vec, ...
     triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
     infoNormalizer, distortionNormalizer, Disp);
 

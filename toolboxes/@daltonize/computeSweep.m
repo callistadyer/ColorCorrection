@@ -109,7 +109,7 @@ LMSContrastCalFormat_new = (LMSCalFormat_new - Disp.grayLMS) ./ Disp.grayLMS;
 % Normalize distortion and info
 normalizerValueToGetRawValue = 1;
 infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, dichromatType, normalizerValueToGetRawValue, Disp, obj.infoParams);
-distortionNormalizer = obj.distortionFcn(LMSCalFormat, LMSCalFormat_new, imgParams, normalizerValueToGetRawValue, obj.distortionParams);
+distortionNormalizer = obj.distortionFcn(LMSCalFormat, LMSCalFormat_new, imgParams, normalizerValueToGetRawValue, Disp, obj.distortionParams);
 % distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, normalizerValueToGetRawValue, obj.distortionParams);
 
 % Get info values for lambda = 0 and lambda = 1
@@ -122,6 +122,11 @@ distortionNormalizer = obj.distortionFcn(LMSCalFormat, LMSCalFormat_new, imgPara
 % Get target info values interpolated between lambdas 0 and 1
 targetInfoNormalized       = linspace(infoNormalized_0, infoNormalized_1, nSteps);
 targetDistortionNormalized = linspace(distortionNormalized0, distortionNormalized1, nSteps);
+
+% targetDistortionNormalized = fliplr(targetDistortionNormalized)
+% try the output of info sweep
+% targetDistortionNormalized = [0.0000    0.8025    2.2118    3.8026    5.4682    7.1846    8.9403   10.7171   12.5608   14.5150   16.9443];
+
 % start with the biggest distortion
 % targetDistortionNormalized = fliplr(targetDistortionNormalized);
 
@@ -256,14 +261,14 @@ end
 % figure(); plot(distNorm_feas,xVec,'-o')
 % disp([distNorm_feas(:), xVec(:)]);
 
-for i = 1:nSteps
-    rgbLin = rgbLinDaltonizedRenderedCalFormatSweep{i};
-    rgb = rgbLin2RGB(rgbLin,Disp);
-    rgbImg = CalFormatToImage(rgb,imgParams.m,imgParams.n);
-    figure();
-    imagesc(rgbImg)
-    axis square
-end
+% for i = 1:nSteps
+%     rgbLin = rgbLinDaltonizedRenderedCalFormatSweep{i};
+%     rgb = rgbLin2RGB(rgbLin,Disp);
+%     rgbImg = CalFormatToImage(rgb,imgParams.m,imgParams.n);
+%     figure();
+%     imagesc(rgbImg)
+%     axis square
+% end
 
 
 outputs = cell(nSteps, 1);  

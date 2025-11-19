@@ -66,7 +66,7 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
     LMSnew = newLMSCalFormat;
 
     % Distortion function
-    [distortion, distortionNormalized] = distortionFcn(LMSold, LMSnew, imgParams, distortionNormalizer, paramsStruct);
+    [distortion, distortionNormalized] = distortionFcn(LMSold, LMSnew, imgParams, distortionNormalizer, Disp, paramsStruct);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % Loss functions
