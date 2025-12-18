@@ -1,10 +1,10 @@
 function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFunction(useLambdaOrTarget, lambdaOrTarget,... 
-    t_vec, LMSCalFormat, imgParams, dichromatType, infoFcn, distortionFcn, infoNormalizer, distortionNormalizer, Disp)
+    t_vec, LMSCalFormat, imgParams, dichromatType, infoFcn, distortionFcn, infoNormalizer, distortionNormalizer, Disp, paramsStruct)
 % lossFunction  Objective for color correction optimization
 %
 % Syntax:
  % [loss, info, infoNormalized] = lossFunction(useLambdaOrTargetInfo, lambdaOrTargetInfo,... 
- %    t_vec, LMSCalFormat, imgParams, dichromatType, infoFcn, distortionFcn, infoNormalizer, distortionNormalizer, Disp)
+ %    t_vec, LMSCalFormat, imgParams, dichromatType, infoFcn, distortionFcn, infoNormalizer, distortionNormalizer, Disp,paramsStruct)
 % Description:
 %   Computes the loss used in optimization by applying a 3x3 transformation
 %   to RGB contrast values, then converting to LMS, computing information gain
@@ -45,7 +45,7 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
     newRGBCalFormat = newRGBContrastCalFormat .* Disp.grayRGB + Disp.grayRGB;
 
     % Now get the transformed LMS values
-    newLMSCalFormat = inv(Disp.M_cones2rgb) * newRGBCalFormat;
+    newLMSCalFormat = Disp.M_rgb2cones * newRGBCalFormat;
 
     % Get the contrast LMS value
     newLMSContrastCalFormat = (newLMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
@@ -55,7 +55,7 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
     LMSold = LMSContrastCalFormat;     % Original LMS contrast
     LMSnew = newLMSContrastCalFormat;  % Transformed LMS contrast 
 
-    paramsStruct = struct();
+    % paramsStruct = struct(); %%% callista
     % Info function
     [info, infoNormalized] = infoFcn(LMSold, LMSnew, imgParams, dichromatType, infoNormalizer, Disp, paramsStruct);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

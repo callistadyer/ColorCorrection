@@ -112,12 +112,19 @@ infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_ne
 distortionNormalizer = obj.distortionFcn(LMSCalFormat, LMSCalFormat_new, imgParams, normalizerValueToGetRawValue, Disp, obj.distortionParams);
 % distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, normalizerValueToGetRawValue, obj.distortionParams);
 
+T0 = eye(3);
+[~,~,~,~,dist0] = lossFunction('lambda', 0, T0(:), LMSCalFormat, imgParams, dichromatType, ...
+    obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+fprintf('distNorm at identity = %.6g\n', dist0);
+
 % Get info values for lambda = 0 and lambda = 1
 [~,~,~,info_0,infoNormalized_0,distortion0, distortionNormalized0] = colorCorrectionOptimize("lambda", 0, [], [], LMSCalFormat, imgParams, dichromatType, ...
-    obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
+    obj.infoFcn, obj.distortionFcn, obj.infoParams, obj.distortionParams, infoNormalizer, distortionNormalizer, Disp);
+
+fprintf('[CHECK] distNorm at lambda=0 optimum = %.6g\n', distortionNormalized0);
 
 [~,~,~,info_1,infoNormalized_1,distortion1, distortionNormalized1] = colorCorrectionOptimize("lambda", 1, [], [], LMSCalFormat, imgParams, dichromatType, ...
-    obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
+    obj.infoFcn, obj.distortionFcn, obj.infoParams, obj.distortionParams, infoNormalizer, distortionNormalizer, Disp);
 
 % Get target info values interpolated between lambdas 0 and 1
 targetInfoNormalized       = linspace(infoNormalized_0, infoNormalized_1, nSteps);
@@ -156,33 +163,33 @@ T_prev = eye(3);
 for i = 1:nSteps
     thisX = xVec(i);
 
-    
-    % Find a good starting point for the distortion sweep (unconstrained on info) 
-    % Minimize (distortionNorm - target)^2 to get a feasible T,
-    % then use that T as the starting point for the real constrained maximize-info step.
-    if strcmpi(sweepAxis,'distortion')
-        feas_fun  = @(t_vec) lossFunction('distortion', thisX, t_vec, ...
-                            LMSCalFormat, imgParams, dichromatType, ...
-                            obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
-        feas_opts = optimoptions('fmincon', 'Algorithm','interior-point', ...
-                                 'Display','none','MaxIterations',60, ...
-                                 'ConstraintTolerance',1e-10,'StepTolerance',1e-10);
-
-        % Constraints
-        [A_total, b_total,~] = buildGamutConstraints(LMSCalFormat, dichromatType, Disp);
-
-        T_feas_vec = fmincon(feas_fun, T_prev(:), A_total, b_total, [], [], [], [], [], feas_opts);
-
-        % Check to see if we achieved the target distortion when there is
-        % no info constraint
-        [~, ~, ~, ~, distNorm_feas(i)] = lossFunction('lambda', 0.0, T_feas_vec, ...
-            LMSCalFormat, imgParams, dichromatType, ...
-            obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
-        fprintf('[pre-solve] step %2d: targetDist=%.6g  achieved=%.6g  =%.3g\n', ...
-            i, thisX, distNorm_feas(i));
-
-        T_prev = reshape(T_feas_vec,3,3);
-    end
+    % 
+    % % Find a good starting point for the distortion sweep (unconstrained on info) 
+    % % Minimize (distortionNorm - target)^2 to get a feasible T,
+    % % then use that T as the starting point for the real constrained maximize-info step.
+    % if strcmpi(sweepAxis,'distortion')
+    %     feas_fun  = @(t_vec) lossFunction('distortion', thisX, t_vec, ...
+    %                         LMSCalFormat, imgParams, dichromatType, ...
+    %                         obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp,obj.infoParams);
+    %     feas_opts = optimoptions('fmincon', 'Algorithm','interior-point', ...
+    %                              'Display','none','MaxIterations',60, ...
+    %                              'ConstraintTolerance',1e-10,'StepTolerance',1e-10);
+    % 
+    %     % Constraints
+    %     [A_total, b_total,~] = buildGamutConstraints(LMSCalFormat, dichromatType, Disp);
+    % 
+    %     T_feas_vec = fmincon(feas_fun, T_prev(:), A_total, b_total, [], [], [], [], [], feas_opts);
+    % 
+    %     % Check to see if we achieved the target distortion when there is
+    %     % no info constraint
+    %     [~, ~, ~, ~, distNorm_feas(i)] = lossFunction('lambda', 0.0, T_feas_vec, ...
+    %         LMSCalFormat, imgParams, dichromatType, ...
+    %         obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp,obj.infoParams);
+    %     fprintf('[pre-solve] step %2d: targetDist=%.6g  achieved=%.6g  =%.3g\n', ...
+    %         i, thisX, distNorm_feas(i));
+    % 
+    %     T_prev = reshape(T_feas_vec,3,3);
+    % end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -200,12 +207,14 @@ for i = 1:nSteps
     [LMS_TI, rgbLin_TI, T_TI, info_TI, normInfo_TI, distortion_TI, normDistortion_TI] = colorCorrectionOptimize( ...
         sweepAxis, lamArg, tgtInfoArg, tgtDistArg, ...
         LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
+        obj.infoParams, obj.distortionParams,...
         infoNormalizer, distortionNormalizer, Disp, 'T_init', T_I);
 
     % Optimize from T_prev starting point
     [LMS_Tprev, rgbLin_Tprev, T_Tprev, info_Tprev, normInfo_Tprev, distortion_Tprev, normDistortion_Tprev] = colorCorrectionOptimize( ...
         sweepAxis, lamArg, tgtInfoArg, tgtDistArg, ...
         LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
+        obj.infoParams, obj.distortionParams,...
         infoNormalizer, distortionNormalizer, Disp, 'T_init', T_prev);
 
     % Compare losses (second arg is the same scalar you optimized on)
@@ -215,18 +224,18 @@ for i = 1:nSteps
     switch lower(sweepAxis)
         case 'info'
             % Objective was "minimize distortion" -> lambda = 0
-            loss_TI    = lossFunction('lambda', 0.0, T_TI(:),    LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
-            loss_Tprev = lossFunction('lambda', 0.0, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
+            loss_TI    = lossFunction('lambda', 0.0, T_TI(:),    LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+            loss_Tprev = lossFunction('lambda', 0.0, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
 
         case 'distortion'
             % Objective was "maximize info" -> lambda = 1
-            loss_TI    = lossFunction('lambda', 1.0, T_TI(:),    LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
-            loss_Tprev = lossFunction('lambda', 1.0, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
+            loss_TI    = lossFunction('lambda', 1.0, T_TI(:),    LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+            loss_Tprev = lossFunction('lambda', 1.0, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
 
         case 'lambda'
             % Objective is the mixed lambda objective
-            loss_TI    = lossFunction('lambda', thisX, T_TI(:),    LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
-            loss_Tprev = lossFunction('lambda', thisX, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
+            loss_TI    = lossFunction('lambda', thisX, T_TI(:),    LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+            loss_Tprev = lossFunction('lambda', thisX, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
     end
 
     % Select better of the two
@@ -241,7 +250,7 @@ for i = 1:nSteps
         T_prev = T_TI;  
 
         targetInfoVsAchievedInfo{i} = [normInfo_TI, thisX];
-        targetDistVsAchievedDist{i} = [normInfo_TI, thisX];
+        targetDistVsAchievedDist{i} = [normDistortion_TI, thisX];
 
 
     else
@@ -254,6 +263,9 @@ for i = 1:nSteps
         % Update T_prev based on previous step
         T_prev = T_Tprev; 
     end
+
+    fprintf('step %2d | sweep=%s | target=%.4f | achievedInfo=%.4f | achievedDist=%.4f\n', ...
+    i, lower(char(sweepAxis)), thisX, infoNormalizedAchievedSweep(i), distortionNormalizedAchievedSweep(i));
 
     [LMSDaltonizedRenderedCalFormatSweep{i},rgbLinDaltonizedRenderedCalFormatSweep{i},~] = DichromRenderLinear(LMSDaltonizedCalFormatSweep{i},dichromatType,Disp);
 
