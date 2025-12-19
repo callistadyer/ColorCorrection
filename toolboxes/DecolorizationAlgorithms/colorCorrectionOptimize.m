@@ -142,7 +142,8 @@ switch lower(target)
 
     case 'distortion'
         % Maximize info subject to distortion constraint (=targetDist)
-        epsDist = 1e-6;
+        % epsDist = 1e-6;
+        epsDist = max(1e-4, 0.02*targetDist);
 
         % Maximize info only (lambda=1)
         fun = @(t_vec) lossFunction('lambda', 1.0, t_vec, ...
@@ -269,6 +270,10 @@ end
 % Try to keep the distortion or info value as close as possible to the
 % target value (epsBand gives some wiggle room)
 % Band inequality: (metric - target)^2 - eps^2 <= 0
-c   = (metricVal - targetVal).^2 - (epsBand.^2);
+% c   = (metricVal - targetVal).^2 - (epsBand.^2);
+
+c   = [ metricVal - (targetVal + epsBand) ;     % metric <= target+eps
+        (targetVal - epsBand) - metricVal ];    % metric >= target-eps
+
 ceq = [];
 end
