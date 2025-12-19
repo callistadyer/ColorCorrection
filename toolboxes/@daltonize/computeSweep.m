@@ -53,11 +53,11 @@ metricFolder = buildMetricFolderName(obj.infoFcn, obj.infoParams, obj.distortion
 
 % New run folder that specifies whether the sweep is info or distortion
 runFolder = sprintf('%s_%dsteps', lower(char(sweepAxis)), nSteps);
-% runFolder = sprintf('%dsteps', nSteps);
 
 saveSubdir = fullfile(saveBase, pathName, metricFolder, runFolder);
 saveFile   = fullfile(saveSubdir, 'sweepOutputs.mat');
 
+% If the file already exists, load that instead of running again
 if exist(saveFile, 'file')
     fprintf('computeSweep Loading old sweep from: %s\n', saveFile);
     loaded  = load(saveFile);
@@ -108,20 +108,16 @@ LMSContrastCalFormat_new = (LMSCalFormat_new - Disp.grayLMS) ./ Disp.grayLMS;
 
 % Normalize distortion and info
 normalizerValueToGetRawValue = 1;
+% Info takes in the contrast image
 infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, dichromatType, normalizerValueToGetRawValue, Disp, obj.infoParams);
+% Distortion takes in the regular LMS image (not contrast) 
 distortionNormalizer = obj.distortionFcn(LMSCalFormat, LMSCalFormat_new, imgParams, normalizerValueToGetRawValue, Disp, obj.distortionParams);
+% Uncomment below if you change it so that distortion takes in contrast image
 % distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, normalizerValueToGetRawValue, obj.distortionParams);
-
-T0 = eye(3);
-[~,~,~,~,dist0] = lossFunction('lambda', 0, T0(:), LMSCalFormat, imgParams, dichromatType, ...
-    obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
-fprintf('distNorm at identity = %.6g\n', dist0);
 
 % Get info values for lambda = 0 and lambda = 1
 [~,~,~,info_0,infoNormalized_0,distortion0, distortionNormalized0] = colorCorrectionOptimize("lambda", 0, [], [], LMSCalFormat, imgParams, dichromatType, ...
     obj.infoFcn, obj.distortionFcn, obj.infoParams, obj.distortionParams, infoNormalizer, distortionNormalizer, Disp);
-
-fprintf('[CHECK] distNorm at lambda=0 optimum = %.6g\n', distortionNormalized0);
 
 [~,~,~,info_1,infoNormalized_1,distortion1, distortionNormalized1] = colorCorrectionOptimize("lambda", 1, [], [], LMSCalFormat, imgParams, dichromatType, ...
     obj.infoFcn, obj.distortionFcn, obj.infoParams, obj.distortionParams, infoNormalizer, distortionNormalizer, Disp);
@@ -130,11 +126,7 @@ fprintf('[CHECK] distNorm at lambda=0 optimum = %.6g\n', distortionNormalized0);
 targetInfoNormalized       = linspace(infoNormalized_0, infoNormalized_1, nSteps);
 targetDistortionNormalized = linspace(distortionNormalized0, distortionNormalized1, nSteps);
 
-% targetDistortionNormalized = fliplr(targetDistortionNormalized)
-% try the output of info sweep
-% targetDistortionNormalized = [0.0000    0.8025    2.2118    3.8026    5.4682    7.1846    8.9403   10.7171   12.5608   14.5150   16.9443];
-
-% start with the biggest distortion
+% Try starting with the biggest distortion
 % targetDistortionNormalized = fliplr(targetDistortionNormalized);
 
 % Preallocate outputs
@@ -157,13 +149,13 @@ switch lower(sweepAxis)
         xVec = targetDistortionNormalized;               
 end
 
+% Starting points for search over matrices
 T_I = eye(3);
 T_prev = eye(3);
 
 for i = 1:nSteps
     thisX = xVec(i);
 
-    % 
     % % Find a good starting point for the distortion sweep (unconstrained on info) 
     % % Minimize (distortionNorm - target)^2 to get a feasible T,
     % % then use that T as the starting point for the real constrained maximize-info step.
@@ -194,12 +186,10 @@ for i = 1:nSteps
 
 
     if strcmpi(sweepAxis,'info')
-        % info sweep: lambda=[], targetInfo=thisX
         lamArg = []; tgtInfoArg = thisX; tgtDistArg = [];
     elseif strcmpi(sweepAxis,'distortion')
         lamArg = []; tgtInfoArg = []; tgtDistArg = thisX;
     else % 'lambda'
-        % lambda sweep: lambda=thisX, targetInfo=[]
         lamArg = thisX; tgtInfoArg = []; tgtDistArg = [];
     end
 
@@ -217,10 +207,7 @@ for i = 1:nSteps
         obj.infoParams, obj.distortionParams,...
         infoNormalizer, distortionNormalizer, Disp, 'T_init', T_prev);
 
-    % Compare losses (second arg is the same scalar you optimized on)
-    % loss_TI    = lossFunction(sweepAxis, thisX, T_TI(:),    LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
-    % loss_Tprev = lossFunction(sweepAxis, thisX, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp);
-    
+    % Compare losses 
     switch lower(sweepAxis)
         case 'info'
             % Objective was "minimize distortion" -> lambda = 0
@@ -238,7 +225,7 @@ for i = 1:nSteps
             loss_Tprev = lossFunction('lambda', thisX, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
     end
 
-    % Select better of the two
+    % Select better of the two losses
     if loss_TI <= loss_Tprev
 
         LMSDaltonizedCalFormatSweep{i}       = LMS_TI;
@@ -302,6 +289,5 @@ for i = 1:nSteps
 end
 
 % Save the outputs
-% saveTransformedOutputs(outputs, pathName, nSteps, obj.infoFcn, obj.infoParams, obj.distortionFcn, Disp);
 saveTransformedOutputs(outputs, pathName, nSteps, obj.infoFcn, obj.infoParams, obj.distortionFcn, Disp, 'sweepAxis', sweepAxis);
 end

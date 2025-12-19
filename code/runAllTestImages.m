@@ -12,8 +12,8 @@ setType       = 1;
 dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
-m = 128;
-n = 128;
+m = 64;
+n = 64;
 
 % How many steps do you want in a transformation sweep?
 nSteps = 11;  
@@ -169,7 +169,6 @@ ylabel('Achieved Info (normalized)');
 title(sprintf('%s — %s — %d steps', imgType, dichromatType, nSteps));
 subtitle('Achieved Info vs Distortion for both sweeps')
 legend('Location','southeast');
-% xlim([0 1]); ylim([0 1]);
 
    
 
