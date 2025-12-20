@@ -26,6 +26,8 @@ function [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, transformRGBmatrix,
 %   infoFnc                    Handle for the information metric.
 %   distortionFcn              Handle for similarity metric to preserve naturalness.
 %                                   'squared' (sum of squared error),
+%   infoParams
+%   distortionParams
 %   infoNormalizer             Scalar to normalize the info metric.
 %   distortionNormalizer       Scalar to normalize the distortion metric.
 %   Disp:                      Struct with display parameters. Must include:
@@ -164,35 +166,6 @@ end
     nonlcon, ...                    % Nonlinear constraint
     options);
 
-% % CHECK LINEAR (gamut) CONSTRAINTS 
-% linViol = max(A_total*transformRGB_opt(:) - b_total);
-% fprintf('[CHECK] max linear viol = %.3g\n', linViol);
-% 
-% % CHECK NONLINEAR (info/distortion band) CONSTRAINT  
-% if ~isempty(nonlcon)
-%     [c, ceq] = nonlcon(transformRGB_opt);
-%     fprintf('[CHECK] max nonlinear c = %.3g\n', max(c));
-% end
-% 
-% fprintf('[CHECK] exitflag=%d, iter=%d\n', exitflag, output.iterations);
-
-% Check that the constraint worked
-% if ~isempty(nonlcon)
-%     [cchk, ~] = nonlcon(transformRGB_opt);
-%     if any(cchk > 1e-8)
-%         warning('Info constraint not fully satisfied (max c = %.3g).', max(cchk));
-%     end
-% end
-
-%%% OLD CODE FOR OPTIMIZATION:
-% % Optimization - start with identity transformation matrix
-% options = optimoptions('fmincon', 'Algorithm', 'interior-point', 'ConstraintTolerance', 1e-10, 'StepTolerance', 1e-10, 'Display', 'iter','MaxIterations',200);
-% % fmincon
-% [transformRGB_opt, fval] = fmincon(@(transformRGB) lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB, triLMSCalFormat,imgParams,dichromatType,infoFnc,distortionFcn,infoNormalizer, distortionNormalizer, Disp), ...
-%     T_init(:), A_total, b_total, [], [], [], [], [], options);
-% % Test loss function with final transformation matrix values
-% [loss, info, infoNormalized, distortion, distortionNormalized] = lossFunction(useLambdaOrTargetInfo,lambdaOrTargetInfo,transformRGB_opt, triLMSCalFormat,imgParams,dichromatType,infoFnc,distortionFcn,infoNormalizer, distortionNormalizer, Disp);
-
 disp('Just finished optimization')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -270,10 +243,7 @@ end
 % Try to keep the distortion or info value as close as possible to the
 % target value (epsBand gives some wiggle room)
 % Band inequality: (metric - target)^2 - eps^2 <= 0
-% c   = (metricVal - targetVal).^2 - (epsBand.^2);
-
-c   = [ metricVal - (targetVal + epsBand) ;     % metric <= target+eps
-        (targetVal - epsBand) - metricVal ];    % metric >= target-eps
+c   = (metricVal - targetVal).^2 - (epsBand.^2);
 
 ceq = [];
 end
