@@ -156,33 +156,33 @@ T_prev = eye(3);
 for i = 1:nSteps
     thisX = xVec(i);
 
-    % % Find a good starting point for the distortion sweep (unconstrained on info) 
-    % % Minimize (distortionNorm - target)^2 to get a feasible T,
-    % % then use that T as the starting point for the real constrained maximize-info step.
-    % if strcmpi(sweepAxis,'distortion')
-    %     feas_fun  = @(t_vec) lossFunction('distortion', thisX, t_vec, ...
-    %                         LMSCalFormat, imgParams, dichromatType, ...
-    %                         obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp,obj.infoParams);
-    %     feas_opts = optimoptions('fmincon', 'Algorithm','interior-point', ...
-    %                              'Display','none','MaxIterations',60, ...
-    %                              'ConstraintTolerance',1e-10,'StepTolerance',1e-10);
-    % 
-    %     % Constraints
-    %     [A_total, b_total,~] = buildGamutConstraints(LMSCalFormat, dichromatType, Disp);
-    % 
-    %     T_feas_vec = fmincon(feas_fun, T_prev(:), A_total, b_total, [], [], [], [], [], feas_opts);
-    % 
-    %     % Check to see if we achieved the target distortion when there is
-    %     % no info constraint
-    %     [~, ~, ~, ~, distNorm_feas(i)] = lossFunction('lambda', 0.0, T_feas_vec, ...
-    %         LMSCalFormat, imgParams, dichromatType, ...
-    %         obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp,obj.infoParams);
-    %     fprintf('[pre-solve] step %2d: targetDist=%.6g  achieved=%.6g  =%.3g\n', ...
-    %         i, thisX, distNorm_feas(i));
-    % 
-    %     T_prev = reshape(T_feas_vec,3,3);
-    % end
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Find a good starting point for the distortion sweep (unconstrained on info) 
+    % Minimize (distortionNorm - target)^2 to get a feasible T,
+    % then use that T as the starting point for the real constrained maximize-info step.
+    if strcmpi(sweepAxis,'distortion')
+        feas_fun  = @(t_vec) lossFunction('distortion', thisX, t_vec, ...
+                            LMSCalFormat, imgParams, dichromatType, ...
+                            obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp,obj.infoParams);
+        feas_opts = optimoptions('fmincon', 'Algorithm','interior-point', ...
+                                 'Display','none','MaxIterations',60, ...
+                                 'ConstraintTolerance',1e-10,'StepTolerance',1e-10);
+
+        % Constraints
+        [A_total, b_total,~] = buildGamutConstraints(LMSCalFormat, dichromatType, Disp);
+
+        T_feas_vec = fmincon(feas_fun, T_prev(:), A_total, b_total, [], [], [], [], [], feas_opts);
+
+        % Check to see if we achieved the target distortion when there is
+        % no info constraint
+        [~, ~, ~, ~, distNorm_feas(i)] = lossFunction('lambda', 0.0, T_feas_vec, ...
+            LMSCalFormat, imgParams, dichromatType, ...
+            obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp,obj.infoParams);
+        fprintf('[pre-solve] step %2d: targetDist=%.6g  achieved=%.6g  =%.3g\n', ...
+            i, thisX, distNorm_feas(i));
+
+        T_prev = reshape(T_feas_vec,3,3);
+    end
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
     if strcmpi(sweepAxis,'info')
