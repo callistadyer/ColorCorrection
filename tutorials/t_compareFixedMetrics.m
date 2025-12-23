@@ -1,58 +1,16 @@
-function t_compareInfoMetrics
+function t_compareFixedMetrics
 
-% t_compareInfoMetrics.m
-% Compare image enhancement outputs across multiple inf metrics while
-% holding distortion approximately constant
+% t_compareFixedMetrics.m
+% Compare image enhancement outputs across multiple metrics while
+% holding either distortion OR info approximately constant.
 %
-% Overview
-%   For each input image and each info metric:
-%     (1) Build a daltonizer object using:
-%           - infoFcn        (varies across metrics)
-%           - distortionFcn  (fixed: e.g., computeDistortion_DE2000)
-%           - renderFcn      (fixed: e.g., DichromRenderLinear)
-%     (2) Run a distortion sweep (computeSweep with sweepAxis='distortion').
-%         This produces a set of optimized transforms T along with:
-%           - achieved distortion (normalized)
-%           - achieved info       (normalized)
-%           - optimized images (tri) and their dichromat renderings (di)
-%     (3) Select the sweep point whose achieved distortion is closest to
-%         targetDistToCompare (some chosen normalized distortion level)
-%     (4) Store:
-%           - the selected transform T
-%           - achieved info/distortion at the selected point
-%           - full sweep curves (info vs distortion)
-%           - output images (tri + dichromat render)
-%     (5) Plot:
-%           - A montage of the original (tri + di) image plus each metric's
-%             optimized output (tri + di)
-%           - A plot of achieved info vs achieved distortion for each metric
+% Minimal change: add a switch:
+%   fixedMode = 'dist' or 'info'
+% and set:
+%   targetDistToCompare OR targetInfoToCompare
 %
-% Key idea
-%   This script tries to isolate the effect of the info metrics by matching
-%   solutions at (approximately) the same distortion. 
-%
-% Inputs / configuration (edit in the "Images parameters" section)
-%   imageTypes           - cell array of image filenames
-%   dichromatType        - e.g., 'Deuteranopia'
-%   m,n                  - output image size
-%   nSteps               - number of points in the distortion sweep
-%   targetDistToCompare  - normalized distortion level used for matching
-%   infoFcnList          - list of info metric function handles
-%   infoParamsList       - parameter structs (e.g., regress params)
-%
-% Outputs
-%   results(ii) struct per image, containing:
-%     .imgType, .dichromatType, .pathName, .targetDistToCompare
-%     .metric(kk) with fields:
-%        .name, .infoFcn, .infoParams
-%        .idxClosest, .distAtTarget, .infoAtTarget, .absErrAtTarget
-%        .T
-%        .infoNormAch, .distNormAch, .targetDistNorm
-%
-%
-% History
-%   2025-12-22  CD  Wrote initial version to compare info metrics at fixed distortion
-
+% If fixedMode='dist': run distortion sweep, pick idx closest in distortion.
+% If fixedMode='info': run info sweep, pick idx closest in info.
 
 clear; clc;
 
@@ -66,7 +24,7 @@ dichromatType = 'Deuteranopia';
 % Size of image
 m = 67; n = 67;
 
-% How many steps to sample at 
+% How many steps to sample at
 nSteps = 11;
 
 % Clear the previous image data if it existed already in dropbox?
@@ -102,12 +60,16 @@ for k = 1:numel(infoFcnList)
     end
 end
 
-% Fixed distortion to compare info types
-% This is the distortion where we want to compare info and
-% visuals across metrics.
-%
-% In practice I pick the sweep step whose achieved distortion is closest
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% NEW: choose whether to fix distortion or fix info
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+fixedMode = 'dist';   % 'dist' or 'info'
+
+% If fixedMode='dist', we match solutions at this achieved distortion:
 targetDistToCompare = 0.4;
+
+% If fixedMode='info', we match solutions at this achieved info:
+targetInfoToCompare = 0.4; %???? idk what to set this to
 
 log = struct();
 
@@ -127,7 +89,9 @@ for ii = 1:numel(imageTypes)
     log(ii).imgType = imgType;
     log(ii).dichromatType = dichromatType;
     log(ii).pathName = pathName;
+    log(ii).fixedMode = fixedMode;
     log(ii).targetDistToCompare = targetDistToCompare;
+    log(ii).targetInfoToCompare = targetInfoToCompare;
 
     % 2) Build reference images
     rgbLinCalFormat = Disp.M_cones2rgb * LMSCalFormat;
@@ -135,11 +99,9 @@ for ii = 1:numel(imageTypes)
     tol = 1e-3;
     mn = min(rgbLinCalFormat(:));
     mx = max(rgbLinCalFormat(:));
-
     if mn < -tol || mx > 1+tol
         warning('Clamping: out of range beyond tol (min=%.6g, max=%.6g).', mn, mx);
     end
-
     rgbLinCalFormat = min(max(rgbLinCalFormat, 0), 1);
 
     rgbTriOrig = CalFormatToImage(rgbLin2RGB(rgbLinCalFormat, Disp), m, n);
@@ -167,35 +129,46 @@ for ii = 1:numel(imageTypes)
         fprintf('\n  ---- Metric %d/%d: %s ----\n', kk, nMetrics, metricName);
 
         % 4) Create daltonizer object for this metric
-        theDaltonizer = daltonize(infoFcn, infoParams, distortionFcn, distortionParams,renderFcn, renderParams, Disp);
+        theDaltonizer = daltonize(infoFcn, infoParams, distortionFcn, distortionParams, renderFcn, renderParams, Disp);
 
-        % 5) Run the distortion sweep as normal
-        % This does:
-        %   for each target distortion:
-        %     maximize info subject to (distortion ~= target)
-        sweepAxis = 'distortion';
+        % 5) Run the sweep (distortion or info) based on fixedMode
+        if strcmpi(fixedMode, 'dist')
+            sweepAxis = 'distortion';
+        else
+            sweepAxis = 'info';
+        end
 
-        [LMSSweep_dist, rgbLinSweep_dist, LMSRenderedSweep_dist, rgbLinRenderedSwexep_dist, TSweep_dist, targetInfoNorm_dist, targetDistNorm_dist, infoNormAch_dist, distNormAch_dist] = computeSweep( ...
+        [LMSSweep, rgbLinSweep, LMSRenderedSweep, rgbLinRenderedSweep, TSweep, ...
+            targetInfoNorm, targetDistNorm, infoNormAch, distNormAch] = computeSweep( ...
             theDaltonizer, LMSCalFormat, imgParams, dichromatType, nSteps, pathName, sweepAxis);
 
-        % 6) Pick the fixed distortion solution
-        % We pick the sweep point whose achieved distortion is closest
-        % to targetDistToCompare
-        [minAbsErr, idxClosest] = min(abs(distNormAch_dist - targetDistToCompare));
+        % 6) Pick the fixed-(dist or info) solution
+        if strcmpi(fixedMode, 'dist')
+            [minAbsErr, idxClosest] = min(abs(distNormAch - targetDistToCompare));
+            pickedTarget = targetDistToCompare;
+            pickedAch    = distNormAch(idxClosest);
+            pickedOther  = infoNormAch(idxClosest);
+            fprintf('     targetDist=%.3f | closest achievedDist=%.3f (|err|=%.3f) | achievedInfo=%.3f\n', ...
+                pickedTarget, pickedAch, minAbsErr, pickedOther);
+        else
+            [minAbsErr, idxClosest] = min(abs(infoNormAch - targetInfoToCompare));
+            pickedTarget = targetInfoToCompare;
+            pickedAch    = infoNormAch(idxClosest);
+            pickedOther  = distNormAch(idxClosest);
+            fprintf('     targetInfo=%.3f | closest achievedInfo=%.3f (|err|=%.3f) | achievedDist=%.3f\n', ...
+                pickedTarget, pickedAch, minAbsErr, pickedOther);
+        end
 
-        infoAtTarget = infoNormAch_dist(idxClosest);
-        distAtTarget = distNormAch_dist(idxClosest);
-
-        fprintf('     targetDist=%.3f | closest achievedDist=%.3f (|err|=%.3f) | achievedInfo=%.3f\n', ...
-            targetDistToCompare, distAtTarget, minAbsErr, infoAtTarget);
+        infoAtTarget = infoNormAch(idxClosest);
+        distAtTarget = distNormAch(idxClosest);
 
         % 7) Extract the image for that solution
         % Optimized *trichromat* image (linear RGB in CalFormat)
-        rgbTriCal = rgbLin2RGB(rgbLinSweep_dist{idxClosest}, Disp);
+        rgbTriCal = rgbLin2RGB(rgbLinSweep{idxClosest}, Disp);
         rgbTriImg = CalFormatToImage(rgbTriCal, m, n);
 
         % Dichromat-rendered version of that optimized image
-        rgbDiCal  = rgbLin2RGB(rgbLinRenderedSweep_dist{idxClosest}, Disp);
+        rgbDiCal  = rgbLin2RGB(rgbLinRenderedSweep{idxClosest}, Disp);
         rgbDiImg  = CalFormatToImage(rgbDiCal, m, n);
 
         % Store for montage
@@ -212,14 +185,15 @@ for ii = 1:numel(imageTypes)
         log(ii).metric(kk).infoAtTarget   = infoAtTarget;
         log(ii).metric(kk).absErrAtTarget = minAbsErr;
 
-        log(ii).metric(kk).T = TSweep_dist{idxClosest};
+        log(ii).metric(kk).T = TSweep{idxClosest};
 
-        log(ii).metric(kk).infoNormAch    = infoNormAch_dist(:);
-        log(ii).metric(kk).distNormAch    = distNormAch_dist(:);
-        log(ii).metric(kk).targetDistNorm = targetDistNorm_dist(:);
+        log(ii).metric(kk).infoNormAch    = infoNormAch(:);
+        log(ii).metric(kk).distNormAch    = distNormAch(:);
+        log(ii).metric(kk).targetInfoNorm = targetInfoNorm(:);
+        log(ii).metric(kk).targetDistNorm = targetDistNorm(:);
 
-        allInfoCurves{kk} = infoNormAch_dist(:);
-        allDistCurves{kk} = distNormAch_dist(:);
+        allInfoCurves{kk} = infoNormAch(:);
+        allDistCurves{kk} = distNormAch(:);
 
     end % metrics loop
 
@@ -227,47 +201,48 @@ for ii = 1:numel(imageTypes)
     % Visualizations %
     %%%%%%%%%%%%%%%%%%
 
-    % First graph: images of transformed outputs for each info metric
-    %   Row 1 = Trichromat
-    %   Row 2 = Dichromat render
-    %   Columns = metrics
-
     nMetrics = numel(infoNameList);
     nCols = nMetrics + 1;
     nRows = 2; % trichromat and dichromat
 
-    % Title of figure and subtitles on each figure
-    figName = sprintf('%s — %s — fixed distortion ~%.2f', imgType, dichromatType, targetDistToCompare);
+    if strcmpi(fixedMode,'dist')
+        figName = sprintf('%s — %s — fixed dist ~%.2f', imgType, dichromatType, targetDistToCompare);
+    else
+        figName = sprintf('%s — %s — fixed info ~%.2f', imgType, dichromatType, targetInfoToCompare);
+    end
+
     fig = figure('Color','w','Name',figName);
     tl  = tiledlayout(fig, nRows, nCols, 'TileSpacing','compact', 'Padding','compact');
 
     % Top row: original trichromat
-    ax = nexttile(tl, 1);  % row1 col1
+    ax = nexttile(tl, 1);
     imshow(rgbTriOrig, 'Parent', ax);
     title(ax, 'Original (tri)', 'Interpreter','none');
 
     % Bottom row: original dichromat render
-    ax = nexttile(tl, 1 + nCols); % row2 col1
+    ax = nexttile(tl, 1 + nCols);
     imshow(rgbDiOrig, 'Parent', ax);
     title(ax, sprintf('Original render (%s)', dichromatType), 'Interpreter','none');
 
     % Metric columns
     for kk = 1:nMetrics
-        thisCol = kk + 1; % plus 1 bc of the original image
+        thisCol = kk + 1;
 
-        % Top row: optimized trichromat output
-        ax = nexttile(tl, thisCol);  % row1 col=thisCol
+        ax = nexttile(tl, thisCol);
         imshow(triOutImgs(:,:,:,kk), 'Parent', ax);
 
-        title(ax, sprintf('%s | tri\n(dist=%.3f, info=%.3f)', ...
-            infoNameList{kk}, log(ii).metric(kk).distAtTarget, log(ii).metric(kk).infoAtTarget), 'Interpreter','none');
+        if strcmpi(fixedMode,'dist')
+            title(ax, sprintf('%s | tri\n(dist=%.3f, info=%.3f)', ...
+                infoNameList{kk}, log(ii).metric(kk).distAtTarget, log(ii).metric(kk).infoAtTarget), 'Interpreter','none');
+        else
+            title(ax, sprintf('%s | tri\n(info=%.3f, dist=%.3f)', ...
+                infoNameList{kk}, log(ii).metric(kk).infoAtTarget, log(ii).metric(kk).distAtTarget), 'Interpreter','none');
+        end
 
-        % Bottom row: dichromat render of that optimized output
-        ax = nexttile(tl, thisCol + nCols);  % row2 col=thisCol
+        ax = nexttile(tl, thisCol + nCols);
         imshow(diOutImgs(:,:,:,kk), 'Parent', ax);
         title(ax, sprintf('%s | di render', infoNameList{kk}), 'Interpreter','none');
     end
-
 
     % Second graph: achieved info vs achieved distortion curves
     figure('Color','w','Name',sprintf('%s — curves by metric', imgType));
@@ -275,11 +250,23 @@ for ii = 1:numel(imageTypes)
     for kk = 1:nMetrics
         plot(allDistCurves{kk}, allInfoCurves{kk}, '-o','LineWidth', 1.5, 'DisplayName', infoNameList{kk});
     end
-    xline(targetDistToCompare, '--', 'Target dist');
+
+    if strcmpi(fixedMode,'dist')
+        xline(targetDistToCompare, '--', 'Target dist');
+    else
+        yline(targetInfoToCompare, '--', 'Target info');
+    end
+
     grid on; axis square;
     xlabel('Achieved Distortion (normalized)');
     ylabel('Achieved Info (normalized)');
-    title(sprintf('%s — %s — distortion sweep curves', imgType, dichromatType));
+
+    if strcmpi(fixedMode,'dist')
+        title(sprintf('%s — %s — distortion sweep curves', imgType, dichromatType));
+    else
+        title(sprintf('%s — %s — info sweep curves', imgType, dichromatType));
+    end
+
     legend('Location','bestoutside');
     hold off;
 
@@ -291,10 +278,15 @@ end % images loop
 projectName = 'ColorCorrection';
 outputDir   = getpref(projectName, 'outputDir');
 
-saveFile = fullfile(outputDir, sprintf('fixedDist%.2f_%s_%dsteps.mat', ...
-    targetDistToCompare, dichromatType, nSteps));
-save(saveFile, 'log');
+if strcmpi(fixedMode,'dist')
+    saveFile = fullfile(outputDir, sprintf('fixedDist%.2f_%s_%dsteps.mat', ...
+        targetDistToCompare, dichromatType, nSteps));
+else
+    saveFile = fullfile(outputDir, sprintf('fixedInfo%.2f_%s_%dsteps.mat', ...
+        targetInfoToCompare, dichromatType, nSteps));
+end
 
+save(saveFile, 'log');
 fprintf('\nSaved results to:\n  %s\n', saveFile);
 
-k = 1
+k = 1;
