@@ -1,5 +1,5 @@
 % Image types
-imageTypes = {'Gaugin.png'};
+imageTypes = {'flower1.png'};
 % imageTypes = {'flower1.png', ...
 %     'fruit.png', ...
 %     'Gaugin.png', ...
@@ -12,13 +12,13 @@ setType       = 1;
 dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
-m = 68;
-n = 68;
+m = 130;
+n = 130;
 
 % How many steps do you want in a transformation sweep?
 nSteps = 11;
 
-sweepAxis = 'distortion';
+sweepAxis = 'both';
 %   'info'  = run info sweep only
 %   'distortion'  = run distortion sweep only
 %   'both'  = run both sweeps + overlay plot

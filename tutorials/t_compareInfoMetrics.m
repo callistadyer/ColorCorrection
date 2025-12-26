@@ -64,7 +64,7 @@ setType       = 1;
 dichromatType = 'Deuteranopia';
 
 % Size of image
-m = 67; n = 67;
+m = 68; n = 68;
 
 % How many steps to sample at 
 nSteps = 11;
@@ -107,7 +107,7 @@ end
 % visuals across metrics.
 %
 % In practice I pick the sweep step whose achieved distortion is closest
-targetDistToCompare = 0.4;
+targetDistToCompare = 0.80;
 
 log = struct();
 
@@ -173,10 +173,10 @@ for ii = 1:numel(imageTypes)
         % This does:
         %   for each target distortion:
         %     maximize info subject to (distortion ~= target)
-        sweepAxis = 'distortion';
+        sweepAxis_dist = 'distortion';
 
-        [LMSSweep_dist, rgbLinSweep_dist, LMSRenderedSweep_dist, rgbLinRenderedSwexep_dist, TSweep_dist, targetInfoNorm_dist, targetDistNorm_dist, infoNormAch_dist, distNormAch_dist] = computeSweep( ...
-            theDaltonizer, LMSCalFormat, imgParams, dichromatType, nSteps, pathName, sweepAxis);
+        [LMSSweep_dist, rgbLinSweep_dist, LMSRenderedSweep_dist, rgbLinRenderedSweep_dist, TSweep_dist, targetInfoNorm_dist, targetDistNorm_dist, infoNormAch_dist, distNormAch_dist] = computeSweep( ...
+            theDaltonizer, LMSCalFormat, imgParams, dichromatType, nSteps, pathName, sweepAxis_dist);
 
         % 6) Pick the fixed distortion solution
         % We pick the sweep point whose achieved distortion is closest

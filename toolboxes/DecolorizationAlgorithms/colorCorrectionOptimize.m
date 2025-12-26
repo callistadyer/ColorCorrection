@@ -1,4 +1,4 @@
-function [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, transformRGBmatrix, info, infoNormalized, distortion, distortionNormalized] = ...
+function [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, transformRGBmatrix, info, infoNormalized, distortion, distortionNormalized, nlconSatisfied] = ...
     colorCorrectionOptimize(target, lambda, targetInfo, targetDist, ...
     triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, infoParams, distortionParams, infoNormalizer, distortionNormalizer, Disp, varargin)
 % Optimizes a linear transformation to enhance color contrast for dichromats
@@ -130,7 +130,11 @@ switch lower(target)
 
     case 'info'
         % Minimize distortion subject to info constraint (=targetInfo)
-        epsInfo = 1e-6;
+        epsInfo = 1;
+        % relTol = 0.01;
+        % absFloor = 1e-6;
+        % epsInfo = max(absFloor, relTol * max(abs(targetInfo), 1));   % relative
+
 
         % Minimize distortion only (lambda=0)
         fun = @(t_vec) lossFunction('lambda', 0.0, t_vec, ...
@@ -144,8 +148,11 @@ switch lower(target)
 
     case 'distortion'
         % Maximize info subject to distortion constraint (=targetDist)
-        % epsDist = 1e-6;
-        epsDist = max(1e-4, 0.02*targetDist);
+        epsDist = 1e-3;
+
+        % pctTol      = 0.01;   % 1% of target
+        % absTolFloor = 1e-6;    % minimum absolute tolerance
+        % epsDist = max(absTolFloor, pctTol * abs(targetDist));
 
         % Maximize info only (lambda=1)
         fun = @(t_vec) lossFunction('lambda', 1.0, t_vec, ...
@@ -156,8 +163,12 @@ switch lower(target)
                         t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
                         infoNormalizer, distortionNormalizer, paramsStruct, Disp, ...
                         'distortion', targetDist, epsDist);
-
 end
+
+% if ~isempty(nonlcon)
+%     [c0, ceq0] = nonlcon(T_init(:));
+%     fprintf('[START] max(c)=%.3g | max|ceq|=%.3g\n', max(c0(:)), max(abs(ceq0(:))));
+% end
 
 % Now do the minimization with that 
 [transformRGB_opt, fval, exitflag, output] = fmincon(fun, T_init(:), ...            
@@ -165,6 +176,30 @@ end
     [], [], [], [], ...             % Aeq, beq, lb, ub 
     nonlcon, ...                    % Nonlinear constraint
     options);
+
+
+% Hard fallback if nonlinear constraint violated
+if ~isempty(nonlcon)
+    [cchk, ceqchk] = nonlcon(transformRGB_opt(:));
+
+    maxC = max(cchk(:));
+    maxAbsCeq = 0;
+    if ~isempty(ceqchk), maxAbsCeq = max(abs(ceqchk(:))); end
+
+    % fmincon reports constraint violation in output.constrviolation (often easiest)
+    % but we'll compute our own too.
+    tol = options.ConstraintTolerance;
+
+    nlconSatisfied = (maxC <= tol) && (maxAbsCeq <= tol);
+
+    if ~nlconSatisfied
+        % THIS is the "fallback" behavior you expected fmincon to do automatically.
+        transformRGB_opt = T_init(:);   % or use T_prev(:) depending on what you passed in
+        fprintf('[FALLBACK] Nonlinear constraint violated. Returning T_init.\n');
+    end
+else
+    nlconSatisfied = true;
+end
 
 disp('Just finished optimization')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -176,14 +211,32 @@ disp('Just finished optimization')
         triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
         infoNormalizer, distortionNormalizer, Disp,paramsStruct);
 
-if strcmpi(target, 'distortion')
-    % Report target vs achieved normalized distortion
-    fprintf('[DISTORTION] targetDist = %.6f, achieved = %.6f, diff = %.6f\n', ...
-        targetDist, distortionNormalized, distortionNormalized - targetDist);
-end
+
+[~, info, infoNormalized, distortion, distortionNormalized] = ...
+    lossFunction('lambda', 1, transformRGB_opt, ...
+        triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
+        infoNormalizer, distortionNormalizer, Disp,paramsStruct);
 % the idea here was that maybe the constraint for distortion worked but
 % keeping it in gamut didn't? or maybe the attempt to keep it in gamut is
 % what's making it fail the search? 
+
+nlconSatisfied = true;  % default
+
+switch lower(target)
+    case 'distortion'
+        nlconSatisfied = abs(distortionNormalized - targetDist) <= epsDist;
+        fprintf('[TARGET DIST] achieved=%.6f target=%.6f |diff|=%.6f (eps=%.3g) satisfied=%d\n', ...
+            distortionNormalized, targetDist, abs(distortionNormalized-targetDist), epsDist, nlconSatisfied);
+
+    case 'info'
+        nlconSatisfied = abs(infoNormalized - targetInfo) <= epsInfo;
+        fprintf('[TARGET INFO] achieved=%.6f target=%.6f |diff|=%.6f (eps=%.3g) satisfied=%d\n', ...
+            infoNormalized, targetInfo, abs(infoNormalized-targetInfo), epsInfo, nlconSatisfied);
+
+    case 'lambda'
+        % No "hit this exact target value" constraint in lambda mode
+        nlconSatisfied = true;
+end
 
 % Reshape optimal solution into matrix
 transformRGBmatrix = reshape(transformRGB_opt, 3, 3);
@@ -208,11 +261,11 @@ rgbLinDaltonizedCalFormat = (triRGBContrastCalFormat_T.*Disp.grayRGB) + Disp.gra
 
 % Cut off values outside of gamut, when there is some weird numerical out
 % of bounds 
-if (max(rgbLinDaltonizedCalFormat(:))>1)% && max(trirgbLinCalFormat_T(:))<1+1e-2)
+if (max(rgbLinDaltonizedCalFormat(:))>1) && (max(rgbLinDaltonizedCalFormat(:)) <1+1e-2)
     rgbLinDaltonizedCalFormat(rgbLinDaltonizedCalFormat>1)=1;
 end
 
-if (min(rgbLinDaltonizedCalFormat(:))<0)% && min(trirgbLinCalFormat_T(:))>0-1e-2)
+if (min(rgbLinDaltonizedCalFormat(:))<0)  && (min(rgbLinDaltonizedCalFormat(:))>0-1e-2)
     rgbLinDaltonizedCalFormat(rgbLinDaltonizedCalFormat<0)=0;
 end
 

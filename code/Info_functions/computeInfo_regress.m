@@ -69,10 +69,14 @@ else
     residual = y - y_hat;             % Difference between actual and predicted (unexplained stuff)
 end
 
-info = -sum(residual.^2, 'all'); % when residual is 0, then info is 0
+% info = -sum(residual.^2, 'all'); % when residual is 0, then info is 0
                                  % when residual is high, then info is negative
                                  % so "good" info will be close to 0 and "bad" info will
-                                 % be very negative. Still maximizing info in this way.
+                                 % be very negative. Still maximizing info in this way
+
+[distortion, ~] = computeDistortion_DE2000(LMSContrastCalFormat_old, y_hat', imgParams, 1, Disp, paramsStruct);
+info = -distortion;
+
 infoNormalized = info/normalizingValue;
 
 end

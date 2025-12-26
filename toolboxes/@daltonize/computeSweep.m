@@ -100,10 +100,13 @@ Disp = obj.Disp;
 LMSContrastCalFormat = (LMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
 
 % Get the dichromat renderings of the original, which is used for the normalizer
+
+%%%% MAYBE JUST TAKE THE DEUTERANOPE VERSION TO COMPARE WITH THE ORIGINAL
 [calFormatLMS_prot, ~, ~] = DichromRenderLinear(LMSCalFormat, 'Protanopia', Disp);
 [calFormatLMS_deut, ~, ~] = DichromRenderLinear(LMSCalFormat, 'Deuteranopia', Disp);
 [calFormatLMS_trit, ~, ~] = DichromRenderLinear(LMSCalFormat, 'Tritanopia', Disp);
 LMSCalFormat_new = [calFormatLMS_prot(1,:); calFormatLMS_deut(2,:); calFormatLMS_trit(3,:)];
+% LMSCalFormat_new = calFormatLMS_deut;
 LMSContrastCalFormat_new = (LMSCalFormat_new - Disp.grayLMS) ./ Disp.grayLMS;
 
 % Normalize distortion and info
@@ -149,17 +152,55 @@ switch lower(sweepAxis)
         xVec = targetDistortionNormalized;               
 end
 
+
+% ------------------------------------------------------------
+% If doing a distortion sweep, try to seed T_prev from the *info* sweep
+% ------------------------------------------------------------
+T_infoSeeds = [];
+if strcmpi(sweepAxis,'distortion')
+
+    infoRunFolder  = sprintf('info_%dsteps', nSteps);
+    infoSaveFile   = fullfile(saveBase, pathName, metricFolder, infoRunFolder, 'sweepOutputs.mat');
+
+    if exist(infoSaveFile,'file')
+        S = load(infoSaveFile,'outputs');
+        outputsInfo = S.outputs;   % nSteps x 1 cell
+
+        % Extract all transform matrices
+        T_infoSeeds = cell(nSteps,1);
+        for i = 1:nSteps
+            T_infoSeeds{i} = outputsInfo{i}.transformRGBmatrix;
+        end
+
+        fprintf('[seed] Loaded %d info-sweep T matrices\n', nSteps);
+    else
+        fprintf('[seed] No info sweep found at:\n  %s\n', infoSaveFile);
+    end
+end
+
+
+
+
 % Starting points for search over matrices
 T_I = eye(3);
 T_prev = eye(3);
 
+
 for i = 1:nSteps
+
+    % if strcmpi(sweepAxis,'distortion') && ~isempty(T_infoSeeds)
+    % T_prev = T_infoSeeds{i};
+    % end
+
     thisX = xVec(i);
 
     % Find a good starting point for the distortion sweep (unconstrained on info) 
     % Minimize (distortionNorm - target)^2 to get a feasible T,
     % then use that T as the starting point for the real constrained maximize-info step.
     if strcmpi(sweepAxis,'distortion')
+
+        % MAYBE START THIS AT THE T THAT IS THE OUTPUT OF THE INFO SWEEP
+        % TRANSFORMATION MATRIX %% CALLISTA TRY THIS
         feas_fun  = @(t_vec) lossFunction('distortion', thisX, t_vec, ...
                             LMSCalFormat, imgParams, dichromatType, ...
                             obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp,obj.infoParams);
@@ -193,15 +234,15 @@ for i = 1:nSteps
         lamArg = thisX; tgtInfoArg = []; tgtDistArg = [];
     end
 
-    % Optimize from identity starting point or at feasible distortion start
-    [LMS_TI, rgbLin_TI, T_TI, info_TI, normInfo_TI, distortion_TI, normDistortion_TI] = colorCorrectionOptimize( ...
+    % % Optimize from identity starting point or at feasible distortion start
+    [LMS_TI, rgbLin_TI, T_TI, info_TI, normInfo_TI, distortion_TI, normDistortion_TI, nlconSatisfied_TI] = colorCorrectionOptimize( ...
         sweepAxis, lamArg, tgtInfoArg, tgtDistArg, ...
         LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
         obj.infoParams, obj.distortionParams,...
         infoNormalizer, distortionNormalizer, Disp, 'T_init', T_I);
 
     % Optimize from T_prev starting point
-    [LMS_Tprev, rgbLin_Tprev, T_Tprev, info_Tprev, normInfo_Tprev, distortion_Tprev, normDistortion_Tprev] = colorCorrectionOptimize( ...
+    [LMS_Tprev, rgbLin_Tprev, T_Tprev, info_Tprev, normInfo_Tprev, distortion_Tprev, normDistortion_Tprev,nlconSatisfied_Tprev] = colorCorrectionOptimize( ...
         sweepAxis, lamArg, tgtInfoArg, tgtDistArg, ...
         LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
         obj.infoParams, obj.distortionParams,...
@@ -218,15 +259,33 @@ for i = 1:nSteps
             % Objective was "maximize info" -> lambda = 1
             loss_TI    = lossFunction('lambda', 1.0, T_TI(:),    LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
             loss_Tprev = lossFunction('lambda', 1.0, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
-
+        
         case 'lambda'
             % Objective is the mixed lambda objective
             loss_TI    = lossFunction('lambda', thisX, T_TI(:),    LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
             loss_Tprev = lossFunction('lambda', thisX, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
     end
 
+    useTI = true;
+
+    viol_TI    = abs(normDistortion_TI    - thisX);
+    viol_Tprev = abs(normDistortion_Tprev - thisX);
+
+    % Your rule: for TI version, if nl constraint not satisfied -> must use Tprev
+    if ~nlconSatisfied_TI && nlconSatisfied_Tprev
+        useTI = false;
+    elseif ~nlconSatisfied_Tprev && nlconSatisfied_TI
+        useTI = true;
+    elseif nlconSatisfied_Tprev && nlconSatisfied_TI
+        % Otherwise decide by loss
+        useTI = (loss_TI <= loss_Tprev);
+    elseif ~nlconSatisfied_Tprev && ~nlconSatisfied_TI
+        % error('Nonlinear constraints never satisfied')
+        useTI = (viol_TI <= viol_Tprev);          % neither feasible -> use smaller violation
+    end
+
     % Select better of the two losses
-    if loss_TI <= loss_Tprev
+    if useTI
 
         LMSDaltonizedCalFormatSweep{i}       = LMS_TI;
         rgbLinDaltonizedCalFormatSweep{i}    = rgbLin_TI;
