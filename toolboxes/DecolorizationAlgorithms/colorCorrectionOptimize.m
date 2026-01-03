@@ -130,10 +130,11 @@ switch lower(target)
 
     case 'info'
         % Minimize distortion subject to info constraint (=targetInfo)
-        epsInfo = 1;
-        % relTol = 0.01;
-        % absFloor = 1e-6;
-        % epsInfo = max(absFloor, relTol * max(abs(targetInfo), 1));   % relative
+        % epsInfo = 1;
+        % epsInfo = 1e-3;
+        relTol = 0.01;
+        absFloor = 1e-3;
+        epsInfo = max(absFloor, relTol * max(abs(targetInfo), 1));   % relative
 
 
         % Minimize distortion only (lambda=0)
@@ -148,11 +149,11 @@ switch lower(target)
 
     case 'distortion'
         % Maximize info subject to distortion constraint (=targetDist)
-        epsDist = 1e-3;
+        % epsDist = 1e-3;
 
-        % pctTol      = 0.01;   % 1% of target
-        % absTolFloor = 1e-6;    % minimum absolute tolerance
-        % epsDist = max(absTolFloor, pctTol * abs(targetDist));
+        pctTol      = 0.01;   % 1% of target
+        absTolFloor = 1e-3;    % minimum absolute tolerance
+        epsDist = max(absTolFloor, pctTol * abs(targetDist));
 
         % Maximize info only (lambda=1)
         fun = @(t_vec) lossFunction('lambda', 1.0, t_vec, ...
@@ -165,11 +166,6 @@ switch lower(target)
                         'distortion', targetDist, epsDist);
 end
 
-% if ~isempty(nonlcon)
-%     [c0, ceq0] = nonlcon(T_init(:));
-%     fprintf('[START] max(c)=%.3g | max|ceq|=%.3g\n', max(c0(:)), max(abs(ceq0(:))));
-% end
-
 % Now do the minimization with that 
 [transformRGB_opt, fval, exitflag, output] = fmincon(fun, T_init(:), ...            
     A_total, b_total, ...           % Linear inequality constraints (gamut)
@@ -178,24 +174,31 @@ end
     options);
 
 
-% Hard fallback if nonlinear constraint violated
+% Fallback if nonlinear constraint violated
 if ~isempty(nonlcon)
-    [cchk, ceqchk] = nonlcon(transformRGB_opt(:));
 
+    % We want cchk to be less than 0, that would mean that the solution is
+    % within the constraint band
+    [cchk, ~] = nonlcon(transformRGB_opt(:));
+
+    % Determine the worst (largest) inequality constraint
+    % If maxC <= 0, all inequality constraints are satisfied exactly
+    % If maxC > 0, that value is the magnitude of the worst violation
     maxC = max(cchk(:));
-    maxAbsCeq = 0;
-    if ~isempty(ceqchk), maxAbsCeq = max(abs(ceqchk(:))); end
 
-    % fmincon reports constraint violation in output.constrviolation (often easiest)
-    % but we'll compute our own too.
-    tol = options.ConstraintTolerance;
+    % Determine whether the nonlinear constraints are satisfied:
+    %   All inequality constraints must be <= tol
+    %   All equality constraints must have |ceq| <= tol
+    % nlconSatisfied = (maxC <= tol) && (maxAbsCeq <= tol);
+    slack = 1e-12;  % tiny numerical wiggle room
+    nlconSatisfied = (maxC <= slack);
 
-    nlconSatisfied = (maxC <= tol) && (maxAbsCeq <= tol);
-
+    % If the nonlinear constraints are not satisfied:
+    %   Reject the optimized solution
+    %   Fall back to identity
     if ~nlconSatisfied
-        % THIS is the "fallback" behavior you expected fmincon to do automatically.
-        transformRGB_opt = T_init(:);   % or use T_prev(:) depending on what you passed in
-        fprintf('[FALLBACK] Nonlinear constraint violated. Returning T_init.\n');
+        transformRGB_opt = T_init(:);   % For the identity start, this will resort to using identity, for other it will resort to T_prev
+        fprintf('Constraint violated: maxC=%.3g (<=0 is feasible). Returning T_init.\n', maxC);
     end
 else
     nlconSatisfied = true;
@@ -207,36 +210,13 @@ disp('Just finished optimization')
 % Compute the info and distortion values for the transformation matrix that
 % ultimately was chosen after the optimization
 [~, info, infoNormalized, distortion, distortionNormalized] = ...
-    lossFunction('lambda', 0, transformRGB_opt, ...
+    lossFunction('lambda', 0.0, transformRGB_opt, ...
         triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
         infoNormalizer, distortionNormalizer, Disp,paramsStruct);
 
-
-[~, info, infoNormalized, distortion, distortionNormalized] = ...
-    lossFunction('lambda', 1, transformRGB_opt, ...
-        triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-        infoNormalizer, distortionNormalizer, Disp,paramsStruct);
 % the idea here was that maybe the constraint for distortion worked but
 % keeping it in gamut didn't? or maybe the attempt to keep it in gamut is
 % what's making it fail the search? 
-
-nlconSatisfied = true;  % default
-
-switch lower(target)
-    case 'distortion'
-        nlconSatisfied = abs(distortionNormalized - targetDist) <= epsDist;
-        fprintf('[TARGET DIST] achieved=%.6f target=%.6f |diff|=%.6f (eps=%.3g) satisfied=%d\n', ...
-            distortionNormalized, targetDist, abs(distortionNormalized-targetDist), epsDist, nlconSatisfied);
-
-    case 'info'
-        nlconSatisfied = abs(infoNormalized - targetInfo) <= epsInfo;
-        fprintf('[TARGET INFO] achieved=%.6f target=%.6f |diff|=%.6f (eps=%.3g) satisfied=%d\n', ...
-            infoNormalized, targetInfo, abs(infoNormalized-targetInfo), epsInfo, nlconSatisfied);
-
-    case 'lambda'
-        % No "hit this exact target value" constraint in lambda mode
-        nlconSatisfied = true;
-end
 
 % Reshape optimal solution into matrix
 transformRGBmatrix = reshape(transformRGB_opt, 3, 3);
