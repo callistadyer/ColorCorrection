@@ -1,7 +1,7 @@
 function [LMSDaltonizedCalFormatSweep, rgbLinDaltonizedCalFormatSweep,...
     LMSDaltonizedRenderedCalFormatSweep,rgbLinDaltonizedRenderedCalFormatSweep,...
     transformRGBmatrixSweep, targetInfoNormalized, targetDistortionNormalized, infoNormalizedAchievedSweep, distortionNormalizedAchievedSweep] = computeSweep(obj,...
-    LMSCalFormat, imgParams, dichromatType, nSteps,pathName,sweepAxis)
+    LMSCalFormat, imgParams, dichromatType, nSteps,pathName,sweepAxis,varargin)
 % computeSweep  Sweep through target info or target distortion or lambda values and optimize color correction.
 %
 % Syntax:
@@ -34,6 +34,11 @@ function [LMSDaltonizedCalFormatSweep, rgbLinDaltonizedCalFormatSweep,...
 %   transformRGBmatrixSweep                - Cell of 3x3 transformation matrices
 %
 
+p = inputParser;
+p.addParameter('rerunStep', [], @(x) isempty(x) || (isscalar(x) && x>=1));
+p.parse(varargin{:});
+rerunStep = p.Results.rerunStep;
+
 if isempty(nSteps)
     nSteps = 10;
 end
@@ -62,69 +67,102 @@ if ~exist(saveSubdir, 'dir')
     mkdir(saveSubdir);
 end
 
-% If the file already exists, load that instead of running again
-% if exist(saveFile, 'file')
-%     fprintf('computeSweep Loading old sweep from: %s\n', saveFile);
-%     loaded  = load(saveFile);
-%     outputs = loaded.outputs;
-% 
-%     nSteps = numel(outputs);
-%     LMSDaltonizedCalFormatSweep            = cell(1,nSteps);
-%     rgbLinDaltonizedCalFormatSweep         = cell(1,nSteps);
-%     LMSDaltonizedRenderedCalFormatSweep    = cell(1,nSteps);
-%     rgbLinDaltonizedRenderedCalFormatSweep = cell(1,nSteps);
-%     transformRGBmatrixSweep                = cell(1,nSteps);
-% 
-%     targetInfoNormalized                   = zeros(1,nSteps);
-%     targetDistortionNormalized             = zeros(1,nSteps);
-% 
-%     infoNormalizedAchievedSweep            = zeros(1,nSteps);
-%     distortionNormalizedAchievedSweep      = zeros(1,nSteps);
-% 
-%     for i = 1:nSteps
-%         LMSDaltonizedCalFormatSweep{i}            = outputs{i}.LMSDaltonizedCalFormat;
-%         rgbLinDaltonizedCalFormatSweep{i}         = outputs{i}.rgbLinDaltonizedCalFormat;
-%         LMSDaltonizedRenderedCalFormatSweep{i}    = outputs{i}.LMSDaltonizedRenderedCalFormat;
-%         rgbLinDaltonizedRenderedCalFormatSweep{i} = outputs{i}.rgbLinDaltonizedRenderedCalFormat;
-%         transformRGBmatrixSweep{i}                = outputs{i}.transformRGBmatrix;
-% 
-%         targetInfoNormalized(i)                   = outputs{i}.targetInfoNormalized;
-%         targetDistortionNormalized(i)             = outputs{i}.targetDistortionNormalized;
-% 
-%         infoNormalizedAchievedSweep(i)            = outputs{i}.infoNormalizedAchievedSweep;
-%         distortionNormalizedAchievedSweep(i)      = outputs{i}.distortionNormalizedAchievedSweep;
-%     end
-%     return;
-% end
-
-% Resume logic: if sweepOutputs.mat exists, load partial results
-% and continue from the next unfinished step.
+% -----------------------------
+% Load/resume/rerun logic (single pass)
+% -----------------------------
 outputs = {};
 startStep = 1;
+stopAfterThisStep = false;
 
-if exist(saveFile, 'file')
+% Helper to detect which steps are "done"
+isDoneStep = @(s) isstruct(s) && isfield(s,'transformRGBmatrix') && ~isempty(s.transformRGBmatrix);
+
+if exist(saveFile,'file')
     fprintf('computeSweep: Found existing sweep file:\n  %s\n', saveFile);
     S = load(saveFile);
 
-    if isfield(S,'outputs')
+    if isfield(S,'outputs') && ~isempty(S.outputs)
         outputs = S.outputs;
 
-        % Determine the last completed step (transformRGBmatrix is a good "done" marker)
         doneMask = false(1, numel(outputs));
         for ii = 1:numel(outputs)
-            doneMask(ii) = isstruct(outputs{ii}) && isfield(outputs{ii}, 'transformRGBmatrix') ...
-                                         && ~isempty(outputs{ii}.transformRGBmatrix);
+            doneMask(ii) = isDoneStep(outputs{ii});
         end
-        lastDone = find(doneMask, 1, 'last');
 
-        if isempty(lastDone)
-            startStep = 1;
-            fprintf('  No completed steps detected. Starting from step 1.\n');
+        lastDone = find(doneMask, 1, 'last');
+        allDone  = (numel(outputs) >= nSteps) && all(doneMask(1:nSteps));
+
+        % Type A: rerun of a specific step
+        if ~isempty(rerunStep)
+            startStep = rerunStep;
+            stopAfterThisStep = true;
+
+            % Ensure we have previous steps cached so T_prev can seed properly
+            if numel(outputs) < nSteps
+                outputs{nSteps} = [];
+            end
+
+            outputs{startStep} = [];
+
+            fprintf('computeSweep: RERUN mode -> step %d only (will overwrite step %d in sweepOutputs.mat)\n', ...
+                startStep, startStep);
+
+            % Type B: no rerunStep, but run is already complete -> load & return 
+        elseif allDone
+            fprintf('computeSweep: All %d steps already complete. Loading and returning.\n', nSteps);
+
+            LMSDaltonizedCalFormatSweep            = cell(1,nSteps);
+            rgbLinDaltonizedCalFormatSweep         = cell(1,nSteps);
+            LMSDaltonizedRenderedCalFormatSweep    = cell(1,nSteps);
+            rgbLinDaltonizedRenderedCalFormatSweep = cell(1,nSteps);
+            transformRGBmatrixSweep                = cell(1,nSteps);
+
+            targetInfoNormalized                   = nan(1,nSteps);
+            targetDistortionNormalized             = nan(1,nSteps);
+            infoNormalizedAchievedSweep            = nan(1,nSteps);
+            distortionNormalizedAchievedSweep      = nan(1,nSteps);
+
+            for i = 1:nSteps
+                LMSDaltonizedCalFormatSweep{i}            = outputs{i}.LMSDaltonizedCalFormat;
+                rgbLinDaltonizedCalFormatSweep{i}         = outputs{i}.rgbLinDaltonizedCalFormat;
+                LMSDaltonizedRenderedCalFormatSweep{i}    = outputs{i}.LMSDaltonizedRenderedCalFormat;
+                rgbLinDaltonizedRenderedCalFormatSweep{i} = outputs{i}.rgbLinDaltonizedRenderedCalFormat;
+                transformRGBmatrixSweep{i}                = outputs{i}.transformRGBmatrix;
+
+                if isfield(outputs{i},'targetInfoNormalized');           targetInfoNormalized(i) = outputs{i}.targetInfoNormalized; end
+                if isfield(outputs{i},'targetDistortionNormalized');     targetDistortionNormalized(i) = outputs{i}.targetDistortionNormalized; end
+                if isfield(outputs{i},'infoNormalizedAchievedSweep');    infoNormalizedAchievedSweep(i) = outputs{i}.infoNormalizedAchievedSweep; end
+                if isfield(outputs{i},'distortionNormalizedAchievedSweep'); distortionNormalizedAchievedSweep(i) = outputs{i}.distortionNormalizedAchievedSweep; end
+            end
+            return;
+
+            % Type C: partial run -> resume from next step 
         else
-            startStep = lastDone + 1;
-            fprintf('  Completed steps: 1–%d. Resuming at step %d.\n', lastDone, startStep);
+            if isempty(lastDone)
+                startStep = 1;
+                fprintf('  No completed steps detected. Starting from step 1.\n');
+            else
+                startStep = lastDone + 1;
+                fprintf('  Completed steps: 1–%d. Resuming at step %d.\n', lastDone, startStep);
+            end
+
+            if numel(outputs) < nSteps
+                outputs{nSteps} = [];
+            end
         end
+
+    else
+        % File exists but doesn't contain outputs
+        outputs = cell(1,nSteps);
+        startStep = 1;
+        fprintf('  sweepOutputs.mat exists but no usable outputs found. Starting fresh.\n');
     end
+
+else
+    % No prior file -> start fresh
+    outputs = cell(1,nSteps);
+    startStep = 1;
+    fprintf('computeSweep: No existing sweep file. Starting fresh.\n');
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -250,10 +288,10 @@ for i = startStep:nSteps
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Find a good starting point for the distortion sweep (unconstrained on info)
-    % The distortion sweep seems to have a harder time finding 
+    % The distortion sweep seems to have a harder time finding
     % solutions at each step that all together form a smooth curve. To try
     % and address this, we have been trying "better" starting points for
-    % the distortion sweep. 
+    % the distortion sweep.
     startPt = 'findDesiredDist';
     if strcmpi(sweepAxis,'distortion')
 
@@ -263,11 +301,11 @@ for i = startStep:nSteps
         if strcmp(startPt,'infoSoln')
             T_prev = T_infoSeeds{i};
 
-        % 2) Try starting the search at a transformation matrix that
-        % succesfully finds the target distortion (with no attention paid
-        % to info)
-        % Minimize (distortionNorm - target)^2 to get a feasible T,
-        % then use that T as the starting point for the real constrained maximize-info step.
+            % 2) Try starting the search at a transformation matrix that
+            % succesfully finds the target distortion (with no attention paid
+            % to info)
+            % Minimize (distortionNorm - target)^2 to get a feasible T,
+            % then use that T as the starting point for the real constrained maximize-info step.
         elseif strcmp(startPt,'findDesiredDist')
 
             % Define the loss function as essentially (distortionNorm - target)^2
@@ -314,7 +352,7 @@ for i = startStep:nSteps
         obj.infoParams, obj.distortionParams,...
         infoNormalizer, distortionNormalizer, Disp, 'T_init', T_I);
 
-    % Optimize from T_prev starting point 
+    % Optimize from T_prev starting point
     [LMS_Tprev, rgbLin_Tprev, T_Tprev, info_Tprev, normInfo_Tprev, distortion_Tprev, normDistortion_Tprev,nlconSatisfied_Tprev] = colorCorrectionOptimize( ...
         sweepAxis, lamArg, tgtInfoArg, tgtDistArg, ...
         LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
@@ -356,15 +394,16 @@ for i = startStep:nSteps
     % If nonlinear constraint not satisfied from identity starting point -> use Tprev
     if ~nlconSatisfied_TI && nlconSatisfied_Tprev
         useTI = false;
-    % If nonlinear constraint not satisfied from T_prev starting point -> use identity start
+        % If nonlinear constraint not satisfied from T_prev starting point -> use identity start
     elseif ~nlconSatisfied_Tprev && nlconSatisfied_TI
         useTI = true;
-    % If nonlinear constraint satisfied from both starting points -> use whichever has lower loss
+        % If nonlinear constraint satisfied from both starting points -> use whichever has lower loss
     elseif nlconSatisfied_Tprev && nlconSatisfied_TI
+        %%%%%%% NOT SURE IF THIS IS A GOOD DECISION?
         % useTI = (loss_TI <= loss_Tprev);
         % useTI = false;
         useTI = true;
-    % If both starting points fail to satisfy the constraint...
+        % If both starting points fail to satisfy the constraint...
     elseif ~nlconSatisfied_Tprev && ~nlconSatisfied_TI
         % error('Nonlinear constraints never satisfied')
         fprintf(['\n[WARNING] Nonlinear constraint NOT satisfied\n' ...
@@ -406,15 +445,6 @@ for i = startStep:nSteps
         T_prev = T_Tprev;
     end
 
-    % % Record whether the SELECTED solution for this step is feasible
-    % % (used later to circle violation points on the debug plot)
-    % if useTI
-    %     violationStep(i) = ~nlconSatisfied_TI;       % circle if TI was infeasible
-    % else
-    %     violationStep(i) = ~nlconSatisfied_Tprev;    % circle if Tprev was infeasible
-    % end
-
-
     % Violation check: evaluate the constraint band on the
     % chosen transform
     pctTol      = 0.01;   % 1% of target
@@ -426,19 +456,13 @@ for i = startStep:nSteps
     switch lower(sweepAxis)
         case 'info'
             % Info-band feasibility: |infoNorm - targetInfo| <= epsInfo
-            [~, ~, infoNorm_chk, ~, distNorm_chk] = lossFunction('lambda', 0.0, T_chosen(:), ...
-                LMSCalFormat, imgParams, dichromatType, ...
-                obj.infoFcn, obj.distortionFcn, ...
-                infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+            [~, ~, infoNorm_chk, ~, distNorm_chk] = lossFunction('lambda', 0.0, T_chosen(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
 
             violationStep(i) = (abs(infoNorm_chk - thisX) > eps);
 
         case 'distortion'
             % Distortion-band feasibility: |distNorm - targetDist| <= epsDist
-            [~, ~, infoNorm_chk, ~, distNorm_chk] = lossFunction('lambda', 0.0, T_chosen(:), ...
-                LMSCalFormat, imgParams, dichromatType, ...
-                obj.infoFcn, obj.distortionFcn, ...
-                infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+            [~, ~, infoNorm_chk, ~, distNorm_chk] = lossFunction('lambda', 0.0, T_chosen(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
 
             violationStep(i) = (abs(distNorm_chk - thisX) > eps);
 
@@ -451,14 +475,9 @@ for i = startStep:nSteps
         i, lower(char(sweepAxis)), thisX, infoNormalizedAchievedSweep(i), distortionNormalizedAchievedSweep(i));
 
     % Plot Achieved info vs distortion up through this step
-    debugPlot_InfoVsDistSingleSweep( ...
-        i, sweepAxis, ...
-        distortionNormalizedAchievedSweep, infoNormalizedAchievedSweep, ...
-        targetDistortionNormalized, targetInfoNormalized, ...
-        violationStep, ...
-        thisX, pathName);
+    debugPlot_InfoVsDistSingleSweep(i, sweepAxis, distortionNormalizedAchievedSweep, infoNormalizedAchievedSweep, targetDistortionNormalized, targetInfoNormalized, violationStep, thisX, pathName);
 
-
+    % Get the dichromat rendering
     [LMSDaltonizedRenderedCalFormatSweep{i},rgbLinDaltonizedRenderedCalFormatSweep{i},~] = DichromRenderLinear(LMSDaltonizedCalFormatSweep{i},dichromatType,Disp);
 
     % Save this step to disk immediately
@@ -481,6 +500,15 @@ for i = startStep:nSteps
     save(saveFile, 'outputs', '-v7.3');
     fprintf('  [checkpoint] saved step %d/%d -> %s\n', i, nSteps, saveFile);
 
+    % Save a per-step snapshot so we can rerun any step instantly
+    stepSnapFile = fullfile(saveSubdir, sprintf('STEP_SNAP_%s_%03d.mat', lower(char(sweepAxis)), i));
+    save(stepSnapFile, 'obj', 'LMSCalFormat', 'imgParams', 'dichromatType','nSteps', 'pathName', 'sweepAxis', 'i', 'thisX', 'infoNormalizer', 'distortionNormalizer', 'targetInfoNormalized', 'targetDistortionNormalized', 'T_I', 'T_prev', '-v7.3');
+
+    % Stop immediately after this step if requested
+    if stopAfterThisStep
+        fprintf('computeSweep: Finished rerun of step %d. Exiting.\n', i);
+        break;
+    end
 end
 % figure(); plot(distNorm_feas,xVec,'-o')
 % disp([distNorm_feas(:), xVec(:)]);
@@ -498,38 +526,54 @@ end
 saveTransformedOutputs(outputs, pathName, nSteps, obj.infoFcn, obj.infoParams, obj.distortionFcn, Disp, 'sweepAxis', sweepAxis);
 
 end
-% Helper function to draw the info-distortion curve after each step
-function debugPlot_InfoVsDistSingleSweep( ...
-    i, sweepAxis, ...
+
+% Helper function to draw the info–distortion curve after each optimization step
+function debugPlot_InfoVsDistSingleSweep(i, sweepAxis, ...
     achDist, achInfo, ...
     targetDistortionNormalized, targetInfoNormalized, ...
     violationStep, ...
     thisX, runID)
 
-% Keep one figure per (runID, sweepAxis)
+% Declare persistent maps so each (runID, sweepAxis) pair keeps its own figure
 persistent hFigMap hAxMap
+
+% Initialize the persistent maps on first call
 if isempty(hFigMap)
     hFigMap = containers.Map('KeyType','char','ValueType','any');
     hAxMap  = containers.Map('KeyType','char','ValueType','any');
 end
 
-% Create or reuse figure/axes
+% Build a unique key identifying this run and sweep type
 key = sprintf('%s__%s', char(string(runID)), lower(char(sweepAxis)));
+
+% If no figure exists for this key (or it was closed), create a new one
 if ~isKey(hFigMap, key) || ~isvalid(hFigMap(key))
     hFig = figure('Name', sprintf('Info vs Distortion (debug) | %s | sweep=%s', char(string(runID)), lower(char(sweepAxis))), 'NumberTitle','off');
+
+    % Create axes inside the new figure
     hAx  = axes('Parent', hFig);
+
+    % Store the handles so future calls reuse them
     hFigMap(key) = hFig;
     hAxMap(key)  = hAx;
 else
+    % Reuse the existing axes for this run/sweep
     hAx = hAxMap(key);
 end
 
-% Colors and styles
+% Define the color used for info sweeps
 infoColor = [0.55 0.20 0.80];
+
+% Define the color used for distortion sweeps
 distColor = [0.10 0.70 0.85];
+
+% Define line style for target reference lines
 lineStyle = ':';
+
+% Define line width for target reference lines
 lineWidth = 0.8;
 
+% Choose the curve color based on which sweep is running
 switch sweepAxis
     case 'info'
         sweepColor = infoColor;
@@ -539,85 +583,102 @@ switch sweepAxis
         sweepColor = [0.35 0.35 0.35];
 end
 
-% Clear and configure axes
 cla(hAx);
 hold(hAx,'on');
 grid(hAx,'off');
 axis(hAx,'square');
+
 xlabel(hAx,'Distortion (normalized)');
 ylabel(hAx,'Info (normalized)');
 
-% Draw target dotted lines
+% Draw horizontal dotted lines for all target info values
 if exist('yline','file') && ~isempty(targetInfoNormalized)
     for kk = 1:numel(targetInfoNormalized)
-        h = yline(hAx, targetInfoNormalized(kk), lineStyle,'Color', infoColor, 'LineWidth', lineWidth);
+        h = yline(hAx, targetInfoNormalized(kk), lineStyle, 'Color', infoColor, 'LineWidth', lineWidth);
+
+        % Prevent these reference lines from appearing in the legend
         h.HandleVisibility = 'off';
     end
 end
+
+% Draw vertical dotted lines for all target distortion values
 if exist('xline','file') && ~isempty(targetDistortionNormalized)
     for kk = 1:numel(targetDistortionNormalized)
         h = xline(hAx, targetDistortionNormalized(kk), lineStyle, 'Color', distColor, 'LineWidth', lineWidth);
+
+        % Prevent these reference lines from appearing in the legend
         h.HandleVisibility = 'off';
     end
 end
 
-% Identify valid points
-valid  = ~isnan(achDist) & ~isnan(achInfo);
-kAll   = find(valid);
-kPast  = kAll(kAll <  i);
+% Find steps where both achieved distortion and info are defined
+valid = ~isnan(achDist) & ~isnan(achInfo);
+
+% Indices of all valid steps
+kAll = find(valid);
+
+% Indices of steps up through and including the current step
 kSoFar = kAll(kAll <= i);
 
-% Plot achieved curve through past points only
+% Plot the achieved info–distortion curve up to the current step
 if ~isempty(kSoFar)
-    plot(hAx, achDist(kSoFar), achInfo(kSoFar), '-','Color', sweepColor, 'LineWidth', 1.5);
+    plot(hAx, achDist(kSoFar), achInfo(kSoFar), '-', 'Color', sweepColor, 'LineWidth', 1.5);
 end
 
-% Plot achieved markers (open circles)
-hAch = plot(hAx, nan, nan, 'o','Color', sweepColor, 'LineWidth', 1.5, 'MarkerSize', 10, 'MarkerFaceColor', 'none');
-if ~isempty(kSoFar)
-    plot(hAx, achDist(kSoFar), achInfo(kSoFar), 'o', ...
-        'Color', sweepColor, 'LineWidth', 1.5, ...
-        'MarkerSize', 6, 'MarkerFaceColor', 'none', ...
-        'HandleVisibility','off');
-end
-
-% Plot violations as filled markers
-hViol = plot(hAx, nan, nan, 'o', ...
+% Create a dummy plot handle for achieved points (legend only)
+hAch = plot(hAx, nan, nan, 'o', ...
+    'Color', sweepColor, ...
+    'LineWidth', 1.5, ...
     'MarkerSize', 10, ...
-    'MarkerFaceColor', sweepColor, ...
-    'MarkerEdgeColor', sweepColor);
-badIdx = kAll(violationStep(kAll));
-if ~isempty(badIdx)
-    plot(hAx, achDist(badIdx), achInfo(badIdx), 'o', ...
-        'MarkerSize', 7, ...
-        'MarkerFaceColor', sweepColor, ...
-        'MarkerEdgeColor', sweepColor, ...
+    'MarkerFaceColor', 'none');
+
+% Plot achieved points as open circles (hidden from legend)
+if ~isempty(kSoFar)
+    plot(hAx, achDist(kSoFar), achInfo(kSoFar), 'o', 'Color', sweepColor, 'LineWidth', 1.5, ...
+        'MarkerSize', 12, ...
+        'MarkerFaceColor', 'none', ...
         'HandleVisibility','off');
 end
 
-% Set title with only target vs achieved for this sweep
+% Create a dummy plot handle for violation points
+hViol = plot(hAx, nan, nan, 'o', 'MarkerSize', 10, 'MarkerFaceColor', sweepColor,'MarkerEdgeColor', sweepColor);
+
+% Find indices of steps marked as violations
+badIdx = kAll(violationStep(kAll));
+
+% Plot violation points as filled circles
+if ~isempty(badIdx)
+    plot(hAx, achDist(badIdx), achInfo(badIdx), 'o', 'MarkerSize', 12, 'MarkerFaceColor', sweepColor, 'MarkerEdgeColor', sweepColor, 'HandleVisibility','off');
+end
+
+% Build the title string depending on the sweep type
 switch sweepAxis
     case 'info'
         titleStr = sprintf([ ...
             'Info vs Distortion (single sweep) | info | up to step %d\n' ...
             'TargetInfo=%.6g | AchievedInfo=%.6g | |Δ|=%.3g'], ...
             i, thisX, achInfo(i), abs(achInfo(i) - thisX));
+
     case 'distortion'
         titleStr = sprintf([ ...
             'Info vs Distortion (single sweep) | distortion | up to step %d\n' ...
             'TargetDist=%.6g | AchievedDist=%.6g | |Δ|=%.3g'], ...
             i, thisX, achDist(i), abs(achDist(i) - thisX));
+
     otherwise
         titleStr = sprintf('Info vs Distortion (single sweep) | up to step %d', i);
 end
+
+% Apply the title to the axes
 title(hAx, titleStr);
 
-% Legend (only meaningful semantics)
+% Create a concise legend explaining achieved vs violation points
 legend(hAx, [hAch hViol], ...
     {sprintf('Achieved (%s sweep)', sweepAxis), ...
      sprintf('Violation (%s sweep)', sweepAxis)}, ...
     'Location','best');
 
+% Force MATLAB to update the figure immediately
 drawnow;
 
 end
