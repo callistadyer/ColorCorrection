@@ -16,8 +16,8 @@ setType       = 1;
 dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
-m = 54;
-n = 54;
+m = 55;
+n = 55;
 
 % How many steps do you want in a transformation sweep?
 nSteps = 11;
@@ -33,10 +33,10 @@ clearFlag     = 0;
 
 % Rerun a certain point
 % Set enable=true to rerun one step
-rerun.enable = false;        
+rerun.enable = true;        
 rerun.step   = 3;         
 rerun.which  = 'distortion';  % 'info' or 'distortion'
-rerun.img    = 'gaugin.png';  % rerun only for this image
+rerun.img    = 'flower1.png';  % rerun only for this image
 if rerun.enable
     sweepAxis = rerun.which; 
 end
@@ -234,30 +234,42 @@ for ii = 1:numel(imageTypes)
     figure();
 
     if ranInfo
-        if rerun.enable
-            fprintf('  [rerun] done. Skipping montage/overlay for speed.\n');
-            break;   % exits the imageTypes loop after the rerun image
-        end
          
         plot(distNormAch_info, infoNormAch_info, 'o-', ...
             'LineWidth', 1.5, ...
             'DisplayName', 'Info sweep (minimize distortion)');
         hold on;
+
+        for k = 1:numel(targetInfoNorm_info)
+            yline(targetInfoNorm_info(k), ':', ...
+                'HandleVisibility','off');   % keeps legend clean
+        end
+        for k = 1:numel(targetDistNorm_info)
+            xline(targetDistNorm_info(k), ':', ...
+                'HandleVisibility','off');
+        end
+
     end
 
     if ranDist
-        if rerun.enable
-            fprintf('  [rerun] done. Skipping montage/overlay for speed.\n');
-            break;   % exits the imageTypes loop after the rerun image
-        end
 
         plot(distNormAch_dist, infoNormAch_dist, 's-', ...
             'LineWidth', 1.5, ...
             'DisplayName', 'Distortion sweep (maximize info)');
         hold on;
+
+        for k = 1:numel(targetInfoNorm_dist)
+            yline(targetInfoNorm_info(k), ':', ...
+                'HandleVisibility','off');   % keeps legend clean
+        end
+        for k = 1:numel(targetDistNorm_dist)
+            xline(targetDistNorm_info(k), ':', ...
+                'HandleVisibility','off');
+        end
+
     end
 
-    grid on; axis square;
+    grid off; axis square;
     xlabel('Achieved Distortion (normalized)');
     ylabel('Achieved Info (normalized)');
     title(sprintf('%s — %s — %d steps', imgType, dichromatType, nSteps));

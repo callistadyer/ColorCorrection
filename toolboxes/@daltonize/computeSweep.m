@@ -230,8 +230,26 @@ if numel(outputs) < nSteps
 end
 
 % If resuming, populate arrays from all of the prev steps outputs{1:startStep-1}
-for ii = 1:startStep-1
-    if isempty(outputs{ii}); continue; end
+% for ii = 1:startStep-1
+%     if isempty(outputs{ii}); continue; end
+% 
+%     LMSDaltonizedCalFormatSweep{ii}            = outputs{ii}.LMSDaltonizedCalFormat;
+%     rgbLinDaltonizedCalFormatSweep{ii}         = outputs{ii}.rgbLinDaltonizedCalFormat;
+%     LMSDaltonizedRenderedCalFormatSweep{ii}    = outputs{ii}.LMSDaltonizedRenderedCalFormat;
+%     rgbLinDaltonizedRenderedCalFormatSweep{ii} = outputs{ii}.rgbLinDaltonizedRenderedCalFormat;
+%     transformRGBmatrixSweep{ii}                = outputs{ii}.transformRGBmatrix;
+% 
+%     infoNormalizedAchievedSweep(ii)            = outputs{ii}.infoNormalizedAchievedSweep;
+%     distortionNormalizedAchievedSweep(ii)      = outputs{ii}.distortionNormalizedAchievedSweep;
+% end
+% Populate arrays from already saved steps 
+for ii = 1:nSteps
+    if ii > numel(outputs) || isempty(outputs{ii})
+        continue; 
+    end
+    if ~isDoneStep(outputs{ii})
+        continue;
+    end
 
     LMSDaltonizedCalFormatSweep{ii}            = outputs{ii}.LMSDaltonizedCalFormat;
     rgbLinDaltonizedCalFormatSweep{ii}         = outputs{ii}.rgbLinDaltonizedCalFormat;
@@ -239,9 +257,21 @@ for ii = 1:startStep-1
     rgbLinDaltonizedRenderedCalFormatSweep{ii} = outputs{ii}.rgbLinDaltonizedRenderedCalFormat;
     transformRGBmatrixSweep{ii}                = outputs{ii}.transformRGBmatrix;
 
-    infoNormalizedAchievedSweep(ii)            = outputs{ii}.infoNormalizedAchievedSweep;
-    distortionNormalizedAchievedSweep(ii)      = outputs{ii}.distortionNormalizedAchievedSweep;
+    if isfield(outputs{ii}, 'infoNormalizedAchievedSweep')
+        infoNormalizedAchievedSweep(ii) = outputs{ii}.infoNormalizedAchievedSweep;
+    end
+    if isfield(outputs{ii}, 'distortionNormalizedAchievedSweep')
+        distortionNormalizedAchievedSweep(ii) = outputs{ii}.distortionNormalizedAchievedSweep;
+    end
+
+    if isfield(outputs{ii}, 'targetInfoNormalized')
+        targetInfoNormalized(ii) = outputs{ii}.targetInfoNormalized;
+    end
+    if isfield(outputs{ii}, 'targetDistortionNormalized')
+        targetDistortionNormalized(ii) = outputs{ii}.targetDistortionNormalized;
+    end
 end
+
 
 % Sweep through target vals
 switch lower(sweepAxis)
@@ -289,7 +319,13 @@ end
 
 violationStep = false(1, nSteps);
 % for i = 1:nSteps
-for i = startStep:nSteps
+if stopAfterThisStep
+    steps = startStep;          % rerun mode: do ONLY this step
+else
+    steps = startStep:nSteps;   % normal mode: resume to end
+end
+
+for i = steps
 
     thisX = xVec(i);
 
@@ -299,7 +335,7 @@ for i = startStep:nSteps
     % solutions at each step that all together form a smooth curve. To try
     % and address this, we have been trying "better" starting points for
     % the distortion sweep.
-    startPt = 'prevStep';
+    startPt = 'findDesiredDist';
     if strcmpi(sweepAxis,'distortion')
 
         % 1) Try starting the search at the transformation matrix found at that
@@ -339,7 +375,8 @@ for i = startStep:nSteps
 
             % Start the search at that transformation matrix
             T_prev = reshape(T_feas_vec,3,3);
-        else 
+        elseif strcmpi(startPt,'prevStep')
+            % T_prev = transformRGBmatrixSweep{i-1};
         end
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
