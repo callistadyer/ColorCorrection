@@ -1,9 +1,13 @@
 % Image types
 % imageTypes = {'fruit.png'};
+% imageTypes = {'flower1.png', ...
+%     'fruit.png', ...
+%     'Gaugin.png', ...
+%     'ishi45.png'};
+
 imageTypes = {'flower1.png', ...
     'fruit.png', ...
-    'Gaugin.png', ...
-    'ishi45.png'};
+    'Gaugin.png'};
 
 % Set type (choose 1 unless ishihara)
 setType       = 1;
@@ -12,8 +16,8 @@ setType       = 1;
 dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
-m = 60;
-n = 60;
+m = 54;
+n = 54;
 
 % How many steps do you want in a transformation sweep?
 nSteps = 11;
@@ -32,7 +36,7 @@ clearFlag     = 0;
 rerun.enable = false;        
 rerun.step   = 3;         
 rerun.which  = 'distortion';  % 'info' or 'distortion'
-rerun.img    = 'gaugin.png';  % rerun only for this image (must match one in imageTypes)
+rerun.img    = 'gaugin.png';  % rerun only for this image
 if rerun.enable
     sweepAxis = rerun.which; 
 end

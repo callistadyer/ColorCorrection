@@ -131,10 +131,10 @@ switch lower(target)
     case 'info'
         % Minimize distortion subject to info constraint (=targetInfo)
         % epsInfo = 1;
-        % epsInfo = 1e-3;
-        relTol = 0.01;
-        absFloor = 1e-3;
-        epsInfo = max(absFloor, relTol * max(abs(targetInfo), 1));   % relative
+        epsInfo = 1e-3;
+        % pctTol = 0.01;
+        % absFloor = 1e-3;
+        % epsInfo = max(absFloor, pctTol * targetInfo);   % relative
 
 
         % Minimize distortion only (lambda=0)
@@ -149,11 +149,11 @@ switch lower(target)
 
     case 'distortion'
         % Maximize info subject to distortion constraint (=targetDist)
-        % epsDist = 1e-3;
+        epsDist = 1e-3;
 
-        pctTol      = 0.01;   % 1% of target
-        absTolFloor = 1e-3;    % minimum absolute tolerance
-        epsDist = max(absTolFloor, pctTol * abs(targetDist));
+        % pctTol      = 0.01;   % 1% of target
+        % absTolFloor = 1e-3;   % minimum absolute tolerance
+        % epsDist = max(absTolFloor, pctTol * targetDist);
 
         % Maximize info only (lambda=1)
         fun = @(t_vec) lossFunction('lambda', 1.0, t_vec, ...
@@ -181,7 +181,6 @@ if ~isempty(nonlcon)
     % within the constraint band
     [cchk, ~] = nonlcon(transformRGB_opt(:));
 
-    % Determine the worst (largest) inequality constraint
     % If maxC <= 0, all inequality constraints are satisfied exactly
     % If maxC > 0, that value is the magnitude of the worst violation
     maxC = max(cchk(:));
@@ -195,7 +194,7 @@ if ~isempty(nonlcon)
 
     % If the nonlinear constraints are not satisfied:
     %   Reject the optimized solution
-    %   Fall back to identity
+    %   Fall back to "Start T"
     if ~nlconSatisfied
         transformRGB_opt = T_init(:);   % For the identity start, this will resort to using identity, for other it will resort to T_prev
         fprintf('Constraint violated: maxC=%.3g (<=0 is feasible). Returning T_init.\n', maxC);

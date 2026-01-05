@@ -67,29 +67,35 @@ if ~exist(saveSubdir, 'dir')
     mkdir(saveSubdir);
 end
 
-% -----------------------------
-% Load/resume/rerun logic (single pass)
-% -----------------------------
+% Load/resume/rerun logic
 outputs = {};
 startStep = 1;
 stopAfterThisStep = false;
 
 % Helper to detect which steps are "done"
+% if the struct exists and contains the 'transformRGBmatrix', and if that field is not empty
 isDoneStep = @(s) isstruct(s) && isfield(s,'transformRGBmatrix') && ~isempty(s.transformRGBmatrix);
 
 if exist(saveFile,'file')
     fprintf('computeSweep: Found existing sweep file:\n  %s\n', saveFile);
     S = load(saveFile);
 
+    % If there is a thing called outputs and there's somethin in it...
     if isfield(S,'outputs') && ~isempty(S.outputs)
         outputs = S.outputs;
 
+        % Initialize a array (one per sweep step) marking all steps as not done
         doneMask = false(1, numel(outputs));
+        % Check inside each step - is there something in each? 
         for ii = 1:numel(outputs)
             doneMask(ii) = isDoneStep(outputs{ii});
         end
 
+        % Identify the most recent sweep step marked as completed so we know
+        % where to resume the sweep
         lastDone = find(doneMask, 1, 'last');
+
+        % True if all nSteps have completed successfully
         allDone  = (numel(outputs) >= nSteps) && all(doneMask(1:nSteps));
 
         % Type A: rerun of a specific step
@@ -97,17 +103,18 @@ if exist(saveFile,'file')
             startStep = rerunStep;
             stopAfterThisStep = true;
 
-            % Ensure we have previous steps cached so T_prev can seed properly
+            % Ensure outputs has at least nSteps entries by padding with empty cells
             if numel(outputs) < nSteps
                 outputs{nSteps} = [];
             end
 
+            % Just clear out the desired step so we can re-do
             outputs{startStep} = [];
 
             fprintf('computeSweep: RERUN mode -> step %d only (will overwrite step %d in sweepOutputs.mat)\n', ...
                 startStep, startStep);
 
-            % Type B: no rerunStep, but run is already complete -> load & return 
+            % Type B: no rerunStep, but run is already complete -> load and return 
         elseif allDone
             fprintf('computeSweep: All %d steps already complete. Loading and returning.\n', nSteps);
 
@@ -138,10 +145,11 @@ if exist(saveFile,'file')
 
             % Type C: partial run -> resume from next step 
         else
+            % Maybe nothing is done...
             if isempty(lastDone)
                 startStep = 1;
                 fprintf('  No completed steps detected. Starting from step 1.\n');
-            else
+            else % start right after the last one finished
                 startStep = lastDone + 1;
                 fprintf('  Completed steps: 1–%d. Resuming at step %d.\n', lastDone, startStep);
             end
@@ -159,7 +167,7 @@ if exist(saveFile,'file')
     end
 
 else
-    % No prior file -> start fresh
+    % No prior file means start fresh
     outputs = cell(1,nSteps);
     startStep = 1;
     fprintf('computeSweep: No existing sweep file. Starting fresh.\n');
@@ -221,7 +229,7 @@ if numel(outputs) < nSteps
     outputs{nSteps} = [];
 end
 
-% If resuming, populate arrays from outputs{1:startStep-1}
+% If resuming, populate arrays from all of the prev steps outputs{1:startStep-1}
 for ii = 1:startStep-1
     if isempty(outputs{ii}); continue; end
 
@@ -236,7 +244,6 @@ for ii = 1:startStep-1
 end
 
 % Sweep through target vals
-
 switch lower(sweepAxis)
     case 'info'
         xVec = targetInfoNormalized;
@@ -292,13 +299,14 @@ for i = startStep:nSteps
     % solutions at each step that all together form a smooth curve. To try
     % and address this, we have been trying "better" starting points for
     % the distortion sweep.
-    startPt = 'findDesiredDist';
+    startPt = 'prevStep';
     if strcmpi(sweepAxis,'distortion')
 
         % 1) Try starting the search at the transformation matrix found at that
         % step of the info sweep (that is, grab the solution for the info
         % sweep, and start there)
         if strcmp(startPt,'infoSoln')
+            
             T_prev = T_infoSeeds{i};
 
             % 2) Try starting the search at a transformation matrix that
@@ -331,6 +339,7 @@ for i = startStep:nSteps
 
             % Start the search at that transformation matrix
             T_prev = reshape(T_feas_vec,3,3);
+        else 
         end
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -400,9 +409,9 @@ for i = startStep:nSteps
         % If nonlinear constraint satisfied from both starting points -> use whichever has lower loss
     elseif nlconSatisfied_Tprev && nlconSatisfied_TI
         %%%%%%% NOT SURE IF THIS IS A GOOD DECISION?
-        % useTI = (loss_TI <= loss_Tprev);
+        useTI = (loss_TI <= loss_Tprev);
         % useTI = false;
-        useTI = true;
+        % useTI = true;
         % If both starting points fail to satisfy the constraint...
     elseif ~nlconSatisfied_Tprev && ~nlconSatisfied_TI
         % error('Nonlinear constraints never satisfied')
@@ -448,28 +457,74 @@ for i = startStep:nSteps
     % Violation check: evaluate the constraint band on the
     % chosen transform
     pctTol      = 0.01;   % 1% of target
-    absTolFloor = 1e-3;    % minimum absolute tolerance
-    eps = max(absTolFloor, pctTol * abs(thisX));
+    absTolFloor = 1e-3;   % minimum absolute tolerance
+    eps = max(absTolFloor, pctTol * thisX);
+ 
+    eps = 1e-3;
 
     T_chosen = transformRGBmatrixSweep{i};
 
     switch lower(sweepAxis)
         case 'info'
-            % Info-band feasibility: |infoNorm - targetInfo| <= epsInfo
             [~, ~, infoNorm_chk, ~, distNorm_chk] = lossFunction('lambda', 0.0, T_chosen(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
 
-            violationStep(i) = (abs(infoNorm_chk - thisX) > eps);
+            % Do you get within the range for the info constraint band? 
+            violationStep(i) = (round(abs(infoNorm_chk - thisX),3) > (eps + 1e-12));
 
         case 'distortion'
-            % Distortion-band feasibility: |distNorm - targetDist| <= epsDist
             [~, ~, infoNorm_chk, ~, distNorm_chk] = lossFunction('lambda', 0.0, T_chosen(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
 
-            violationStep(i) = (abs(distNorm_chk - thisX) > eps);
+            % Do you get within the range for the distortion constraint band? 
+            violationStep(i) = (round(abs(distNorm_chk - thisX),3) > (eps + 1e-12));
 
         otherwise
             violationStep(i) = false;
     end
 
+    % If violation, let's take a look
+    if violationStep(i)
+
+        % Identify which initialization the SELECTED solution used
+        if useTI
+            chosenInit = 'identity start (T_I)';
+        else
+            chosenInit = 'previous start (T_prev)';
+        end
+
+        % Get the relevent info
+        switch lower(sweepAxis)
+            case 'info'
+                targetVal   = thisX;
+                achievedVal = infoNorm_chk;
+                deltaVal    = abs(achievedVal - targetVal);
+                metricName  = 'infoNorm';
+            case 'distortion'
+                targetVal   = thisX;
+                achievedVal = distNorm_chk;
+                deltaVal    = abs(achievedVal - targetVal);
+                metricName  = 'distNorm';
+        end
+
+        fprintf('\n================= CONSTRAINT VIOLATION =================\n');
+        fprintf('step=%d | sweep=%s\n', i, lower(char(sweepAxis)));
+        fprintf('chosen init: %s\n', chosenInit);
+        fprintf('target %s = %.6g\n', metricName, targetVal);
+        fprintf('achieved %s = %.6g\n', metricName, achievedVal);
+        fprintf('delta = %.6g', deltaVal);
+
+        % Also show the two candidate solutions
+        if strcmpi(sweepAxis,'info')
+            fprintf('candidate (T_I)    achieved info=%.6g | dist=%.6g\n', normInfo_TI,   normDistortion_TI);
+            fprintf('candidate (T_prev) achieved info=%.6g | dist=%.6g\n', normInfo_Tprev, normDistortion_Tprev);
+        elseif strcmpi(sweepAxis,'distortion')
+            fprintf('candidate (T_I)    achieved dist=%.6g | info=%.6g\n', normDistortion_TI,   normInfo_TI);
+            fprintf('candidate (T_prev) achieved dist=%.6g | info=%.6g\n', normDistortion_Tprev, normInfo_Tprev);
+        end
+
+        % keyboard;  
+        % pause;   
+    end
+ 
 
     fprintf('step %2d | sweep=%s | target=%.4f | achievedInfo=%.4f | achievedDist=%.4f\n', ...
         i, lower(char(sweepAxis)), thisX, infoNormalizedAchievedSweep(i), distortionNormalizedAchievedSweep(i));
@@ -561,19 +616,11 @@ else
     hAx = hAxMap(key);
 end
 
-% Define the color used for info sweeps
 infoColor = [0.55 0.20 0.80];
-
-% Define the color used for distortion sweeps
 distColor = [0.10 0.70 0.85];
-
-% Define line style for target reference lines
 lineStyle = ':';
-
-% Define line width for target reference lines
 lineWidth = 0.8;
 
-% Choose the curve color based on which sweep is running
 switch sweepAxis
     case 'info'
         sweepColor = infoColor;
@@ -595,8 +642,6 @@ ylabel(hAx,'Info (normalized)');
 if exist('yline','file') && ~isempty(targetInfoNormalized)
     for kk = 1:numel(targetInfoNormalized)
         h = yline(hAx, targetInfoNormalized(kk), lineStyle, 'Color', infoColor, 'LineWidth', lineWidth);
-
-        % Prevent these reference lines from appearing in the legend
         h.HandleVisibility = 'off';
     end
 end
@@ -605,16 +650,12 @@ end
 if exist('xline','file') && ~isempty(targetDistortionNormalized)
     for kk = 1:numel(targetDistortionNormalized)
         h = xline(hAx, targetDistortionNormalized(kk), lineStyle, 'Color', distColor, 'LineWidth', lineWidth);
-
-        % Prevent these reference lines from appearing in the legend
         h.HandleVisibility = 'off';
     end
 end
 
 % Find steps where both achieved distortion and info are defined
 valid = ~isnan(achDist) & ~isnan(achInfo);
-
-% Indices of all valid steps
 kAll = find(valid);
 
 % Indices of steps up through and including the current step
@@ -625,60 +666,44 @@ if ~isempty(kSoFar)
     plot(hAx, achDist(kSoFar), achInfo(kSoFar), '-', 'Color', sweepColor, 'LineWidth', 1.5);
 end
 
-% Create a dummy plot handle for achieved points (legend only)
-hAch = plot(hAx, nan, nan, 'o', ...
-    'Color', sweepColor, ...
-    'LineWidth', 1.5, ...
-    'MarkerSize', 10, ...
-    'MarkerFaceColor', 'none');
+% Create a dummy plot handle for achieved points (for legend)
+hAch = plot(hAx, nan, nan, 'o', 'Color', sweepColor, 'LineWidth', 1.5, 'MarkerSize', 10, 'MarkerFaceColor', 'none');
 
-% Plot achieved points as open circles (hidden from legend)
+% Plot achieved points as open circles
 if ~isempty(kSoFar)
-    plot(hAx, achDist(kSoFar), achInfo(kSoFar), 'o', 'Color', sweepColor, 'LineWidth', 1.5, ...
-        'MarkerSize', 12, ...
-        'MarkerFaceColor', 'none', ...
-        'HandleVisibility','off');
+    plot(hAx, achDist(kSoFar), achInfo(kSoFar), 'o', 'Color', sweepColor, 'LineWidth', 1.5, 'MarkerSize', 12, 'MarkerFaceColor', 'none', 'HandleVisibility','off');
 end
 
 % Create a dummy plot handle for violation points
-hViol = plot(hAx, nan, nan, 'o', 'MarkerSize', 10, 'MarkerFaceColor', sweepColor,'MarkerEdgeColor', sweepColor);
+% hViol = plot(hAx, nan, nan, 'o', 'MarkerSize', 10, 'MarkerFaceColor', sweepColor,'MarkerEdgeColor', sweepColor);
 
 % Find indices of steps marked as violations
-badIdx = kAll(violationStep(kAll));
+% badIdx = kAll(violationStep(kAll));
 
 % Plot violation points as filled circles
-if ~isempty(badIdx)
-    plot(hAx, achDist(badIdx), achInfo(badIdx), 'o', 'MarkerSize', 12, 'MarkerFaceColor', sweepColor, 'MarkerEdgeColor', sweepColor, 'HandleVisibility','off');
-end
+% if ~isempty(badIdx)
+%     plot(hAx, achDist(badIdx), achInfo(badIdx), 'o', 'MarkerSize', 12, 'MarkerFaceColor', sweepColor, 'MarkerEdgeColor', sweepColor, 'HandleVisibility','off');
+% end
 
-% Build the title string depending on the sweep type
+% Title
 switch sweepAxis
     case 'info'
         titleStr = sprintf([ ...
             'Info vs Distortion (single sweep) | info | up to step %d\n' ...
-            'TargetInfo=%.6g | AchievedInfo=%.6g | |Δ|=%.3g'], ...
+            'TargetInfo=%.6g | AchievedInfo=%.6g | delta=%.3g'], ...
             i, thisX, achInfo(i), abs(achInfo(i) - thisX));
 
     case 'distortion'
         titleStr = sprintf([ ...
             'Info vs Distortion (single sweep) | distortion | up to step %d\n' ...
-            'TargetDist=%.6g | AchievedDist=%.6g | |Δ|=%.3g'], ...
+            'TargetDist=%.6g | AchievedDist=%.6g | delta=%.3g'], ...
             i, thisX, achDist(i), abs(achDist(i) - thisX));
-
-    otherwise
-        titleStr = sprintf('Info vs Distortion (single sweep) | up to step %d', i);
 end
-
-% Apply the title to the axes
 title(hAx, titleStr);
 
-% Create a concise legend explaining achieved vs violation points
-legend(hAx, [hAch hViol], ...
-    {sprintf('Achieved (%s sweep)', sweepAxis), ...
-     sprintf('Violation (%s sweep)', sweepAxis)}, ...
-    'Location','best');
+% Legend
+% legend(hAx, [hAch hViol], {sprintf('Achieved (%s sweep)', sweepAxis), sprintf('Violation (%s sweep)', sweepAxis)}, 'Location','best');
 
-% Force MATLAB to update the figure immediately
 drawnow;
 
 end
