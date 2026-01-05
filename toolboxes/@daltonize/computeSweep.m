@@ -114,7 +114,7 @@ if exist(saveFile,'file')
             fprintf('computeSweep: RERUN mode -> step %d only (will overwrite step %d in sweepOutputs.mat)\n', ...
                 startStep, startStep);
 
-            % Type B: no rerunStep, but run is already complete -> load and return 
+        % Type B: no rerunStep, but run is already complete -> load and return 
         elseif allDone
             fprintf('computeSweep: All %d steps already complete. Loading and returning.\n', nSteps);
 
@@ -143,7 +143,7 @@ if exist(saveFile,'file')
             end
             return;
 
-            % Type C: partial run -> resume from next step 
+        % Type C: partial run -> resume from next step 
         else
             % Maybe nothing is done...
             if isempty(lastDone)
@@ -302,9 +302,9 @@ if strcmpi(sweepAxis,'distortion')
             T_infoSeeds{i} = outputsInfo{i}.transformRGBmatrix;
         end
 
-        fprintf('[seed] Loaded %d info-sweep T matrices\n', nSteps);
+        fprintf('Loaded %d info-sweep T matrices\n', nSteps);
     else
-        fprintf('[seed] No info sweep found at:\n  %s\n', infoSaveFile);
+        fprintf('No info sweep found at:\n  %s\n', infoSaveFile);
     end
 end
 
