@@ -1,13 +1,13 @@
 % Image types
-% imageTypes = {'fruit.png'};
+imageTypes = {'fruit.png'};
 % imageTypes = {'flower1.png', ...
 %     'fruit.png', ...
 %     'Gaugin.png', ...
 %     'ishi45.png'};
 
-imageTypes = {'flower1.png', ...
-    'fruit.png', ...
-    'Gaugin.png'};
+% imageTypes = {'flower1.png', ...
+%     'fruit.png', ...
+%     'Gaugin.png'};
 
 % Set type (choose 1 unless ishihara)
 setType       = 1;
@@ -16,8 +16,8 @@ setType       = 1;
 dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
-m = 128;
-n = 128;
+m = 61;
+n = 61;
 
 % How many steps do you want in a transformation sweep?
 nSteps = 11;
@@ -30,17 +30,6 @@ sweepAxis = 'both';
 % Do you want to clear the image transformation results if it already
 % exists (0)? Or do you want to load the image result if it exists (1)?
 clearFlag     = 0;
-
-% Rerun a certain point
-% Set enable=true to rerun one step
-rerun.enable = true;        
-rerun.step   = 5;         
-rerun.which  = 'distortion';  % 'info' or 'distortion'
-rerun.img    = 'flower1.png';  % rerun only for this image
-if rerun.enable
-    sweepAxis = rerun.which; 
-end
-
 
 
 %% Define objective functions
@@ -70,12 +59,6 @@ for ii = 1:numel(imageTypes)
     imgType = imageTypes{ii};
     fprintf('Processing image type: %s\n', imgType);
 
-    % If rerunning, only process the requested image
-    if rerun.enable && ~strcmpi(imgType, rerun.img)
-        fprintf('  [rerun] skipping (want img=%s)\n', rerun.img);
-        continue;
-    end
-
     % Generate input image
     [LMSCalFormat, rgbLinCalFormat, LMSCalFormatRendered, rgbLinCalFormatRendered, ...
         Disp, imgParams, pathName] = colorCorrectionGenerateImages( ...
@@ -103,23 +86,10 @@ for ii = 1:numel(imageTypes)
         ranInfo = true;
         sweepAxis_info = 'info';
 
-        % [LMSSweep_info, rgbLinSweep_info, ...
-        %     LMSRenderedSweep_info, rgbLinRenderedSweep_info, ...
-        %     TSweep_info, targetInfoNorm_info, targetDistNorm_info, ...
-        %     infoNormAch_info, distNormAch_info] = computeSweep(theDaltonizer,LMSCalFormat, imgParams, dichromatType,nSteps, pathName, sweepAxis_info);
-
-        % If rerunning, tell it which step of the sweep to re-do
-        extraArgs = {};
-        if rerun.enable && strcmpi(rerun.which,'info')
-            extraArgs = {'rerunStep', rerun.step};
-        end
-
         [LMSSweep_info, rgbLinSweep_info, ...
             LMSRenderedSweep_info, rgbLinRenderedSweep_info, ...
             TSweep_info, targetInfoNorm_info, targetDistNorm_info, ...
-            infoNormAch_info, distNormAch_info] = computeSweep( ...
-            theDaltonizer, LMSCalFormat, imgParams, dichromatType, nSteps, pathName, sweepAxis_info, ...
-            extraArgs{:});
+            infoNormAch_info, distNormAch_info] = computeSweep(theDaltonizer,LMSCalFormat, imgParams, dichromatType,nSteps, pathName, sweepAxis_info);
 
         % Target vs achieved info
         fprintf('\nInfo sweep (n=%d): target vs achieved info\n', numel(targetInfoNorm_info));
@@ -164,23 +134,10 @@ for ii = 1:numel(imageTypes)
         ranDist = true;
         sweepAxis_dist = 'distortion';
 
-        % [LMSSweep_dist, rgbLinSweep_dist, ...
-        %     LMSRenderedSweep_dist, rgbLinRenderedSweep_dist, ...
-        %     TSweep_dist, targetInfoNorm_dist, targetDistNorm_dist, ...
-        %     infoNormAch_dist, distNormAch_dist] = computeSweep(theDaltonizer,LMSCalFormat, imgParams, dichromatType, nSteps, pathName, sweepAxis_dist);
-
-        % If rerunning, tell it which step of the sweep to re-do
-        extraArgs = {};
-        if rerun.enable && strcmpi(rerun.which,'distortion')
-            extraArgs = {'rerunStep', rerun.step};
-        end
-
         [LMSSweep_dist, rgbLinSweep_dist, ...
             LMSRenderedSweep_dist, rgbLinRenderedSweep_dist, ...
             TSweep_dist, targetInfoNorm_dist, targetDistNorm_dist, ...
-            infoNormAch_dist, distNormAch_dist] = computeSweep( ...
-            theDaltonizer, LMSCalFormat, imgParams, dichromatType, nSteps, pathName, sweepAxis_dist, ...
-            extraArgs{:});
+            infoNormAch_dist, distNormAch_dist] = computeSweep(theDaltonizer,LMSCalFormat, imgParams, dichromatType, nSteps, pathName, sweepAxis_dist);
 
         % Target vs achieved distortion (normalized)
         fprintf('\nDistortion sweep (n=%d): target vs achieved distortion\n', numel(targetDistNorm_dist));

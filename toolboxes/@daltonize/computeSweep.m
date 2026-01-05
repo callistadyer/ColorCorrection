@@ -34,11 +34,6 @@ function [LMSDaltonizedCalFormatSweep, rgbLinDaltonizedCalFormatSweep,...
 %   transformRGBmatrixSweep                - Cell of 3x3 transformation matrices
 %
 
-p = inputParser;
-p.addParameter('rerunStep', [], @(x) isempty(x) || (isscalar(x) && x>=1));
-p.parse(varargin{:});
-rerunStep = p.Results.rerunStep;
-
 if isempty(nSteps)
     nSteps = 10;
 end
@@ -48,131 +43,38 @@ if ~exist('sweepAxis','var') || isempty(sweepAxis)
 end
 
 %%%%%%%%%%%%%%%%%%%%%%% Load it %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Check to see if this output already exists, and then load it
 projectName = 'ColorCorrection';
 outputDir   = getpref(projectName, 'outputDir');
 saveBase    = fullfile(outputDir, 'testImagesTransformed');
 
-% Build the metric folder
 metricFolder = buildMetricFolderName(obj.infoFcn, obj.infoParams, obj.distortionFcn);
-
-% New run folder that specifies whether the sweep is info or distortion
-runFolder = sprintf('%s_%dsteps', lower(char(sweepAxis)), nSteps);
+runFolder    = sprintf('%s_%dsteps', lower(char(sweepAxis)), nSteps);
 
 saveSubdir = fullfile(saveBase, pathName, metricFolder, runFolder);
 saveFile   = fullfile(saveSubdir, 'sweepOutputs.mat');
 
-% new
-if ~exist(saveSubdir, 'dir')
-    mkdir(saveSubdir);
-end
+if ~exist(saveSubdir, 'dir'); mkdir(saveSubdir); end
 
-% Load/resume/rerun logic
-outputs = {};
+% Defaults
+outputs   = cell(1, nSteps);
 startStep = 1;
-stopAfterThisStep = false;
 
-% Helper to detect which steps are "done"
-% if the struct exists and contains the 'transformRGBmatrix', and if that field is not empty
-isDoneStep = @(s) isstruct(s) && isfield(s,'transformRGBmatrix') && ~isempty(s.transformRGBmatrix);
+% Load function
+[outputs, startStep, allDone, loaded] = loadSweepOutputs(saveFile, nSteps);
 
-if exist(saveFile,'file')
-    fprintf('computeSweep: Found existing sweep file:\n  %s\n', saveFile);
-    S = load(saveFile);
+if allDone
+    LMSDaltonizedCalFormatSweep            = loaded.LMSDaltonizedCalFormatSweep;
+    rgbLinDaltonizedCalFormatSweep         = loaded.rgbLinDaltonizedCalFormatSweep;
+    LMSDaltonizedRenderedCalFormatSweep    = loaded.LMSDaltonizedRenderedCalFormatSweep;
+    rgbLinDaltonizedRenderedCalFormatSweep = loaded.rgbLinDaltonizedRenderedCalFormatSweep;
+    transformRGBmatrixSweep                = loaded.transformRGBmatrixSweep;
 
-    % If there is a thing called outputs and there's somethin in it...
-    if isfield(S,'outputs') && ~isempty(S.outputs)
-        outputs = S.outputs;
-
-        % Initialize a array (one per sweep step) marking all steps as not done
-        doneMask = false(1, numel(outputs));
-        % Check inside each step - is there something in each? 
-        for ii = 1:numel(outputs)
-            doneMask(ii) = isDoneStep(outputs{ii});
-        end
-
-        % Identify the most recent sweep step marked as completed so we know
-        % where to resume the sweep
-        lastDone = find(doneMask, 1, 'last');
-
-        % True if all nSteps have completed successfully
-        allDone  = (numel(outputs) >= nSteps) && all(doneMask(1:nSteps));
-
-        % Type A: rerun of a specific step
-        if ~isempty(rerunStep)
-            startStep = rerunStep;
-            stopAfterThisStep = true;
-
-            % Ensure outputs has at least nSteps entries by padding with empty cells
-            if numel(outputs) < nSteps
-                outputs{nSteps} = [];
-            end
-
-            % Just clear out the desired step so we can re-do
-            outputs{startStep} = [];
-
-            fprintf('computeSweep: RERUN mode -> step %d only (will overwrite step %d in sweepOutputs.mat)\n', ...
-                startStep, startStep);
-
-        % Type B: no rerunStep, but run is already complete -> load and return 
-        elseif allDone
-            fprintf('computeSweep: All %d steps already complete. Loading and returning.\n', nSteps);
-
-            LMSDaltonizedCalFormatSweep            = cell(1,nSteps);
-            rgbLinDaltonizedCalFormatSweep         = cell(1,nSteps);
-            LMSDaltonizedRenderedCalFormatSweep    = cell(1,nSteps);
-            rgbLinDaltonizedRenderedCalFormatSweep = cell(1,nSteps);
-            transformRGBmatrixSweep                = cell(1,nSteps);
-
-            targetInfoNormalized                   = nan(1,nSteps);
-            targetDistortionNormalized             = nan(1,nSteps);
-            infoNormalizedAchievedSweep            = nan(1,nSteps);
-            distortionNormalizedAchievedSweep      = nan(1,nSteps);
-
-            for i = 1:nSteps
-                LMSDaltonizedCalFormatSweep{i}            = outputs{i}.LMSDaltonizedCalFormat;
-                rgbLinDaltonizedCalFormatSweep{i}         = outputs{i}.rgbLinDaltonizedCalFormat;
-                LMSDaltonizedRenderedCalFormatSweep{i}    = outputs{i}.LMSDaltonizedRenderedCalFormat;
-                rgbLinDaltonizedRenderedCalFormatSweep{i} = outputs{i}.rgbLinDaltonizedRenderedCalFormat;
-                transformRGBmatrixSweep{i}                = outputs{i}.transformRGBmatrix;
-
-                if isfield(outputs{i},'targetInfoNormalized');           targetInfoNormalized(i) = outputs{i}.targetInfoNormalized; end
-                if isfield(outputs{i},'targetDistortionNormalized');     targetDistortionNormalized(i) = outputs{i}.targetDistortionNormalized; end
-                if isfield(outputs{i},'infoNormalizedAchievedSweep');    infoNormalizedAchievedSweep(i) = outputs{i}.infoNormalizedAchievedSweep; end
-                if isfield(outputs{i},'distortionNormalizedAchievedSweep'); distortionNormalizedAchievedSweep(i) = outputs{i}.distortionNormalizedAchievedSweep; end
-            end
-            return;
-
-        % Type C: partial run -> resume from next step 
-        else
-            % Maybe nothing is done...
-            if isempty(lastDone)
-                startStep = 1;
-                fprintf('  No completed steps detected. Starting from step 1.\n');
-            else % start right after the last one finished
-                startStep = lastDone + 1;
-                fprintf('  Completed steps: 1–%d. Resuming at step %d.\n', lastDone, startStep);
-            end
-
-            if numel(outputs) < nSteps
-                outputs{nSteps} = [];
-            end
-        end
-
-    else
-        % File exists but doesn't contain outputs
-        outputs = cell(1,nSteps);
-        startStep = 1;
-        fprintf('  sweepOutputs.mat exists but no usable outputs found. Starting fresh.\n');
-    end
-
-else
-    % No prior file means start fresh
-    outputs = cell(1,nSteps);
-    startStep = 1;
-    fprintf('computeSweep: No existing sweep file. Starting fresh.\n');
+    targetInfoNormalized                   = loaded.targetInfoNormalized;
+    targetDistortionNormalized             = loaded.targetDistortionNormalized;
+    infoNormalizedAchievedSweep            = loaded.infoNormalizedAchievedSweep;
+    distortionNormalizedAchievedSweep      = loaded.distortionNormalizedAchievedSweep;
+    return;
 end
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % If it doesn't already exist, go ahead and compute the transformation as normal:
@@ -223,29 +125,19 @@ transformRGBmatrixSweep                  = cell(1, nSteps);
 infoNormalizedAchievedSweep              = nan(1, nSteps);
 distortionNormalizedAchievedSweep        = nan(1, nSteps);
 
-
-% Initialize outputs cell
+% Make sure outputs is at least nSteps long (safe even if already true)
 if numel(outputs) < nSteps
     outputs{nSteps} = [];
 end
 
-% If resuming, populate arrays from all of the prev steps outputs{1:startStep-1}
-% for ii = 1:startStep-1
-%     if isempty(outputs{ii}); continue; end
-% 
-%     LMSDaltonizedCalFormatSweep{ii}            = outputs{ii}.LMSDaltonizedCalFormat;
-%     rgbLinDaltonizedCalFormatSweep{ii}         = outputs{ii}.rgbLinDaltonizedCalFormat;
-%     LMSDaltonizedRenderedCalFormatSweep{ii}    = outputs{ii}.LMSDaltonizedRenderedCalFormat;
-%     rgbLinDaltonizedRenderedCalFormatSweep{ii} = outputs{ii}.rgbLinDaltonizedRenderedCalFormat;
-%     transformRGBmatrixSweep{ii}                = outputs{ii}.transformRGBmatrix;
-% 
-%     infoNormalizedAchievedSweep(ii)            = outputs{ii}.infoNormalizedAchievedSweep;
-%     distortionNormalizedAchievedSweep(ii)      = outputs{ii}.distortionNormalizedAchievedSweep;
-% end
-% Populate arrays from already saved steps 
+% Only populate steps that are complete 
+isDoneStep = @(s) isstruct(s) ...
+    && isfield(s,'stepCompleted') && isequal(s.stepCompleted,true) ...
+    && isfield(s,'transformRGBmatrix') && ~isempty(s.transformRGBmatrix);
+
 for ii = 1:nSteps
-    if ii > numel(outputs) || isempty(outputs{ii})
-        continue; 
+    if isempty(outputs{ii})
+        continue;
     end
     if ~isDoneStep(outputs{ii})
         continue;
@@ -263,13 +155,6 @@ for ii = 1:nSteps
     if isfield(outputs{ii}, 'distortionNormalizedAchievedSweep')
         distortionNormalizedAchievedSweep(ii) = outputs{ii}.distortionNormalizedAchievedSweep;
     end
-
-    if isfield(outputs{ii}, 'targetInfoNormalized')
-        targetInfoNormalized(ii) = outputs{ii}.targetInfoNormalized;
-    end
-    if isfield(outputs{ii}, 'targetDistortionNormalized')
-        targetDistortionNormalized(ii) = outputs{ii}.targetDistortionNormalized;
-    end
 end
 
 
@@ -283,296 +168,183 @@ switch lower(sweepAxis)
         xVec = targetDistortionNormalized;
 end
 
+% Compute candidate start points for the optimizer
+modes = {'infoSoln','findDesiredDist','findDesiredInfo'};   % pick what you want
+startPts = findStartPoints(modes, sweepAxis, nSteps, startStep, xVec, transformRGBmatrixSweep, saveBase, pathName, metricFolder, LMSCalFormat, imgParams, dichromatType, infoNormalizer, distortionNormalizer, Disp, obj);
 
-% If doing a distortion sweep, try to load and use the final T_prev solution
-% from the info sweep
-T_infoSeeds = [];
-if strcmpi(sweepAxis,'distortion')
+T_I    = startPts.T_I;
+T_prev = startPts.T_prev0;
 
-    infoRunFolder  = sprintf('info_%dsteps', nSteps);
-    infoSaveFile   = fullfile(saveBase, pathName, metricFolder, infoRunFolder, 'sweepOutputs.mat');
-
-    if exist(infoSaveFile,'file')
-        S = load(infoSaveFile,'outputs');
-        outputsInfo = S.outputs;   % nSteps x 1 cell
-
-        % Extract all transform matrices
-        T_infoSeeds = cell(nSteps,1);
-        for i = 1:nSteps
-            T_infoSeeds{i} = outputsInfo{i}.transformRGBmatrix;
-        end
-
-        fprintf('Loaded %d info-sweep T matrices\n', nSteps);
-    else
-        fprintf('No info sweep found at:\n  %s\n', infoSaveFile);
-    end
-end
-
-% Starting points for search over matrices
-T_I = eye(3);
-
-if startStep > 1 && ~isempty(transformRGBmatrixSweep{startStep-1})
-    T_prev = transformRGBmatrixSweep{startStep-1};
-else
-    T_prev = eye(3);
-end
+T_infoSeeds       = startPts.T_infoSeeds;
+T_findDesiredDist = startPts.T_findDesiredDist;
+T_findDesiredInfo = startPts.T_findDesiredInfo;
+% 
+% violationStep = false(1, nSteps);
+% for i = startStep:nSteps
+% 
+%     thisX = xVec(i);
+% 
+%     % Depending on the sweep axis, the "target" value is different
+%     if strcmpi(sweepAxis,'info')
+%         lamArg = []; tgtInfoArg = thisX; tgtDistArg = [];
+%     elseif strcmpi(sweepAxis,'distortion')
+%         lamArg = []; tgtInfoArg = []; tgtDistArg = thisX;
+%     else % 'lambda'
+%         lamArg = thisX; tgtInfoArg = []; tgtDistArg = [];
+%     end
+% 
+% 
+%     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     [best, startPtSolns] = chooseStartPoints(i, sweepAxis, thisX,T_I, T_prev,T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp);
+% 
+%     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+%     % Commit the chosen solution for this step
+%     LMSDaltonizedCalFormatSweep{i}       = best.LMS;
+%     rgbLinDaltonizedCalFormatSweep{i}    = best.rgbLin;
+%     transformRGBmatrixSweep{i}           = best.T;
+%     infoNormalizedAchievedSweep(i)       = best.infoNorm;
+%     distortionNormalizedAchievedSweep(i) = best.distNorm;
+% 
+%     % IMPORTANT: update T_prev so the next step chains from this one
+%     T_prev = best.T;
+% 
+%     % Optional debug print
+%     fprintf('step %2d | winner = %-16s | nonLinOK=%d | loss=%.4g | viol=%.4g\n', ...
+%         i, best.name, best.nonLinSatisfied, best.loss, best.violation);
+% 
+%     fprintf('step %2d | sweep=%s | target=%.4f | achievedInfo=%.4f | achievedDist=%.4f\n', ...
+%         i, lower(char(sweepAxis)), thisX, infoNormalizedAchievedSweep(i), distortionNormalizedAchievedSweep(i));
+% 
+%     % Plot Achieved info vs distortion up through this step
+%     debugPlot_InfoVsDistSingleSweep(i, sweepAxis, distortionNormalizedAchievedSweep, infoNormalizedAchievedSweep, targetDistortionNormalized, targetInfoNormalized, violationStep, thisX, pathName);
+% 
+%     % Get the dichromat rendering
+%     [LMSDaltonizedRenderedCalFormatSweep{i},rgbLinDaltonizedRenderedCalFormatSweep{i},~] = DichromRenderLinear(LMSDaltonizedCalFormatSweep{i},dichromatType,Disp);
+% 
+%     % Save this step to disk immediately
+%     outputs{i} = struct( ...
+%         'LMSDaltonizedCalFormat',            LMSDaltonizedCalFormatSweep{i}, ...
+%         'rgbLinDaltonizedCalFormat',         rgbLinDaltonizedCalFormatSweep{i}, ...
+%         'LMSDaltonizedRenderedCalFormat',    LMSDaltonizedRenderedCalFormatSweep{i}, ...
+%         'rgbLinDaltonizedRenderedCalFormat', rgbLinDaltonizedRenderedCalFormatSweep{i}, ...
+%         'transformRGBmatrix',                transformRGBmatrixSweep{i}, ...
+%         'targetInfoNormalized',              targetInfoNormalized(i), ...
+%         'targetDistortionNormalized',        targetDistortionNormalized(i), ...
+%         'infoNormalizedAchievedSweep',       infoNormalizedAchievedSweep(i), ...
+%         'distortionNormalizedAchievedSweep', distortionNormalizedAchievedSweep(i), ...
+%         'imgParams',                         imgParams, ...
+%         'Disp',                              Disp, ...
+%         'sweepAxis',                         char(sweepAxis), ...
+%         'stepCompleted',                     true, ...
+%         'timestamp',                         datestr(now));
+% 
+%     save(saveFile, 'outputs', '-v7.3');
+%     fprintf('  [checkpoint] saved step %d/%d -> %s\n', i, nSteps, saveFile);
+% 
+%     % Save a per-step snapshot so we can rerun any step instantly
+%     % stepSnapFile = fullfile(saveSubdir, sprintf('STEP_SNAP_%s_%03d.mat', lower(char(sweepAxis)), i));
+%     % save(stepSnapFile, 'obj', 'LMSCalFormat', 'imgParams', 'dichromatType','nSteps', 'pathName', 'sweepAxis', 'i', 'thisX', 'infoNormalizer', 'distortionNormalizer', 'targetInfoNormalized', 'targetDistortionNormalized', 'T_I', 'T_prev', '-v7.3');
+% 
+% end
 
 violationStep = false(1, nSteps);
-% for i = 1:nSteps
-if stopAfterThisStep
-    steps = startStep;          % rerun mode: do ONLY this step
-else
-    steps = startStep:nSteps;   % normal mode: resume to end
-end
 
-for i = steps
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% PASS 1: FORWARD (startStep -> nSteps)
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%`
+forwardBest = repmat(struct('name','','T',[],'LMS',[],'rgbLin',[], ...
+    'infoNorm',NaN,'distNorm',NaN,'loss',Inf,'nonLinSatisfied',false,'violation',Inf), 1, nSteps);
+
+T_prev_fwd = T_prev;   % your existing startPts.T_prev0
+
+for i = startStep:nSteps
 
     thisX = xVec(i);
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Find a good starting point for the distortion sweep (unconstrained on info)
-    % The distortion sweep seems to have a harder time finding
-    % solutions at each step that all together form a smooth curve. To try
-    % and address this, we have been trying "better" starting points for
-    % the distortion sweep.
-    startPt = 'infoSoln';
-    if strcmpi(sweepAxis,'distortion')
+    % (if you still need lamArg/tgtInfoArg/tgtDistArg for logging, keep it here;
+    %  chooseStartPoints only needs sweepAxis + thisX)
+    [bestF, ~] = chooseStartPoints( ...
+        i, sweepAxis, thisX, ...
+        T_I, T_prev_fwd, ...
+        T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
+        LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp);
 
-        % 1) Try starting the search at the transformation matrix found at that
-        % step of the info sweep (that is, grab the solution for the info
-        % sweep, and start there)
-        if strcmp(startPt,'infoSoln')
-            
-            T_prev = T_infoSeeds{i};
+    forwardBest(i) = bestF;
 
-            % 2) Try starting the search at a transformation matrix that
-            % succesfully finds the target distortion (with no attention paid
-            % to info)
-            % Minimize (distortionNorm - target)^2 to get a feasible T,
-            % then use that T as the starting point for the real constrained maximize-info step.
-        elseif strcmp(startPt,'findDesiredDist')
-
-            % Define the loss function as essentially (distortionNorm - target)^2
-            feas_fun  = @(t_vec) lossFunction('distortion', thisX, t_vec, ...
-                LMSCalFormat, imgParams, dichromatType, ...
-                obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp,obj.infoParams);
-
-            % Optimization options
-            feas_opts = optimoptions('fmincon', 'Algorithm','interior-point','Display','none','MaxIterations',60,'ConstraintTolerance',1e-10,'StepTolerance',1e-10);
-
-            % Gamut constraints
-            [A_total, b_total,~] = buildGamutConstraints(LMSCalFormat, dichromatType, Disp);
-
-            % Minimize
-            T_feas_vec = fmincon(feas_fun, T_prev(:), A_total, b_total, [], [], [], [], [], feas_opts);
-
-            % Check to see if we achieved the target distortion when there is
-            % no info constraint
-            [~, ~, ~, ~, distNorm_feas(i)] = lossFunction('lambda', 0.0, T_feas_vec, LMSCalFormat, imgParams, dichromatType, ...
-                obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp,obj.infoParams);
-
-            fprintf('[pre-solve] step %2d: targetDist=%.6g  achieved=%.6g  =%.3g\n', i, thisX, distNorm_feas(i));
-
-            % Start the search at that transformation matrix
-            T_prev = reshape(T_feas_vec,3,3);
-        elseif strcmpi(startPt,'prevStep')
-            % T_prev = transformRGBmatrixSweep{i-1};
-        end
+    % Chain T_prev forward
+    if ~isempty(bestF.T)
+        T_prev_fwd = bestF.T;
     end
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+end
 
+% ==============================
+% PASS 2: BACKWARD (nSteps-1 -> startStep)
+% IMPORTANT: initialize T_prev using the *forward* end-point
+% ==============================
+backwardBest = repmat(struct('name','','T',[],'LMS',[],'rgbLin',[], ...
+    'infoNorm',NaN,'distNorm',NaN,'loss',Inf,'nonLinSatisfied',false,'violation',Inf), 1, nSteps);
 
-    % Depending on the sweep axis, the "target" value is different
-    if strcmpi(sweepAxis,'info')
-        lamArg = []; tgtInfoArg = thisX; tgtDistArg = [];
-    elseif strcmpi(sweepAxis,'distortion')
-        lamArg = []; tgtInfoArg = []; tgtDistArg = thisX;
-    else % 'lambda'
-        lamArg = thisX; tgtInfoArg = []; tgtDistArg = [];
+% Your note: when going backwards, don't start from identity.
+% Start at the second-to-last point, using T_prev from the previous solution (the forward final point).
+T_prev_bwd = forwardBest(nSteps).T;
+
+for i = (nSteps-1):-1:startStep
+
+    thisX = xVec(i);
+
+    [bestB, ~] = chooseStartPoints( ...
+        i, sweepAxis, thisX, ...
+        T_I, T_prev_bwd, ...                  % T_prev_bwd is the chain seed for backward
+        T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
+        LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp);
+
+    backwardBest(i) = bestB;
+
+    % Chain T_prev backward
+    if ~isempty(bestB.T)
+        T_prev_bwd = bestB.T;
     end
+end
 
-    % Optimize from identity starting point or at feasible distortion start
-    [LMS_TI, rgbLin_TI, T_TI, info_TI, normInfo_TI, distortion_TI, normDistortion_TI, nlconSatisfied_TI] = colorCorrectionOptimize( ...
-        sweepAxis, lamArg, tgtInfoArg, tgtDistArg, ...
-        LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
-        obj.infoParams, obj.distortionParams,...
-        infoNormalizer, distortionNormalizer, Disp, 'T_init', T_I);
+% ==============================
+% FINAL: choose per-step winner between forward vs backward
+% Rule: constraints first, then lower loss.
+% ==============================
+for i = startStep:nSteps
 
-    % Optimize from T_prev starting point
-    [LMS_Tprev, rgbLin_Tprev, T_Tprev, info_Tprev, normInfo_Tprev, distortion_Tprev, normDistortion_Tprev,nlconSatisfied_Tprev] = colorCorrectionOptimize( ...
-        sweepAxis, lamArg, tgtInfoArg, tgtDistArg, ...
-        LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
-        obj.infoParams, obj.distortionParams,...
-        infoNormalizer, distortionNormalizer, Disp, 'T_init', T_prev);
+    bestF = forwardBest(i);
+    bestB = backwardBest(i);
 
-    % Compare losses
-    switch lower(sweepAxis)
-        case 'info'
-            % Objective was "minimize distortion" -> lambda = 0
-            loss_TI    = lossFunction('lambda', 0.0, T_TI(:),    LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
-            loss_Tprev = lossFunction('lambda', 0.0, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+    % If backward wasn't computed for i (e.g., i==nSteps), treat it as missing
+    hasB = ~isempty(bestB.T);
 
-        case 'distortion'
-            % Objective was "maximize info" -> lambda = 1
-            loss_TI    = lossFunction('lambda', 1.0, T_TI(:),    LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
-            loss_Tprev = lossFunction('lambda', 1.0, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
-
-        case 'lambda'
-            % Objective is the mixed lambda objective
-            loss_TI    = lossFunction('lambda', thisX, T_TI(:),    LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
-            loss_Tprev = lossFunction('lambda', thisX, T_Tprev(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
-    end
-
-    useTI = true;
-
-    switch lower(sweepAxis)
-        case 'distortion'
-            viol_TI    = abs(normDistortion_TI    - thisX);
-            viol_Tprev = abs(normDistortion_Tprev - thisX);
-        case 'info'
-            viol_TI    = abs(normInfo_TI    - thisX);
-            viol_Tprev = abs(normInfo_Tprev - thisX);
-        otherwise
-            viol_TI    = NaN;
-            viol_Tprev = NaN;
-    end
-
-    % If nonlinear constraint not satisfied from identity starting point -> use Tprev
-    if ~nlconSatisfied_TI && nlconSatisfied_Tprev
-        useTI = false;
-        % If nonlinear constraint not satisfied from T_prev starting point -> use identity start
-    elseif ~nlconSatisfied_Tprev && nlconSatisfied_TI
-        useTI = true;
-        % If nonlinear constraint satisfied from both starting points -> use whichever has lower loss
-    elseif nlconSatisfied_Tprev && nlconSatisfied_TI
-        %%%%%%% NOT SURE IF THIS IS A GOOD DECISION?
-        useTI = (loss_TI <= loss_Tprev);
-        % useTI = false;
-        % useTI = true;
-        % If both starting points fail to satisfy the constraint...
-    elseif ~nlconSatisfied_Tprev && ~nlconSatisfied_TI
-        % error('Nonlinear constraints never satisfied')
-        fprintf(['\n[WARNING] Nonlinear constraint NOT satisfied\n' ...
-            '  sweep step        : %d\n' ...
-            '  sweep axis        : %s\n' ...
-            '  target distortion : %.6g\n' ...
-            '  T_I    -> achieved distortion = %.6g | |Δ| = %.3g\n' ...
-            '  T_prev -> achieved distortion = %.6g | |Δ| = %.3g\n'], ...
-            i, lower(char(sweepAxis)), thisX, ...
-            normDistortion_TI,    viol_TI, ...
-            normDistortion_Tprev, viol_Tprev);
-
-        useTI = (viol_TI <= viol_Tprev);          % neither feasible -> use smaller violation???
-    end
-
-    % Select better of the two losses
-    if useTI
-
-        LMSDaltonizedCalFormatSweep{i}       = LMS_TI;
-        rgbLinDaltonizedCalFormatSweep{i}    = rgbLin_TI;
-        infoNormalizedAchievedSweep(i)       = normInfo_TI;
-        distortionNormalizedAchievedSweep(i) = normDistortion_TI;
-        transformRGBmatrixSweep{i}           = T_TI;
-        % Update T_prev based on previous step
-        T_prev = T_TI;
-
-        targetInfoVsAchievedInfo{i} = [normInfo_TI, thisX];
-        targetDistVsAchievedDist{i} = [normDistortion_TI, thisX];
-
-
+    if ~hasB
+        best = bestF;
+        best.pass = 'forward';
     else
-
-        LMSDaltonizedCalFormatSweep{i}        = LMS_Tprev;
-        rgbLinDaltonizedCalFormatSweep{i}     = rgbLin_Tprev;
-        infoNormalizedAchievedSweep(i)        = normInfo_Tprev;
-        distortionNormalizedAchievedSweep(i)  = normDistortion_Tprev;
-        transformRGBmatrixSweep{i}            = T_Tprev;
-        % Update T_prev based on previous step
-        T_prev = T_Tprev;
+        best = pickBetterSolution(bestF, bestB);
     end
 
-    % Violation check: evaluate the constraint band on the
-    % chosen transform
-    pctTol      = 0.01;   % 1% of target
-    absTolFloor = 1e-3;   % minimum absolute tolerance
-    eps = max(absTolFloor, pctTol * thisX);
- 
-    eps = 1e-3;
+    % Commit chosen solution for this step
+    LMSDaltonizedCalFormatSweep{i}       = best.LMS;
+    rgbLinDaltonizedCalFormatSweep{i}    = best.rgbLin;
+    transformRGBmatrixSweep{i}           = best.T;
+    infoNormalizedAchievedSweep(i)       = best.infoNorm;
+    distortionNormalizedAchievedSweep(i) = best.distNorm;
 
-    T_chosen = transformRGBmatrixSweep{i};
+    fprintf('step %2d | winner=%-12s | from=%-8s | nonLinOK=%d | loss=%.4g | viol=%.4g\n', ...
+        i, best.name, best.pass, best.nonLinSatisfied, best.loss, best.violation);
 
-    switch lower(sweepAxis)
-        case 'info'
-            [~, ~, infoNorm_chk, ~, distNorm_chk] = lossFunction('lambda', 0.0, T_chosen(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+    % (everything below stays the same: plotting, dichrom render, saving outputs{i}, etc.)
+    debugPlot_InfoVsDistSingleSweep(i, sweepAxis, ...
+        distortionNormalizedAchievedSweep, infoNormalizedAchievedSweep, ...
+        targetDistortionNormalized, targetInfoNormalized, ...
+        violationStep, thisX, pathName);
 
-            % Do you get within the range for the info constraint band? 
-            violationStep(i) = (round(abs(infoNorm_chk - thisX),3) > (eps + 1e-12));
+    [LMSDaltonizedRenderedCalFormatSweep{i}, rgbLinDaltonizedRenderedCalFormatSweep{i}, ~] = ...
+        DichromRenderLinear(LMSDaltonizedCalFormatSweep{i}, dichromatType, Disp);
 
-        case 'distortion'
-            [~, ~, infoNorm_chk, ~, distNorm_chk] = lossFunction('lambda', 0.0, T_chosen(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
-
-            % Do you get within the range for the distortion constraint band? 
-            violationStep(i) = (round(abs(distNorm_chk - thisX),3) > (eps + 1e-12));
-
-        otherwise
-            violationStep(i) = false;
-    end
-
-    % If violation, let's take a look
-    if violationStep(i)
-
-        % Identify which initialization the SELECTED solution used
-        if useTI
-            chosenInit = 'identity start (T_I)';
-        else
-            chosenInit = 'previous start (T_prev)';
-        end
-
-        % Get the relevent info
-        switch lower(sweepAxis)
-            case 'info'
-                targetVal   = thisX;
-                achievedVal = infoNorm_chk;
-                deltaVal    = abs(achievedVal - targetVal);
-                metricName  = 'infoNorm';
-            case 'distortion'
-                targetVal   = thisX;
-                achievedVal = distNorm_chk;
-                deltaVal    = abs(achievedVal - targetVal);
-                metricName  = 'distNorm';
-        end
-
-        fprintf('\n================= CONSTRAINT VIOLATION =================\n');
-        fprintf('step=%d | sweep=%s\n', i, lower(char(sweepAxis)));
-        fprintf('chosen init: %s\n', chosenInit);
-        fprintf('target %s = %.6g\n', metricName, targetVal);
-        fprintf('achieved %s = %.6g\n', metricName, achievedVal);
-        fprintf('delta = %.6g', deltaVal);
-
-        % Also show the two candidate solutions
-        if strcmpi(sweepAxis,'info')
-            fprintf('candidate (T_I)    achieved info=%.6g | dist=%.6g\n', normInfo_TI,   normDistortion_TI);
-            fprintf('candidate (T_prev) achieved info=%.6g | dist=%.6g\n', normInfo_Tprev, normDistortion_Tprev);
-        elseif strcmpi(sweepAxis,'distortion')
-            fprintf('candidate (T_I)    achieved dist=%.6g | info=%.6g\n', normDistortion_TI,   normInfo_TI);
-            fprintf('candidate (T_prev) achieved dist=%.6g | info=%.6g\n', normDistortion_Tprev, normInfo_Tprev);
-        end
-
-        % keyboard;  
-        % pause;   
-    end
- 
-
-    fprintf('step %2d | sweep=%s | target=%.4f | achievedInfo=%.4f | achievedDist=%.4f\n', ...
-        i, lower(char(sweepAxis)), thisX, infoNormalizedAchievedSweep(i), distortionNormalizedAchievedSweep(i));
-
-    % Plot Achieved info vs distortion up through this step
-    debugPlot_InfoVsDistSingleSweep(i, sweepAxis, distortionNormalizedAchievedSweep, infoNormalizedAchievedSweep, targetDistortionNormalized, targetInfoNormalized, violationStep, thisX, pathName);
-
-    % Get the dichromat rendering
-    [LMSDaltonizedRenderedCalFormatSweep{i},rgbLinDaltonizedRenderedCalFormatSweep{i},~] = DichromRenderLinear(LMSDaltonizedCalFormatSweep{i},dichromatType,Disp);
-
-    % Save this step to disk immediately
     outputs{i} = struct( ...
         'LMSDaltonizedCalFormat',            LMSDaltonizedCalFormatSweep{i}, ...
         'rgbLinDaltonizedCalFormat',         rgbLinDaltonizedCalFormatSweep{i}, ...
@@ -591,17 +363,10 @@ for i = steps
 
     save(saveFile, 'outputs', '-v7.3');
     fprintf('  [checkpoint] saved step %d/%d -> %s\n', i, nSteps, saveFile);
-
-    % Save a per-step snapshot so we can rerun any step instantly
-    stepSnapFile = fullfile(saveSubdir, sprintf('STEP_SNAP_%s_%03d.mat', lower(char(sweepAxis)), i));
-    save(stepSnapFile, 'obj', 'LMSCalFormat', 'imgParams', 'dichromatType','nSteps', 'pathName', 'sweepAxis', 'i', 'thisX', 'infoNormalizer', 'distortionNormalizer', 'targetInfoNormalized', 'targetDistortionNormalized', 'T_I', 'T_prev', '-v7.3');
-
-    % Stop immediately after this step if requested
-    if stopAfterThisStep
-        fprintf('computeSweep: Finished rerun of step %d. Exiting.\n', i);
-        break;
-    end
 end
+
+
+
 % figure(); plot(distNorm_feas,xVec,'-o')
 % disp([distNorm_feas(:), xVec(:)]);
 
@@ -618,6 +383,47 @@ end
 saveTransformedOutputs(outputs, pathName, nSteps, obj.infoFcn, obj.infoParams, obj.distortionFcn, Disp, 'sweepAxis', sweepAxis);
 
 end
+
+
+
+% ===== helper: choose between two candidate solutions (nested) =====
+function best = pickBetterSolution(bestF, bestB)
+    % Add pass labels for logging
+    bestF.pass = 'forward';
+    bestB.pass = 'backward';
+
+    % 1) If only one satisfies nonlinear constraints -> take it
+    if bestF.nonLinSatisfied && ~bestB.nonLinSatisfied
+        best = bestF; return;
+    elseif bestB.nonLinSatisfied && ~bestF.nonLinSatisfied
+        best = bestB; return;
+    end
+
+    % 2) If both satisfy constraints -> choose lower loss
+    if bestF.nonLinSatisfied && bestB.nonLinSatisfied
+        if bestF.loss <= bestB.loss
+            best = bestF;
+        else
+            best = bestB;
+        end
+        return;
+    end
+
+    % 3) If neither satisfies constraints -> smaller violation wins, then lower loss
+    if bestF.violation < bestB.violation
+        best = bestF;
+    elseif bestB.violation < bestF.violation
+        best = bestB;
+    else
+        % tie on violation: choose lower loss
+        if bestF.loss <= bestB.loss
+            best = bestF;
+        else
+            best = bestB;
+        end
+    end
+end
+
 
 % Helper function to draw the info–distortion curve after each optimization step
 function debugPlot_InfoVsDistSingleSweep(i, sweepAxis, ...
@@ -744,3 +550,4 @@ title(hAx, titleStr);
 drawnow;
 
 end
+
