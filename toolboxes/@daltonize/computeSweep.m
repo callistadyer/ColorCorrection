@@ -335,7 +335,7 @@ for i = steps
     % solutions at each step that all together form a smooth curve. To try
     % and address this, we have been trying "better" starting points for
     % the distortion sweep.
-    startPt = 'findDesiredDist';
+    startPt = 'infoSoln';
     if strcmpi(sweepAxis,'distortion')
 
         % 1) Try starting the search at the transformation matrix found at that

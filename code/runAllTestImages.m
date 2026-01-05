@@ -16,8 +16,8 @@ setType       = 1;
 dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
-m = 55;
-n = 55;
+m = 128;
+n = 128;
 
 % How many steps do you want in a transformation sweep?
 nSteps = 11;
@@ -34,7 +34,7 @@ clearFlag     = 0;
 % Rerun a certain point
 % Set enable=true to rerun one step
 rerun.enable = true;        
-rerun.step   = 3;         
+rerun.step   = 5;         
 rerun.which  = 'distortion';  % 'info' or 'distortion'
 rerun.img    = 'flower1.png';  % rerun only for this image
 if rerun.enable
@@ -259,11 +259,11 @@ for ii = 1:numel(imageTypes)
         hold on;
 
         for k = 1:numel(targetInfoNorm_dist)
-            yline(targetInfoNorm_info(k), ':', ...
+            yline(targetInfoNorm_dist(k), ':', ...
                 'HandleVisibility','off');   % keeps legend clean
         end
         for k = 1:numel(targetDistNorm_dist)
-            xline(targetDistNorm_info(k), ':', ...
+            xline(targetDistNorm_dist(k), ':', ...
                 'HandleVisibility','off');
         end
 
