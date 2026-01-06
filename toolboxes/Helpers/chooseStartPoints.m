@@ -79,7 +79,7 @@ stepDir = fullfile(passDir, sprintf('step_%03d', i));
 if ~exist(stepDir, 'dir'); mkdir(stepDir); end
 
 %%%%%%%%%% Tolerances for constraints %%%%%%%%%%
-pctTol      = 0.01;
+pctTol      = 0.03;
 absTolFloor = 5e-3;
 
 % Run each candidate start and collect results
@@ -206,11 +206,15 @@ for k = 1:nCands
         startPtSolns(k).nonLinSatisfied = logical(nonLinSatisfied_k);
         startPtSolns(k).violation       = violation_k;
 
+
         % Save so resume works
         candSoln  = startPtSolns(k);  
         completed = true;           
         timestamp = datestr(now);    
         save(candFile, 'candSoln', 'completed', 'timestamp', 'i', 'k', 'thisX', 'sweepAxis', '-v7.3');
+
+        % debugPlot_CandidatesUsingSweepFigure(i, sweepAxis, thisX, startPtSolns(k), passName, saveSubdir);
+
 
         fprintf('  [%s] saved %s -> %s\n', char(passName), thisName, candFile);
 
@@ -241,3 +245,79 @@ else
 end
 
 end
+% 
+% function debugPlot_CandidatesUsingSweepFigure(i, sweepAxis, thisX, candSoln, passName, runID)
+% % debugPlot_CandidatesUsingSweepFigure
+% % Accumulative plot of ALL candidate solutions across ALL steps.
+% %
+% % Each candidate name is assigned a persistent color so clusters emerge.
+% % Nothing is ever cleared — this shows reachability + branch structure.
+% 
+% persistent hFigMap hAxMap colorMap colorList colorIdx
+% if isempty(hFigMap)
+%     hFigMap  = containers.Map('KeyType','char','ValueType','any');
+%     hAxMap   = containers.Map('KeyType','char','ValueType','any');
+%     colorMap = containers.Map('KeyType','char','ValueType','any');
+% 
+%     % Distinct, colorblind-safe-ish palette
+%     colorList = lines(12);
+%     colorIdx  = 1;
+% end
+% 
+% key = sprintf('%s__%s__%s__candCloud', ...
+%     char(string(runID)), char(string(passName)), lower(char(sweepAxis)));
+% 
+% % Create / reuse figure
+% if ~isKey(hFigMap,key) || ~isvalid(hFigMap(key))
+%     hFig = figure('Name', sprintf('Candidate clusters | %s | %s | sweep=%s', ...
+%         char(string(runID)), char(string(passName)), lower(char(sweepAxis))), ...
+%         'NumberTitle','off');
+%     hAx = axes('Parent', hFig);
+%     hold(hAx,'on');
+%     axis(hAx,'square');
+%     grid(hAx,'off');
+%     xlabel(hAx,'Distortion (normalized)');
+%     ylabel(hAx,'Info (normalized)');
+% 
+%     hFigMap(key) = hFig;
+%     hAxMap(key)  = hAx;
+% 
+%     % Draw target guide ONCE per figure (optional)
+%     switch lower(sweepAxis)
+%         case 'info'
+%             if exist('yline','file'); yline(hAx, thisX, ':', 'LineWidth', 1.2); end
+%         case 'distortion'
+%             if exist('xline','file'); xline(hAx, thisX, ':', 'LineWidth', 1.2); end
+%     end
+% else
+%     hAx = hAxMap(key);
+% end
+% 
+% % Skip invalid points
+% if isempty(candSoln) || isnan(candSoln.distNorm) || isnan(candSoln.infoNorm)
+%     return;
+% end
+% 
+% % Assign persistent color by candidate name
+% name = candSoln.name;
+% if ~isKey(colorMap, name)
+%     colorMap(name) = colorList(colorIdx, :);
+%     colorIdx = mod(colorIdx, size(colorList,1)) + 1;
+% end
+% c = colorMap(name);
+% 
+% % Marker: feasible vs infeasible
+% if candSoln.nonLinSatisfied
+%     mk = 'o';
+% else
+%     mk = 'x';
+% end
+% 
+% plot(hAx, candSoln.distNorm, candSoln.infoNorm, mk, ...
+%     'Color', c, ...
+%     'MarkerSize', 10, ...
+%     'LineWidth', 1.5, ...
+%     'HandleVisibility','off');
+% 
+% drawnow;
+% end

@@ -203,7 +203,7 @@ T_findDesiredInfo = startPts.T_findDesiredInfo;
 violationStep = false(1, nSteps);
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% PASS 1: FORWARD (startStep -> nSteps)
+% FORWARD PASS (startStep -> nSteps)
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%`
 forwardBest = repmat(struct('name','','T',[],'LMS',[],'rgbLin',[], ...
     'infoNorm',NaN,'distNorm',NaN,'loss',Inf,'nonLinSatisfied',false,'violation',Inf), 1, nSteps);
@@ -214,8 +214,6 @@ for i = startStep:nSteps
 
     thisX = xVec(i);
 
-    % (if you still need lamArg/tgtInfoArg/tgtDistArg for logging, keep it here;
-    %  chooseStartPoints only needs sweepAxis + thisX)
     [bestF, ~] = chooseStartPoints(i, sweepAxis, thisX, T_I, T_prev_fwd, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
         LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp,...
         saveSubdir, 'forward');
@@ -229,13 +227,13 @@ for i = startStep:nSteps
 end
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% PASS 2: BACKWARD (nSteps-1 -> startStep)
-% IMPORTANT: initialize T_prev using the *forward* end-point
+% BACKWARD PASS (nSteps-1 -> startStep)
+% Initialize T_prev using the *forward* end-point
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 backwardBest = repmat(struct('name','','T',[],'LMS',[],'rgbLin',[], ...
     'infoNorm',NaN,'distNorm',NaN,'loss',Inf,'nonLinSatisfied',false,'violation',Inf), 1, nSteps);
 
-% Your note: when going backwards, don't start from identity.
+% When going backwards, don't start from identity.
 % Start at the second-to-last point, using T_prev from the previous solution (the forward final point).
 T_prev_bwd = forwardBest(nSteps).T;
 
@@ -243,7 +241,7 @@ for i = (nSteps-1):-1:startStep
 
     thisX = xVec(i);
 
-    [bestB, ~] = chooseStartPoints(i, sweepAxis, thisX, T_I, T_prev_bwd, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
+    [bestB, startPtSolns] = chooseStartPoints(i, sweepAxis, thisX, T_I, T_prev_bwd, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
         LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp,...
         saveSubdir, 'backward');
 

@@ -24,7 +24,7 @@ m = 61;
 n = 61;
 
 % How many steps do you want in a transformation sweep?
-nSteps = 12;
+nSteps = 16;
 
 sweepAxis = 'both';
 %   'info'  = run info sweep only
