@@ -2,47 +2,46 @@ function startPts = findStartPoints(modes, sweepAxis, nSteps, startStep, xVec, t
 % function startPts = findStartPoints(modes, sweepAxis, nSteps, startStep, xVec, transformRGBmatrixSweep, saveBase, pathName, metricFolder, LMSCalFormat, imgParams, dichromatType, infoNormalizer, distortionNormalizer, Disp, obj)
 % 
 % Description:
-%   This helper builds a set of candidate initialization transforms (T_init)
+%   This helper builds a set of initialization transforms (T_init)
 %   that computeSweep can use when optimizing each sweep step. The goal is
-%   to (1) resume smoothly from previous results and/or (2) supply better
+%   to (1) resume smoothly from previous results and/or (2) get better
 %   starting points for difficult constrained problems (especially the
 %   distortion sweep).
 %
-%   Supported starting-point strategies are selected via 'modes':
 %     'infoSoln'         - load per-step transform matrices from the INFO sweep
 %     'findDesiredDist'  - presolve for each step to achieve a target distortion
 %     'findDesiredInfo'  - presolve for each step to achieve a target info
 %
 % Inputs:
-%   modes                  - Cell array or string array of requested strategies.
+%   modes                  - Types of start points
 %                            Example: {'infoSoln','findDesiredDist'}.
 %   sweepAxis              - Sweep type currently running in computeSweep:
-%                            'info', 'distortion', or 'lambda'.
-%   nSteps                 - Total number of sweep steps.
-%   startStep              - First step that still needs to be computed (resume index).
+%                                   'info'
+%                                   'distortion'
+%                                   'lambda'
+%   nSteps                 - Total number of sweep steps
+%   startStep              - First step that still needs to be computed (resume index)
 %   xVec                   - 1 x nSteps vector of target values for this sweep:
-%                            if sweepAxis='info'       -> targetInfoNormalized
-%                            if sweepAxis='distortion' -> targetDistortionNormalized
-%                            if sweepAxis='lambda'     -> lambda values (presolve modes are skipped).
+%                               if sweepAxis='info'       -> targetInfoNormalized
+%                               if sweepAxis='distortion' -> targetDistortionNormalized
+%                               if sweepAxis='lambda'     -> lambda values 
 %   transformRGBmatrixSweep - 1 x nSteps cell array of already-loaded transforms
-%                             (may contain empties for unfinished steps).
-%   saveBase               - Base directory containing sweep output folders.
-%                            Example: fullfile(outputDir,'testImagesTransformed').
+%   saveBase               - Base directory containing sweep output folders
+%                                 Example: fullfile(outputDir,'testImagesTransformed')
 %   pathName               - Image/run identifier used to build paths.
-%                            Example: 'Deuteranopia/flower2.png/s1_m32_n32'.
-%   metricFolder           - Metric folder name (built from info/distortion choices).
-%                            Example: buildMetricFolderName(...).
-%   LMSCalFormat           - 3 x N LMS values of the input image (cal format).
-%   imgParams              - Struct with image-related parameters (m, n, etc.).
+%                                 Example: 'Deuteranopia/flower2.png/s1_m32_n32'
+%   metricFolder           - Metric folder name (built from info/distortion choices)
+%                                 Example: buildMetricFolderName(...)
+%   LMSCalFormat           - 3 x N LMS values of the input image (cal format)
+%   imgParams              - Struct with image-related parameters (m, n, etc.)
 %   dichromatType          - Dichromat type string passed to render/constraints:
 %                            'Protanopia', 'Deuteranopia', or 'Tritanopia'.
 %   infoNormalizer         - Scalar normalizer used by lossFunction/info metric
-%                            (same value used by computeSweep/colorCorrectionOptimize).
+%                           
 %   distortionNormalizer   - Scalar normalizer used by lossFunction/distortion metric
-%                            (same value used by computeSweep/colorCorrectionOptimize).
-%   Disp                   - Display/calibration struct (e.g., contains grayLMS, matrices).
-%   obj                    - Daltonizer object (provides obj.infoFcn, obj.distortionFcn,
-%                            and obj.infoParams needed by lossFunction).
+%                           
+%   Disp                   - Display/calibration struct 
+%   obj                    - Daltonizer object 
 %
 % Outputs (returned in struct startPts):
 %   startPts.T_I            - 3 x 3 identity matrix (always available baseline).
