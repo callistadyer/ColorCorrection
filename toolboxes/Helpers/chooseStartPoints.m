@@ -1,7 +1,4 @@
-function [best, startPtSolns, candNames, candTinit] = chooseStartPoints( ...
-    i, sweepAxis, thisX, ...
-    T_I, T_prev, ...
-    T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
+function [best, startPtSolns, candNames, candTinit] = chooseStartPoints(i, sweepAxis, thisX, T_I, T_prev, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
     LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp, saveSubdir, passName)
 % chooseStartPoints  Build a list of candidate start points and run the optimizer from each, then pick the best.
 %
@@ -39,6 +36,8 @@ function [best, startPtSolns, candNames, candTinit] = chooseStartPoints( ...
 %   candNames    - Cell array of candidate names that were tested (1 x K)
 %   candTinit    - Cell array of candidate 3x3 start matrices (1 x K)
 
+%%%%%%%%%%%%%%%%%%%%% CHOOSE START POINT OPTIONS %%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Build candidate name list
 candNames = {};
 candTinit = {};
@@ -68,10 +67,10 @@ end
 %     candNames{end+1} = 'findDesiredInfo';
 %     candTinit{end+1} = T_findDesiredInfo{i};
 % end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Run each candidate start and collect results
-nCands = numel(candNames);
-
+% Where are you going to save this stuff? You will want to save it as it
+% runs so you can pick up where you left off
 % e.g. <saveSubdir>/forward/step_003/start_T_prev.mat
 passDir = fullfile(saveSubdir, char(passName));
 if ~exist(passDir, 'dir'); mkdir(passDir); end
@@ -79,11 +78,13 @@ if ~exist(passDir, 'dir'); mkdir(passDir); end
 stepDir = fullfile(passDir, sprintf('step_%03d', i));
 if ~exist(stepDir, 'dir'); mkdir(stepDir); end
 
-% Tolerances for constraints.=
+%%%%%%%%%% Tolerances for constraints %%%%%%%%%%
 pctTol      = 0.01;
 absTolFloor = 5e-3;
 
-% Template struct (scalar!)
+% Run each candidate start and collect results
+nCands = numel(candNames);
+
 emptySoln = struct( ...
     'name',            '', ...
     'T',               [], ...
@@ -95,8 +96,10 @@ emptySoln = struct( ...
     'nonLinSatisfied', false, ...
     'violation',       Inf);
 
-% Preallocate a 1 x nCands struct array
+% Preallocate 
 startPtSolns = repmat(emptySoln, 1, nCands);
+
+% Loop through each of your starting points
 for k = 1:nCands
     thisName = candNames{k};
     T_init   = candTinit{k};
@@ -114,7 +117,7 @@ for k = 1:nCands
     safeName = regexprep(thisName, '[^A-Za-z0-9_]+', '_');
     candFile = fullfile(stepDir, sprintf('start_%s.mat', safeName));
 
-    % Load-if-exists, else run + save immediately
+    % Load if exists, otherwise run + save 
     loadedOK = false;
 
     if exist(candFile, 'file')
@@ -125,7 +128,7 @@ for k = 1:nCands
                 isfield(S,'candSoln') && isstruct(S.candSoln) && ...
                 isfield(S.candSoln,'T') && ~isempty(S.candSoln.T)
 
-            % Fill the struct array entry directly (your names)
+            % Fill the struct array entry 
             startPtSolns(k) = S.candSoln;
             loadedOK = true;
 
@@ -133,12 +136,12 @@ for k = 1:nCands
         end
     end
 
+    % If you dont have it saved somewhere, then do the optimization from
+    % that start point
     if ~loadedOK
 
         % Run the optimizer from this start
-        [LMS_k, rgbLin_k, T_k, ~, infoNorm_k, ~, distNorm_k, nonLinSatisfied_k] = colorCorrectionOptimize( ...
-            sweepAxis, lamArg, tgtInfoArg, tgtDistArg, ...
-            LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
+        [LMS_k, rgbLin_k, T_k, ~, infoNorm_k, ~, distNorm_k, nonLinSatisfied_k] = colorCorrectionOptimize(sweepAxis, lamArg, tgtInfoArg, tgtDistArg, LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
             obj.infoParams, obj.distortionParams, ...
             infoNormalizer, distortionNormalizer, Disp, ...
             'T_init', T_init,...
@@ -149,10 +152,10 @@ for k = 1:nCands
         switch lower(sweepAxis)
             case 'info'
 
-                loss_k = lossFunction('lambda', 0.0, T_k(:), LMSCalFormat, imgParams, dichromatType, ...
-                    obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
-                % violation_k = abs(infoNorm_k - thisX);
+                loss_k = lossFunction('lambda', 0.0, T_k(:), LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
 
+                % Check the violation of constraints, but give it some
+                % wiggle room (epsBand)
                 % Absolute distance from target value
                 rawDelta = abs(infoNorm_k - thisX);
 
@@ -192,7 +195,7 @@ for k = 1:nCands
                 violation_k = NaN;
         end
 
-        % Store this candidate solution (YOUR FIELD NAMES)
+        % Store this candidate solution
         startPtSolns(k).name            = thisName;
         startPtSolns(k).T               = T_k;
         startPtSolns(k).LMS             = LMS_k;
@@ -203,7 +206,7 @@ for k = 1:nCands
         startPtSolns(k).nonLinSatisfied = logical(nonLinSatisfied_k);
         startPtSolns(k).violation       = violation_k;
 
-        % Save immediately so resume works
+        % Save so resume works
         candSoln  = startPtSolns(k);  
         completed = true;           
         timestamp = datestr(now);    
@@ -214,19 +217,22 @@ for k = 1:nCands
     end
 end
 
-% Choose the best feasible: first filter by nonlinear satisfaction, then minimize loss
+% Choose the best feasible: first filter by whether it satisfies the nonlinear constraint, then minimize loss
 nonLinMask = [startPtSolns.nonLinSatisfied];
 
 if any(nonLinMask)
+    % Which solutions satisfied the nonlinear constraint?
     solnsFeas = startPtSolns(nonLinMask);
+    % Out of those, which has the lowest loss?
     [~, idx]  = min([solnsFeas.loss]);
+    % Grab that one 
     best      = solnsFeas(idx);
 else
     % If nothing satisfies nonlinear constraints, fall back to smallest violation, then smallest loss
     [~, idxV] = min([startPtSolns.violation]);
     best      = startPtSolns(idxV);
 
-    % Tie-break on loss if multiple equal violations (rare, but safe)
+    % Tie-break on loss if multiple equal violations 
     tied = find([startPtSolns.violation] == best.violation);
     if numel(tied) > 1
         [~, idxL] = min([startPtSolns(tied).loss]);
