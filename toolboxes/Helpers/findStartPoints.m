@@ -1,4 +1,4 @@
-function startPts = findStartPoints(modes, sweepAxis, nSteps, startStep, xVec, transformRGBmatrixSweep, saveBase, pathName, metricFolder, LMSCalFormat, imgParams, dichromatType, infoNormalizer, distortionNormalizer, Disp, obj)
+function startPts = findStartPoints(modes, sweepAxis, nSteps, startStep, xVec, transformRGBmatrixSweep, saveBase, pathName, metricFolder, LMSCalFormat, imgParams, dichromatType, infoNormalizer, distortionNormalizer, Disp, obj, saveSubdir)
 % function startPts = findStartPoints(modes, sweepAxis, nSteps, startStep, xVec, transformRGBmatrixSweep, saveBase, pathName, metricFolder, LMSCalFormat, imgParams, dichromatType, infoNormalizer, distortionNormalizer, Disp, obj)
 % 
 % Description:
@@ -142,6 +142,17 @@ if wantInfoSoln && strcmpi(sweepAxis,'distortion')
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This stuff takes longer. Save and reload if you can
+presolveRoot = fullfile(saveSubdir, 'presolve');    % lives alongside sweepOutputs.mat
+if ~exist(presolveRoot, 'dir'); mkdir(presolveRoot); end
+
+distCacheDir = fullfile(presolveRoot, 'findDesiredDist');
+infoCacheDir = fullfile(presolveRoot, 'findDesiredInfo');
+
+if ~exist(distCacheDir, 'dir'); mkdir(distCacheDir); end
+if ~exist(infoCacheDir, 'dir'); mkdir(infoCacheDir); end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Build shared optimization components for presolve strategies
 
 % Linear gamut constraints are reused across all presolve steps
@@ -155,12 +166,6 @@ feas_opts = optimoptions('fmincon', ...
     'ConstraintTolerance',1e-10, ...
     'StepTolerance',1e-10);
 
-% Helper to evaluate normalized info and distortion for any transform
-getNorms = @(t_vec) lossFunction('lambda', 0.0, t_vec, ...
-    LMSCalFormat, imgParams, dichromatType, ...
-    obj.infoFcn, obj.distortionFcn, ...
-    infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % findDesiredDist mode: presolve to hit target distortion values
 
@@ -173,21 +178,49 @@ if wantFindDesiredDist && strcmpi(sweepAxis,'distortion')
 
     for i = startStep:nSteps
 
-        % Target distortion value for this sweep step
         targetDist = xVec(i);
 
-        % Objective: squared error between achieved and target distortion
-        feas_fun = @(t_vec) localDistObjective(t_vec, targetDist, getNorms);
+        % Cache file for this presolve step
+        stepFile = fullfile(distCacheDir, sprintf('step_%03d.mat', i));
 
-        % Solve constrained presolve optimization
-        T_feas_vec = fmincon(feas_fun, T_seed(:), A_total, b_total, [], [], [], [], [], feas_opts);
+        % Try load
+        loadedOK = false;
+        if exist(stepFile, 'file')
+            S = load(stepFile);
+            if isfield(S,'completed') && isequal(S.completed,true) && ...
+                    isfield(S,'T_feas_vec') && ~isempty(S.T_feas_vec)
+                T_feas_vec = S.T_feas_vec;
+                loadedOK = true;
+                fprintf('[findDesiredDist] LOADED step %2d from cache: %s\n', i, stepFile);
+            end
+        end
 
-        % Evaluate achieved distortion for diagnostics
-        [~, ~, ~, ~, distNorm] = getNorms(T_feas_vec);
+        if ~loadedOK
+            % Objective: squared error between achieved and target distortion
+            feas_fun = @(t_vec) localDistObjective(t_vec, targetDist,LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp);
 
-        fprintf('[findDesiredDist] step %2d: target=%.6g achieved=%.6g delta=%.3g\n', i, targetDist, distNorm, abs(distNorm - targetDist));
+            % Solve constrained presolve optimization
+            T_feas_vec = fmincon(feas_fun, T_seed(:), A_total, b_total, [], [], [], [], [], feas_opts);
 
-        % Store result and chain as seed
+            % Save immediately so we never rerun unless cache is deleted
+            completed = true;
+            timestamp = datestr(now);
+            save(stepFile, 'T_feas_vec', 'targetDist', 'completed', 'timestamp', '-v7.3');
+            fprintf('[findDesiredDist] SAVED  step %2d -> %s\n', i, stepFile);
+        end
+
+        % Evaluate achieved distortion for diagnostics (works for loaded or computed)
+        [~, ~, ~, ~, distNorm] = lossFunction( ...
+            'lambda', 0.0, T_feas_vec, ...
+            LMSCalFormat, imgParams, dichromatType, ...
+            obj.infoFcn, obj.distortionFcn, ...
+            infoNormalizer, distortionNormalizer, ...
+            Disp, obj.infoParams);
+
+        fprintf('[findDesiredDist] step %2d: target=%.6g achieved=%.6g delta=%.3g\n', ...
+            i, targetDist, distNorm, abs(distNorm - targetDist));
+
+        % Store result and chain seed
         T_findDesiredDist{i} = reshape(T_feas_vec, 3, 3);
         T_seed = T_findDesiredDist{i};
     end
@@ -207,21 +240,46 @@ if wantFindDesiredInfo && strcmpi(sweepAxis,'info')
 
     for i = startStep:nSteps
 
-        % Target info value for this sweep step
         targetInfo = xVec(i);
 
-        % Objective: squared error between achieved and target info
-        feas_fun = @(t_vec) localInfoObjective(t_vec, targetInfo, getNorms);
+        % Cache file for this presolve step
+        stepFile = fullfile(infoCacheDir, sprintf('step_%03d.mat', i));
 
-        % Solve constrained presolve optimization
-        T_feas_vec = fmincon(feas_fun, T_seed(:), A_total, b_total, [], [], [], [], [], feas_opts);
+        % Try load
+        loadedOK = false;
+        if exist(stepFile, 'file')
+            S = load(stepFile);
+            if isfield(S,'completed') && isequal(S.completed,true) && ...
+                    isfield(S,'T_feas_vec') && ~isempty(S.T_feas_vec)
+                T_feas_vec = S.T_feas_vec;
+                loadedOK = true;
+                fprintf('[findDesiredInfo] LOADED step %2d from cache: %s\n', i, stepFile);
+            end
+        end
 
-        % Evaluate achieved info for diagnostics
-        [~, ~, infoNorm, ~, ~] = getNorms(T_feas_vec);
+        if ~loadedOK
+            feas_fun = @(t_vec) localInfoObjective(t_vec, targetInfo, LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp);
 
-        fprintf('[findDesiredInfo] step %2d: target=%.6g achieved=%.6g delta=%.3g\n', i, targetInfo, infoNorm, abs(infoNorm - targetInfo));
+            T_feas_vec = fmincon(feas_fun, T_seed(:), A_total, b_total, [], [], [], [], [], feas_opts);
 
-        % Store result and chain as seed
+            completed = true;
+            timestamp = datestr(now);
+            save(stepFile, 'T_feas_vec', 'targetInfo', 'completed', 'timestamp', '-v7.3');
+            fprintf('[findDesiredInfo] SAVED  step %2d -> %s\n', i, stepFile);
+        end
+
+        % Diagnostics
+        [~, ~, infoNorm, ~, ~] = lossFunction( ...
+            'lambda', 0.0, T_feas_vec, ...
+            LMSCalFormat, imgParams, dichromatType, ...
+            obj.infoFcn, obj.distortionFcn, ...
+            infoNormalizer, distortionNormalizer, ...
+            Disp, obj.infoParams);
+
+
+        fprintf('[findDesiredInfo] step %2d: target=%.6g achieved=%.6g delta=%.3g\n', ...
+            i, targetInfo, infoNorm, abs(infoNorm - targetInfo));
+
         T_findDesiredInfo{i} = reshape(T_feas_vec, 3, 3);
         T_seed = T_findDesiredInfo{i};
     end
@@ -229,18 +287,27 @@ if wantFindDesiredInfo && strcmpi(sweepAxis,'info')
     startPts.T_findDesiredInfo = T_findDesiredInfo;
 end
 
+
+
 end
 
-function f = localDistObjective(t_vec, targetDist, getNorms)
+function f = localDistObjective(t_vec, targetDist, LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp)
+
 % Squared error between achieved and target distortion
-[~, ~, ~, ~, distNorm] = getNorms(t_vec);
+
+[~, ~, ~, ~, distNorm] = lossFunction('lambda', 0.0, t_vec, LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+
 d = distNorm - targetDist;
-f = d*d;
+f = d * d;
 end
 
-function f = localInfoObjective(t_vec, targetInfo, getNorms)
+
+function f = localInfoObjective(t_vec, targetInfo, LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp)
+
 % Squared error between achieved and target info
-[~, ~, infoNorm, ~, ~] = getNorms(t_vec);
+
+[~, ~, infoNorm, ~, ~] = lossFunction('lambda', 0.0, t_vec, LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+
 d = infoNorm - targetInfo;
-f = d*d;
+f = d * d;
 end

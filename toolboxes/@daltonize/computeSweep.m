@@ -52,8 +52,21 @@ runFolder    = sprintf('%s_%dsteps', lower(char(sweepAxis)), nSteps);
 
 saveSubdir = fullfile(saveBase, pathName, metricFolder, runFolder);
 saveFile   = fullfile(saveSubdir, 'sweepOutputs.mat');
+% Best folder (final chosen per-step winners)
+bestSubdir = fullfile(saveSubdir, 'best');
+if ~exist(bestSubdir, 'dir'); mkdir(bestSubdir); end
+bestSaveFile = fullfile(bestSubdir, 'sweepOutputs_best.mat');   % separate from main
+
 
 if ~exist(saveSubdir, 'dir'); mkdir(saveSubdir); end
+
+forwardDir  = fullfile(saveSubdir, 'forward');
+backwardDir = fullfile(saveSubdir, 'backward');
+bestDir     = fullfile(saveSubdir, 'best');
+
+if ~exist(forwardDir,'dir');  mkdir(forwardDir);  end
+if ~exist(backwardDir,'dir'); mkdir(backwardDir); end
+if ~exist(bestDir,'dir');     mkdir(bestDir);     end
 
 % Defaults
 outputs   = cell(1, nSteps);
@@ -130,7 +143,7 @@ if numel(outputs) < nSteps
     outputs{nSteps} = [];
 end
 
-% Only populate steps that are complete 
+% Only populate steps that are complete
 isDoneStep = @(s) isstruct(s) ...
     && isfield(s,'stepCompleted') && isequal(s.stepCompleted,true) ...
     && isfield(s,'transformRGBmatrix') && ~isempty(s.transformRGBmatrix);
@@ -170,7 +183,7 @@ end
 
 % Compute candidate start points for the optimizer
 modes = {'infoSoln','findDesiredDist','findDesiredInfo'};   % pick what you want
-startPts = findStartPoints(modes, sweepAxis, nSteps, startStep, xVec, transformRGBmatrixSweep, saveBase, pathName, metricFolder, LMSCalFormat, imgParams, dichromatType, infoNormalizer, distortionNormalizer, Disp, obj);
+startPts = findStartPoints(modes, sweepAxis, nSteps, startStep, xVec, transformRGBmatrixSweep, saveBase, pathName, metricFolder, LMSCalFormat, imgParams, dichromatType, infoNormalizer, distortionNormalizer, Disp, obj, saveSubdir);
 
 T_I    = startPts.T_I;
 T_prev = startPts.T_prev0;
@@ -178,75 +191,6 @@ T_prev = startPts.T_prev0;
 T_infoSeeds       = startPts.T_infoSeeds;
 T_findDesiredDist = startPts.T_findDesiredDist;
 T_findDesiredInfo = startPts.T_findDesiredInfo;
-% 
-% violationStep = false(1, nSteps);
-% for i = startStep:nSteps
-% 
-%     thisX = xVec(i);
-% 
-%     % Depending on the sweep axis, the "target" value is different
-%     if strcmpi(sweepAxis,'info')
-%         lamArg = []; tgtInfoArg = thisX; tgtDistArg = [];
-%     elseif strcmpi(sweepAxis,'distortion')
-%         lamArg = []; tgtInfoArg = []; tgtDistArg = thisX;
-%     else % 'lambda'
-%         lamArg = thisX; tgtInfoArg = []; tgtDistArg = [];
-%     end
-% 
-% 
-%     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%     [best, startPtSolns] = chooseStartPoints(i, sweepAxis, thisX,T_I, T_prev,T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp);
-% 
-%     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 
-%     % Commit the chosen solution for this step
-%     LMSDaltonizedCalFormatSweep{i}       = best.LMS;
-%     rgbLinDaltonizedCalFormatSweep{i}    = best.rgbLin;
-%     transformRGBmatrixSweep{i}           = best.T;
-%     infoNormalizedAchievedSweep(i)       = best.infoNorm;
-%     distortionNormalizedAchievedSweep(i) = best.distNorm;
-% 
-%     % IMPORTANT: update T_prev so the next step chains from this one
-%     T_prev = best.T;
-% 
-%     % Optional debug print
-%     fprintf('step %2d | winner = %-16s | nonLinOK=%d | loss=%.4g | viol=%.4g\n', ...
-%         i, best.name, best.nonLinSatisfied, best.loss, best.violation);
-% 
-%     fprintf('step %2d | sweep=%s | target=%.4f | achievedInfo=%.4f | achievedDist=%.4f\n', ...
-%         i, lower(char(sweepAxis)), thisX, infoNormalizedAchievedSweep(i), distortionNormalizedAchievedSweep(i));
-% 
-%     % Plot Achieved info vs distortion up through this step
-%     debugPlot_InfoVsDistSingleSweep(i, sweepAxis, distortionNormalizedAchievedSweep, infoNormalizedAchievedSweep, targetDistortionNormalized, targetInfoNormalized, violationStep, thisX, pathName);
-% 
-%     % Get the dichromat rendering
-%     [LMSDaltonizedRenderedCalFormatSweep{i},rgbLinDaltonizedRenderedCalFormatSweep{i},~] = DichromRenderLinear(LMSDaltonizedCalFormatSweep{i},dichromatType,Disp);
-% 
-%     % Save this step to disk immediately
-%     outputs{i} = struct( ...
-%         'LMSDaltonizedCalFormat',            LMSDaltonizedCalFormatSweep{i}, ...
-%         'rgbLinDaltonizedCalFormat',         rgbLinDaltonizedCalFormatSweep{i}, ...
-%         'LMSDaltonizedRenderedCalFormat',    LMSDaltonizedRenderedCalFormatSweep{i}, ...
-%         'rgbLinDaltonizedRenderedCalFormat', rgbLinDaltonizedRenderedCalFormatSweep{i}, ...
-%         'transformRGBmatrix',                transformRGBmatrixSweep{i}, ...
-%         'targetInfoNormalized',              targetInfoNormalized(i), ...
-%         'targetDistortionNormalized',        targetDistortionNormalized(i), ...
-%         'infoNormalizedAchievedSweep',       infoNormalizedAchievedSweep(i), ...
-%         'distortionNormalizedAchievedSweep', distortionNormalizedAchievedSweep(i), ...
-%         'imgParams',                         imgParams, ...
-%         'Disp',                              Disp, ...
-%         'sweepAxis',                         char(sweepAxis), ...
-%         'stepCompleted',                     true, ...
-%         'timestamp',                         datestr(now));
-% 
-%     save(saveFile, 'outputs', '-v7.3');
-%     fprintf('  [checkpoint] saved step %d/%d -> %s\n', i, nSteps, saveFile);
-% 
-%     % Save a per-step snapshot so we can rerun any step instantly
-%     % stepSnapFile = fullfile(saveSubdir, sprintf('STEP_SNAP_%s_%03d.mat', lower(char(sweepAxis)), i));
-%     % save(stepSnapFile, 'obj', 'LMSCalFormat', 'imgParams', 'dichromatType','nSteps', 'pathName', 'sweepAxis', 'i', 'thisX', 'infoNormalizer', 'distortionNormalizer', 'targetInfoNormalized', 'targetDistortionNormalized', 'T_I', 'T_prev', '-v7.3');
-% 
-% end
 
 violationStep = false(1, nSteps);
 
@@ -264,11 +208,9 @@ for i = startStep:nSteps
 
     % (if you still need lamArg/tgtInfoArg/tgtDistArg for logging, keep it here;
     %  chooseStartPoints only needs sweepAxis + thisX)
-    [bestF, ~] = chooseStartPoints( ...
-        i, sweepAxis, thisX, ...
-        T_I, T_prev_fwd, ...
-        T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
-        LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp);
+    [bestF, ~] = chooseStartPoints(i, sweepAxis, thisX, T_I, T_prev_fwd, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
+        LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp,...
+        saveSubdir, 'forward');
 
     forwardBest(i) = bestF;
 
@@ -278,10 +220,10 @@ for i = startStep:nSteps
     end
 end
 
-% ==============================
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % PASS 2: BACKWARD (nSteps-1 -> startStep)
 % IMPORTANT: initialize T_prev using the *forward* end-point
-% ==============================
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 backwardBest = repmat(struct('name','','T',[],'LMS',[],'rgbLin',[], ...
     'infoNorm',NaN,'distNorm',NaN,'loss',Inf,'nonLinSatisfied',false,'violation',Inf), 1, nSteps);
 
@@ -293,11 +235,9 @@ for i = (nSteps-1):-1:startStep
 
     thisX = xVec(i);
 
-    [bestB, ~] = chooseStartPoints( ...
-        i, sweepAxis, thisX, ...
-        T_I, T_prev_bwd, ...                  % T_prev_bwd is the chain seed for backward
-        T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
-        LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp);
+    [bestB, ~] = chooseStartPoints(i, sweepAxis, thisX, T_I, T_prev_bwd, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
+        LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp,...
+        saveSubdir, 'backward');
 
     backwardBest(i) = bestB;
 
@@ -307,11 +247,13 @@ for i = (nSteps-1):-1:startStep
     end
 end
 
-% ==============================
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % FINAL: choose per-step winner between forward vs backward
 % Rule: constraints first, then lower loss.
-% ==============================
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for i = startStep:nSteps
+
+    thisX = xVec(i);
 
     bestF = forwardBest(i);
     bestB = backwardBest(i);
@@ -336,7 +278,6 @@ for i = startStep:nSteps
     fprintf('step %2d | winner=%-12s | from=%-8s | nonLinOK=%d | loss=%.4g | viol=%.4g\n', ...
         i, best.name, best.pass, best.nonLinSatisfied, best.loss, best.violation);
 
-    % (everything below stays the same: plotting, dichrom render, saving outputs{i}, etc.)
     debugPlot_InfoVsDistSingleSweep(i, sweepAxis, ...
         distortionNormalizedAchievedSweep, infoNormalizedAchievedSweep, ...
         targetDistortionNormalized, targetInfoNormalized, ...
@@ -362,7 +303,14 @@ for i = startStep:nSteps
         'timestamp',                         datestr(now));
 
     save(saveFile, 'outputs', '-v7.3');
-    fprintf('  [checkpoint] saved step %d/%d -> %s\n', i, nSteps, saveFile);
+    % Best checkpoint in best/ folder 
+    % save(bestSaveFile, 'outputs', '-v7.3');
+    % fprintf('  [best] saved step %d/%d -> %s\n', i, nSteps, bestSaveFile);
+    bestStepDir = fullfile(bestSubdir, sprintf('step_%03d', i));
+    if ~exist(bestStepDir,'dir'); mkdir(bestStepDir); end
+    bestStepFile = fullfile(bestStepDir, 'best.mat');
+    save(bestStepFile, 'best', 'thisX', 'sweepAxis', 'i', '-v7.3');
+    fprintf('  [best] saved -> %s\n', bestStepFile);
 end
 
 
@@ -386,42 +334,42 @@ end
 
 
 
-% ===== helper: choose between two candidate solutions (nested) =====
+% Choose between two candidate solutions (nested) =====
 function best = pickBetterSolution(bestF, bestB)
-    % Add pass labels for logging
-    bestF.pass = 'forward';
-    bestB.pass = 'backward';
+% Add pass labels for logging
+bestF.pass = 'forward';
+bestB.pass = 'backward';
 
-    % 1) If only one satisfies nonlinear constraints -> take it
-    if bestF.nonLinSatisfied && ~bestB.nonLinSatisfied
-        best = bestF; return;
-    elseif bestB.nonLinSatisfied && ~bestF.nonLinSatisfied
-        best = bestB; return;
-    end
+% 1) If only one satisfies nonlinear constraints -> take it
+if bestF.nonLinSatisfied && ~bestB.nonLinSatisfied
+    best = bestF; return;
+elseif bestB.nonLinSatisfied && ~bestF.nonLinSatisfied
+    best = bestB; return;
+end
 
-    % 2) If both satisfy constraints -> choose lower loss
-    if bestF.nonLinSatisfied && bestB.nonLinSatisfied
-        if bestF.loss <= bestB.loss
-            best = bestF;
-        else
-            best = bestB;
-        end
-        return;
-    end
-
-    % 3) If neither satisfies constraints -> smaller violation wins, then lower loss
-    if bestF.violation < bestB.violation
+% 2) If both satisfy constraints -> choose lower loss
+if bestF.nonLinSatisfied && bestB.nonLinSatisfied
+    if bestF.loss <= bestB.loss
         best = bestF;
-    elseif bestB.violation < bestF.violation
-        best = bestB;
     else
-        % tie on violation: choose lower loss
-        if bestF.loss <= bestB.loss
-            best = bestF;
-        else
-            best = bestB;
-        end
+        best = bestB;
     end
+    return;
+end
+
+% 3) If neither satisfies constraints -> smaller violation wins, then lower loss
+if bestF.violation < bestB.violation
+    best = bestF;
+elseif bestB.violation < bestF.violation
+    best = bestB;
+else
+    % tie on violation: choose lower loss
+    if bestF.loss <= bestB.loss
+        best = bestF;
+    else
+        best = bestB;
+    end
+end
 end
 
 

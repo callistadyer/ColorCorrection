@@ -2,7 +2,7 @@ function [best, startPtSolns, candNames, candTinit] = chooseStartPoints( ...
     i, sweepAxis, thisX, ...
     T_I, T_prev, ...
     T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
-    LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp)
+    LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp, saveSubdir, passName)
 % chooseStartPoints  Build a list of candidate start points and run the optimizer from each, then pick the best.
 %
 % Syntax:
@@ -72,6 +72,17 @@ end
 % Run each candidate start and collect results
 nCands = numel(candNames);
 
+% e.g. <saveSubdir>/forward/step_003/start_T_prev.mat
+passDir = fullfile(saveSubdir, char(passName));
+if ~exist(passDir, 'dir'); mkdir(passDir); end
+
+stepDir = fullfile(passDir, sprintf('step_%03d', i));
+if ~exist(stepDir, 'dir'); mkdir(stepDir); end
+
+% Tolerances for constraints.=
+pctTol      = 0.01;
+absTolFloor = 5e-3;
+
 % Template struct (scalar!)
 emptySoln = struct( ...
     'name',            '', ...
@@ -99,42 +110,108 @@ for k = 1:nCands
         lamArg = thisX; tgtInfoArg = []; tgtDistArg = [];
     end
 
-    % Run the optimizer from this start
-    [LMS_k, rgbLin_k, T_k, ~, infoNorm_k, ~, distNorm_k, nonLinSatisfied_k] = colorCorrectionOptimize( ...
-        sweepAxis, lamArg, tgtInfoArg, tgtDistArg, ...
-        LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
-        obj.infoParams, obj.distortionParams, ...
-        infoNormalizer, distortionNormalizer, Disp, ...
-        'T_init', T_init);
+    % Safe filename for this start (avoid weird characters)
+    safeName = regexprep(thisName, '[^A-Za-z0-9_]+', '_');
+    candFile = fullfile(stepDir, sprintf('start_%s.mat', safeName));
 
-    % Compute the loss that corresponds to this sweep objective
-    switch lower(sweepAxis)
-        case 'info'
-            loss_k = lossFunction('lambda', 0.0, T_k(:), LMSCalFormat, imgParams, dichromatType, ...
-                obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
-            violation_k = abs(infoNorm_k - thisX);
+    % Load-if-exists, else run + save immediately
+    loadedOK = false;
 
-        case 'distortion'
-            loss_k = lossFunction('lambda', 1.0, T_k(:), LMSCalFormat, imgParams, dichromatType, ...
-                obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
-            violation_k = abs(distNorm_k - thisX);
+    if exist(candFile, 'file')
+        S = load(candFile);
 
-        otherwise % 'lambda'
-            loss_k = lossFunction('lambda', thisX, T_k(:), LMSCalFormat, imgParams, dichromatType, ...
-                obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
-            violation_k = NaN;
+        % Expect a struct named candSoln and completed=true
+        if isfield(S,'completed') && isequal(S.completed,true) && ...
+                isfield(S,'candSoln') && isstruct(S.candSoln) && ...
+                isfield(S.candSoln,'T') && ~isempty(S.candSoln.T)
+
+            % Fill the struct array entry directly (your names)
+            startPtSolns(k) = S.candSoln;
+            loadedOK = true;
+
+            fprintf('  [%s][step %03d] LOADED start %-12s from %s\n', char(passName), i, thisName, candFile);
+        end
     end
 
-    % Store this candidate solution
-    startPtSolns(k).name            = thisName;
-    startPtSolns(k).T               = T_k;
-    startPtSolns(k).LMS             = LMS_k;
-    startPtSolns(k).rgbLin          = rgbLin_k;
-    startPtSolns(k).infoNorm        = infoNorm_k;
-    startPtSolns(k).distNorm        = distNorm_k;
-    startPtSolns(k).loss            = loss_k;
-    startPtSolns(k).nonLinSatisfied = logical(nonLinSatisfied_k);
-    startPtSolns(k).violation       = violation_k;
+    if ~loadedOK
+
+        % Run the optimizer from this start
+        [LMS_k, rgbLin_k, T_k, ~, infoNorm_k, ~, distNorm_k, nonLinSatisfied_k] = colorCorrectionOptimize( ...
+            sweepAxis, lamArg, tgtInfoArg, tgtDistArg, ...
+            LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
+            obj.infoParams, obj.distortionParams, ...
+            infoNormalizer, distortionNormalizer, Disp, ...
+            'T_init', T_init,...
+            'pctTol', pctTol, ...     
+            'absTolFloor', absTolFloor);
+
+        % Compute the loss that corresponds to this sweep objective
+        switch lower(sweepAxis)
+            case 'info'
+
+                loss_k = lossFunction('lambda', 0.0, T_k(:), LMSCalFormat, imgParams, dichromatType, ...
+                    obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+                % violation_k = abs(infoNorm_k - thisX);
+
+                % Absolute distance from target value
+                rawDelta = abs(infoNorm_k - thisX);
+
+                % Allowed tolerance band around the target
+                epsBand = max(absTolFloor, pctTol * thisX);
+
+                if rawDelta <= epsBand
+                    % Within allowed tolerance = no violation
+                    violation_k = 0;
+                else
+                    % Outside tolerance = violation equals excess distance
+                    violation_k = rawDelta - epsBand;
+                end
+
+            case 'distortion'
+                loss_k = lossFunction('lambda', 1.0, T_k(:), LMSCalFormat, imgParams, dichromatType, ...
+                    obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+                % violation_k = abs(distNorm_k - thisX);
+
+                % Absolute distance from target value
+                rawDelta = abs(distNorm_k - thisX);
+
+                % Allowed tolerance band around the target
+                epsBand = max(absTolFloor, pctTol * thisX);
+
+                if rawDelta <= epsBand
+                    % Within allowed tolerance = no violation
+                    violation_k = 0;
+                else
+                    % Outside tolerance = violation equals excess distance
+                    violation_k = rawDelta - epsBand;
+                end
+
+            otherwise % 'lambda'
+                loss_k = lossFunction('lambda', thisX, T_k(:), LMSCalFormat, imgParams, dichromatType, ...
+                    obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+                violation_k = NaN;
+        end
+
+        % Store this candidate solution (YOUR FIELD NAMES)
+        startPtSolns(k).name            = thisName;
+        startPtSolns(k).T               = T_k;
+        startPtSolns(k).LMS             = LMS_k;
+        startPtSolns(k).rgbLin          = rgbLin_k;
+        startPtSolns(k).infoNorm        = infoNorm_k;
+        startPtSolns(k).distNorm        = distNorm_k;
+        startPtSolns(k).loss            = loss_k;
+        startPtSolns(k).nonLinSatisfied = logical(nonLinSatisfied_k);
+        startPtSolns(k).violation       = violation_k;
+
+        % Save immediately so resume works
+        candSoln  = startPtSolns(k);  
+        completed = true;           
+        timestamp = datestr(now);    
+        save(candFile, 'candSoln', 'completed', 'timestamp', 'i', 'k', 'thisX', 'sweepAxis', '-v7.3');
+
+        fprintf('  [%s] saved %s -> %s\n', char(passName), thisName, candFile);
+
+    end
 end
 
 % Choose the best feasible: first filter by nonlinear satisfaction, then minimize loss

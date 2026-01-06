@@ -73,9 +73,16 @@ end
 %% Key value pairs
 parser = inputParser;
 parser.addParameter('T_init', eye(3), @(x) isnumeric(x) && isequal(size(x),[3 3]));
-parser.parse(varargin{:});
-T_init  = parser.Results.T_init;
 
+% Relative/absolute band tolerance controls
+parser.addParameter('pctTol', 0.01, @(x) isnumeric(x) && isscalar(x) && x >= 0);
+parser.addParameter('absTolFloor', 1e-3, @(x) isnumeric(x) && isscalar(x) && x >= 0);
+
+parser.parse(varargin{:});
+
+T_init      = parser.Results.T_init;
+pctTol      = parser.Results.pctTol;
+absTolFloor = parser.Results.absTolFloor;
 
 switch lower(target)
     case 'lambda'
@@ -115,6 +122,7 @@ if exist('infoParams','var') && ~isempty(infoParams)
     end
 end
 
+
 % Attempt to add in nonlinear constraint where we keep info a constant
 % value and search over distortion values (want to keep info as the
 % target info and then get the transformation that minimizes distortion, or
@@ -130,11 +138,7 @@ switch lower(target)
 
     case 'info'
         % Minimize distortion subject to info constraint (=targetInfo)
-        % epsInfo = 1;
-        % epsInfo = 1e-3;
-        pctTol = 0.01;
-        absFloor = 1e-3;
-        epsInfo = max(absFloor, pctTol * targetInfo);   % relative
+        epsInfo = max(absTolFloor, pctTol * targetInfo);   % relative
 
 
         % Minimize distortion only (lambda=0)
@@ -149,10 +153,6 @@ switch lower(target)
 
     case 'distortion'
         % Maximize info subject to distortion constraint (=targetDist)
-        % epsDist = 1e-3;
-
-        pctTol      = 0.01;   % 1% of target
-        absTolFloor = 1e-3;   % minimum absolute tolerance
         epsDist = max(absTolFloor, pctTol * targetDist);
 
         % Maximize info only (lambda=1)
