@@ -112,15 +112,18 @@ normalizerValueToGetRawValue = 1;
 infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, dichromatType, normalizerValueToGetRawValue, Disp, obj.infoParams);
 % Distortion takes in the regular LMS image (not contrast)
 distortionNormalizer = obj.distortionFcn(LMSCalFormat, LMSCalFormat_new, imgParams, normalizerValueToGetRawValue, Disp, obj.distortionParams);
+
 % Uncomment below if you change it so that distortion takes in contrast image
 % distortionNormalizer = obj.distortionFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, normalizerValueToGetRawValue, obj.distortionParams);
 
 % Get info values for lambda = 0 and lambda = 1
-[~,~,~,info_0,infoNormalized_0,distortion0, distortionNormalized0] = colorCorrectionOptimize("lambda", 0, [], [], LMSCalFormat, imgParams, dichromatType, ...
-    obj.infoFcn, obj.distortionFcn, obj.infoParams, obj.distortionParams, infoNormalizer, distortionNormalizer, Disp);
+% [~,~,~,info_0,infoNormalized_0,distortion0, distortionNormalized0] = colorCorrectionOptimize("lambda", 0, [], [], LMSCalFormat, imgParams, dichromatType, ...
+%     obj.infoFcn, obj.distortionFcn, obj.infoParams, obj.distortionParams, infoNormalizer, distortionNormalizer, Disp);
+% 
+% [~,~,~,info_1,infoNormalized_1,distortion1, distortionNormalized1] = colorCorrectionOptimize("lambda", 1, [], [], LMSCalFormat, imgParams, dichromatType, ...
+%     obj.infoFcn, obj.distortionFcn, obj.infoParams, obj.distortionParams, infoNormalizer, distortionNormalizer, Disp);
 
-[~,~,~,info_1,infoNormalized_1,distortion1, distortionNormalized1] = colorCorrectionOptimize("lambda", 1, [], [], LMSCalFormat, imgParams, dichromatType, ...
-    obj.infoFcn, obj.distortionFcn, obj.infoParams, obj.distortionParams, infoNormalizer, distortionNormalizer, Disp);
+[infoNormalized_0, infoNormalized_1, distortionNormalized0, distortionNormalized1] = computeEndpoints(saveSubdir, LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp);
 
 % Get target info values interpolated between lambdas 0 and 1
 targetInfoNormalized       = linspace(infoNormalized_0, infoNormalized_1, nSteps);
@@ -149,19 +152,24 @@ isDoneStep = @(s) isstruct(s) ...
     && isfield(s,'transformRGBmatrix') && ~isempty(s.transformRGBmatrix);
 
 for ii = 1:nSteps
+    % If there is no saved output at all, obviously can't load it
     if isempty(outputs{ii})
         continue;
     end
+
+    % Just recompute this step if it never finished running
     if ~isDoneStep(outputs{ii})
         continue;
     end
 
+    % Restore optimized outputs for this step
     LMSDaltonizedCalFormatSweep{ii}            = outputs{ii}.LMSDaltonizedCalFormat;
     rgbLinDaltonizedCalFormatSweep{ii}         = outputs{ii}.rgbLinDaltonizedCalFormat;
     LMSDaltonizedRenderedCalFormatSweep{ii}    = outputs{ii}.LMSDaltonizedRenderedCalFormat;
     rgbLinDaltonizedRenderedCalFormatSweep{ii} = outputs{ii}.rgbLinDaltonizedRenderedCalFormat;
     transformRGBmatrixSweep{ii}                = outputs{ii}.transformRGBmatrix;
 
+    % Restore achieved metrics if they were saved 
     if isfield(outputs{ii}, 'infoNormalizedAchievedSweep')
         infoNormalizedAchievedSweep(ii) = outputs{ii}.infoNormalizedAchievedSweep;
     end
@@ -384,7 +392,7 @@ function debugPlot_InfoVsDistSingleSweep(i, sweepAxis, ...
 persistent hFigMap hAxMap
 
 % Initialize the persistent maps on first call
-if isempty(hFigMap)
+if isempty(hFigMap) 
     hFigMap = containers.Map('KeyType','char','ValueType','any');
     hAxMap  = containers.Map('KeyType','char','ValueType','any');
 end
