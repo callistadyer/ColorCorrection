@@ -56,17 +56,17 @@ if exist('T_infoSeeds','var') && ~isempty(T_infoSeeds) && numel(T_infoSeeds) >= 
     candTinit{end+1} = T_infoSeeds{i};
 end
 
-% % Try feasibility-start that hits desired distortion (if provided)
-% if exist('T_findDesiredDist','var') && ~isempty(T_findDesiredDist) && numel(T_findDesiredDist) >= i && ~isempty(T_findDesiredDist{i})
-%     candNames{end+1} = 'findDesiredDist';
-%     candTinit{end+1} = T_findDesiredDist{i};
-% end
-% 
-% % Try feasibility-start that hits desired info (if provided)
-% if exist('T_findDesiredInfo','var') && ~isempty(T_findDesiredInfo) && numel(T_findDesiredInfo) >= i && ~isempty(T_findDesiredInfo{i})
-%     candNames{end+1} = 'findDesiredInfo';
-%     candTinit{end+1} = T_findDesiredInfo{i};
-% end
+% Try feasibility-start that hits desired distortion (if provided)
+if exist('T_findDesiredDist','var') && ~isempty(T_findDesiredDist) && numel(T_findDesiredDist) >= i && ~isempty(T_findDesiredDist{i})
+    candNames{end+1} = 'findDesiredDist';
+    candTinit{end+1} = T_findDesiredDist{i};
+end
+
+% Try feasibility-start that hits desired info (if provided)
+if exist('T_findDesiredInfo','var') && ~isempty(T_findDesiredInfo) && numel(T_findDesiredInfo) >= i && ~isempty(T_findDesiredInfo{i})
+    candNames{end+1} = 'findDesiredInfo';
+    candTinit{end+1} = T_findDesiredInfo{i};
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Where are you going to save this stuff? You will want to save it as it
@@ -79,7 +79,7 @@ stepDir = fullfile(passDir, sprintf('step_%03d', i));
 if ~exist(stepDir, 'dir'); mkdir(stepDir); end
 
 %%%%%%%%%% Tolerances for constraints %%%%%%%%%%
-pctTol      = 0.03;
+pctTol      = 0.05;
 absTolFloor = 5e-3;
 
 % Run each candidate start and collect results
@@ -245,79 +245,3 @@ else
 end
 
 end
-% 
-% function debugPlot_CandidatesUsingSweepFigure(i, sweepAxis, thisX, candSoln, passName, runID)
-% % debugPlot_CandidatesUsingSweepFigure
-% % Accumulative plot of ALL candidate solutions across ALL steps.
-% %
-% % Each candidate name is assigned a persistent color so clusters emerge.
-% % Nothing is ever cleared — this shows reachability + branch structure.
-% 
-% persistent hFigMap hAxMap colorMap colorList colorIdx
-% if isempty(hFigMap)
-%     hFigMap  = containers.Map('KeyType','char','ValueType','any');
-%     hAxMap   = containers.Map('KeyType','char','ValueType','any');
-%     colorMap = containers.Map('KeyType','char','ValueType','any');
-% 
-%     % Distinct, colorblind-safe-ish palette
-%     colorList = lines(12);
-%     colorIdx  = 1;
-% end
-% 
-% key = sprintf('%s__%s__%s__candCloud', ...
-%     char(string(runID)), char(string(passName)), lower(char(sweepAxis)));
-% 
-% % Create / reuse figure
-% if ~isKey(hFigMap,key) || ~isvalid(hFigMap(key))
-%     hFig = figure('Name', sprintf('Candidate clusters | %s | %s | sweep=%s', ...
-%         char(string(runID)), char(string(passName)), lower(char(sweepAxis))), ...
-%         'NumberTitle','off');
-%     hAx = axes('Parent', hFig);
-%     hold(hAx,'on');
-%     axis(hAx,'square');
-%     grid(hAx,'off');
-%     xlabel(hAx,'Distortion (normalized)');
-%     ylabel(hAx,'Info (normalized)');
-% 
-%     hFigMap(key) = hFig;
-%     hAxMap(key)  = hAx;
-% 
-%     % Draw target guide ONCE per figure (optional)
-%     switch lower(sweepAxis)
-%         case 'info'
-%             if exist('yline','file'); yline(hAx, thisX, ':', 'LineWidth', 1.2); end
-%         case 'distortion'
-%             if exist('xline','file'); xline(hAx, thisX, ':', 'LineWidth', 1.2); end
-%     end
-% else
-%     hAx = hAxMap(key);
-% end
-% 
-% % Skip invalid points
-% if isempty(candSoln) || isnan(candSoln.distNorm) || isnan(candSoln.infoNorm)
-%     return;
-% end
-% 
-% % Assign persistent color by candidate name
-% name = candSoln.name;
-% if ~isKey(colorMap, name)
-%     colorMap(name) = colorList(colorIdx, :);
-%     colorIdx = mod(colorIdx, size(colorList,1)) + 1;
-% end
-% c = colorMap(name);
-% 
-% % Marker: feasible vs infeasible
-% if candSoln.nonLinSatisfied
-%     mk = 'o';
-% else
-%     mk = 'x';
-% end
-% 
-% plot(hAx, candSoln.distNorm, candSoln.infoNorm, mk, ...
-%     'Color', c, ...
-%     'MarkerSize', 10, ...
-%     'LineWidth', 1.5, ...
-%     'HandleVisibility','off');
-% 
-% drawnow;
-% end
