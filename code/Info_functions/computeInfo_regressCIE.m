@@ -1,6 +1,6 @@
-function [info,infoNormalized] = computeInfo_regressSquared(LMSContrastCalFormat_old, LMSContrastCalFormat_new, imgParams, dichromatType, normalizingValue, Disp, paramsStruct)
+function [info,infoNormalized] = computeInfo_regressCIE(LMSContrastCalFormat_old, LMSContrastCalFormat_new, imgParams, dichromatType, normalizingValue, Disp, paramsStruct)
 %  Syntax:
-%     [info,infoNormalized] = computeInfo_regressSquared(LMSContrastCalFormat_old, LMSContrastCalFormat_new, imgParams, dichromatType, normalizingValue, Disp, paramsStruct)
+%     [info,infoNormalized] = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, imgParams, dichromatType, normalizingValue, Disp, paramsStruct)
 %
 % Description:
 %
@@ -62,6 +62,7 @@ if size(y,1) ~= N
 end
 
 if all(X == 0, 'all')                 % If all predictors are zero, can't do regression
+    y_hat    = zeros(size(y));
     residual = y;                     % ... so use the full missing cone contrast as residual
 else
     beta = X \ y;                     % Linear least-squares regression to predict missing cone
@@ -69,13 +70,29 @@ else
     residual = y - y_hat;             % Difference between actual and predicted (unexplained stuff)
 end
 
-info = -sum(residual.^2, 'all'); % when residual is 0, then info is 0
-                                 % when residual is high, then info is negative
-                                 % so "good" info will be close to 0 and "bad" info will
-                                 % be very negative. Still maximizing info in this way
 
-% [distortion, ~] = computeDistortion_DE2000(LMSContrastCalFormat_old, y_hat', imgParams, 1, Disp, paramsStruct);
-% info = -distortion;
+% Build reconstructed full LMS contrast (3×N)
+LMSContrast_pred = LMSContrastCalFormat_new;   % start from available (transformed) contrasts
+
+switch paramsStruct.predictingWhat
+    case 'L' % If you are just predicting L, then replace the L channel with the prediction
+        LMSContrast_pred(1,:) = y_hat(:).';
+    case 'M' % If you are just predicting M, then replace the M channel with the prediction
+        LMSContrast_pred(2,:) = y_hat(:).';
+    case 'S' % If you are just predicting S, then replace the S channel with the prediction
+        LMSContrast_pred(3,:) = y_hat(:).';
+    case 'L,M,S' % If you are predicting all LMS, then y_hat will simply be the predicted LMS
+        LMSContrast_pred = y_hat';   % y_hat is N×3 here
+    otherwise
+        error('Unsupported predictingWhat: %s', paramsStruct.predictingWhat);
+end
+
+% Convert from LMS contrast to LMS excitations before computing the perceptual difference
+LMSCalFormat_old = (LMSContrastCalFormat_old.*Disp.grayLMS) + Disp.grayLMS;
+LMSCalFormat_pred = (LMSContrast_pred.*Disp.grayLMS) + Disp.grayLMS;
+
+[distortion, ~] = computeDistortion_DE2000(LMSCalFormat_old, LMSCalFormat_pred, imgParams, 1, Disp, paramsStruct);
+info = -distortion;
 
 infoNormalized = info/normalizingValue;
 

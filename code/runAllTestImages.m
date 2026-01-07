@@ -38,7 +38,8 @@ clearFlag     = 0;
 
 %% Define objective functions
 %%%%%%%%% INFO FUNCTION %%%%%%%%%
-infoFcn = @computeInfo_regress;
+infoFcn = @computeInfo_regressCIE;
+% infoFcn = @computeInfo_regressSquared;
 % infoFcn = @computeInfo_LMdifference;
 % infoFcn = @computeInfo_Wade;
 

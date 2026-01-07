@@ -55,7 +55,6 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
     LMSold = LMSContrastCalFormat;     % Original LMS contrast
     LMSnew = newLMSContrastCalFormat;  % Transformed LMS contrast 
 
-    % paramsStruct = struct(); %%% callista
     % Info function
     [info, infoNormalized] = infoFcn(LMSold, LMSnew, imgParams, dichromatType, infoNormalizer, Disp, paramsStruct);
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
