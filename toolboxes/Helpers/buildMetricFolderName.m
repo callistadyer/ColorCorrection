@@ -49,7 +49,7 @@ function metricFolder = buildMetricFolderName(infoFcn, infoParams, distortionFcn
     distortionFcnName = func2str(distortionFcn);
 
     % Regression case is a little annoying...
-    if strcmp(infoFcnName, 'computeInfo_regress')
+    if strcmp(infoFcnName, 'computeInfo_regress') || strcmp(infoFcnName, 'computeInfo_regressCIE')
 
         % Regression mode needs to know what is being predicted from what
         if ~isfield(infoParams,'predictingWhat') || ~isfield(infoParams,'predictingFromWhat')
