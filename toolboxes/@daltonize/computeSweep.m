@@ -129,9 +129,6 @@ distortionNormalizer = obj.distortionFcn(LMSCalFormat, LMSCalFormat_new, imgPara
 targetInfoNormalized       = linspace(infoNormalized_0, infoNormalized_1, nSteps);
 targetDistortionNormalized = linspace(distortionNormalized0, distortionNormalized1, nSteps);
 
-% Try starting with the biggest distortion
-% targetDistortionNormalized = fliplr(targetDistortionNormalized);
-
 % Preallocate outputs
 LMSDaltonizedCalFormatSweep              = cell(1, nSteps);
 rgbLinDaltonizedCalFormatSweep           = cell(1, nSteps);
