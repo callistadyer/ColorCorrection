@@ -1,4 +1,4 @@
-function [outputs, startStep, allDone, loaded] = loadSweepOutputsIfPresent(saveFile, nSteps)
+function [outputs, startStep, allDone, loaded] = loadSweepOutputs(saveFile, nSteps, mode)
 % loadSweepOutputsIfPresent
 % Load a previous sweepOutputs.mat if present, determine resume step,
 % and (if fully complete) materialize final sweep arrays for early return.
@@ -46,6 +46,21 @@ if ~isfield(S,'outputs') || isempty(S.outputs)
 end
 
 old = S.outputs;
+
+if strcmpi(mode, 'raw')
+    for ii = 1:min(nSteps, numel(old))
+        outputs{ii} = old{ii};
+    end
+
+    % In raw mode, "done" is not a concept. But if you want a boolean:
+    % allDone = true only if every cell 1..nSteps is non-empty.
+    allDone = all(~cellfun(@isempty, outputs));
+
+    % Not resuming an optimization in raw mode
+    startStep = nSteps + 1;
+
+    return;
+end
 
 % Copy completed steps
 for ii = 1:min(nSteps, numel(old))

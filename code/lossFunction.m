@@ -1,4 +1,4 @@
-function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFunction(useLambdaOrTarget, lambdaOrTarget,... 
+function [loss, info, infoNormalized, distortion, distortionNormalized, LMSCalFormat_pred] = lossFunction(useLambdaOrTarget, lambdaOrTarget,... 
     t_vec, LMSCalFormat, imgParams, dichromatType, infoFcn, distortionFcn, infoNormalizer, distortionNormalizer, Disp, paramsStruct)
 % lossFunction  Objective for color correction optimization
 %
@@ -56,7 +56,12 @@ function [loss, info, infoNormalized, distortion, distortionNormalized] = lossFu
     LMSnew = newLMSContrastCalFormat;  % Transformed LMS contrast 
 
     % Info function
-    [info, infoNormalized] = infoFcn(LMSold, LMSnew, imgParams, dichromatType, infoNormalizer, Disp, paramsStruct);
+    if isequal(infoFcn, @computeInfo_regressCIE)
+        [info, infoNormalized, LMSCalFormat_pred] = infoFcn(LMSold, LMSnew, imgParams, dichromatType, infoNormalizer, Disp, paramsStruct);
+    else
+        LMSCalFormat_pred = [];
+        [info, infoNormalized] = infoFcn(LMSold, LMSnew, imgParams, dichromatType, infoNormalizer, Disp, paramsStruct);
+    end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     %%%%%%%%%%%%%%% Calculate distortion in the image %%%%%%%%%%%%%%%%%

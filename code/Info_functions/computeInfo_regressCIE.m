@@ -1,4 +1,4 @@
-function [info,infoNormalized] = computeInfo_regressCIE(LMSContrastCalFormat_old, LMSContrastCalFormat_new, imgParams, dichromatType, normalizingValue, Disp, paramsStruct)
+function [info,infoNormalized,LMSCalFormat_pred] = computeInfo_regressCIE(LMSContrastCalFormat_old, LMSContrastCalFormat_new, imgParams, dichromatType, normalizingValue, Disp, paramsStruct)
 %  Syntax:
 %     [info,infoNormalized] = computeInfo_regress(LMSContrastCalFormat_old, LMSContrastCalFormat_new, imgParams, dichromatType, normalizingValue, Disp, paramsStruct)
 %

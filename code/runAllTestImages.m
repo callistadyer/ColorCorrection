@@ -1,10 +1,11 @@
 % Image types
-% imageTypes = {'ishi45.png'};
-imageTypes = {'flower1.png', ...
-    'fruit.png', ...
-    'Gaugin.png', ...
-    'ishi45.png'};
-
+imageTypes = {'flower1.png'};
+% imageTypes = {'flower1.png', ...
+%     'fruit.png', ...
+%     'Gaugin.png', ...
+%     'ishi45.png'};
+% imageTypes = {'flower1.png', ...
+%     'fruit.png'};
 % Set type (choose 1 unless ishihara)
 setType       = 1;
 
@@ -12,13 +13,13 @@ setType       = 1;
 dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
-m = 128;
-n = 128;
+m = 61;
+n = 61;
 
 % How many steps do you want in a transformation sweep?
 nSteps = 20;
 
-sweepAxis = 'both';
+sweepAxis = 'distortion';
 %   'info'  = run info sweep only
 %   'distortion'  = run distortion sweep only
 %   'both'  = run both sweeps + overlay plot
@@ -52,6 +53,7 @@ distortionParams = struct();
 renderFcn = @DichromRenderLinear;
 renderParams = struct();
 
+
 %% Loop over all image types
 for ii = 1:numel(imageTypes)
 
@@ -69,7 +71,7 @@ for ii = 1:numel(imageTypes)
         distortionFcn, distortionParams, ...
         renderFcn, renderParams, ...
         Disp);
-
+    
     %% Info and distortion sweeps
     %   (1) Run an info sweep (minimize distortion at each target info)
     %   (2) Run a distortion sweep (maximize info at each target distortion)
@@ -241,5 +243,24 @@ for ii = 1:numel(imageTypes)
     legend('Location','southeast');
 
 
+end
 
+projectName = 'ColorCorrection';
+outputDir   = getpref(projectName,'outputDir');
+saveBase    = fullfile(outputDir,'testImagesTransformed');
+
+metricFolder = buildMetricFolderName(theDaltonizer.infoFcn, theDaltonizer.infoParams, theDaltonizer.distortionFcn);
+
+if ranInfo
+    sweepFileInfo = fullfile(saveBase, pathName, metricFolder, sprintf('info_%dsteps', nSteps), 'sweepOutputs.mat');
+    if exist(sweepFileInfo,'file')
+        infoDistortionPlots(sweepFileInfo, nSteps, true, false, 1);
+    end
+end
+
+if ranDist
+    sweepFileDist = fullfile(saveBase, pathName, metricFolder, sprintf('distortion_%dsteps', nSteps), 'sweepOutputs.mat');
+    if exist(sweepFileDist,'file')
+        infoDistortionPlots(sweepFileDist, nSteps, true, false, 1);
+    end
 end

@@ -1,97 +1,197 @@
-function [infoNorm, distortionNorm] = infoDistortionPlots(dichromatType, imageName, m, n, infoName, distortionName, nSteps, Live, Save, bPLOT)
-% infoDistortionPlots  Visualize the tradeoff between info and distortion across sweep steps
-%
-% Syntax:
-% Description:
-%   Loads precomputed sweep outputs (from computeInfoSweep) for a given image,
-%   dichromat type, and info/distortion metric combination. Extracts normalized information and
-%   distortion values for each sweep step, and generates plots to visualize Info vs. distortion
-%
-% Inputs:
-%   dichromatType   - String specifying dichromacy type:
-%                       'Protanopia'
-%                       'Deuteranopia'
-%                       'Tritanopia'
-%   imageName       - Image string (e.g., 'flower1.png')
-%   m, n            - Size of the image (e.g., 60, 60)
-%   infoName        - Name of information metric used in optimization
-%   distortionName  - Name of distortion metric used in optimization
-%   nSteps          - Number of sweep steps (e.g., 30)
-%   Live            - Do you want the plot to plot live?
-%                           true = leave figures open
-%                           false = close after plotting
-%   Save            - Do you want to save the figure as png? 
-%                           true = save info-vs-distortion plot as PNG
-%
-% Example:
-%{
-   infoDistortionPlots('Deuteranopia', 'Gaugin.png', 128, 128, ...
-       'Wade', 'squared', 30, true, true);
-%}
 
-% Get the directory where we can find the outputs files with info and
-% distortion values 
-projectName = 'ColorCorrection';
-outputDir   = getpref(projectName, 'outputDir');
-rootDir     = fullfile(outputDir, 'testImagesTransformed');
+function [infoNorm, distortionNorm] = infoDistortionPlots(sweepFile, nSteps, Live, Save, bPLOT)
+% infoDistortionPlots  Load ONE specific sweepOutputs.mat and plot info vs distortion
+% (uses RAW loading mode: no isDoneStep logic, no recursion, no guessing)
+%
+% Inputs
+%   sweepFile : full path to sweepOutputs.mat
+%   nSteps    : number of steps you expect to plot/return
+%   Live      : true/false show figure
+%   Save      : true/false save png next to sweepOutputs.mat
+%   bPLOT     : 1/0 whether to plot
+%
+% Outputs
+%   infoNorm, distortionNorm : 1 x nSteps arrays (NaN where missing)
 
-% Load the sweep outputs
-outputs = loadSweepOutputs(rootDir, dichromatType, imageName, m, n, infoName, distortionName, nSteps);
-n = numel(outputs);
-distortionNorm = nan(1,n);  
-infoNorm = nan(1,n);  
+if nargin < 5, bPLOT = 1; end
+if nargin < 4, Save  = false; end
+if nargin < 3, Live  = true; end
 
-% Loop through each sweep step and grab the info and distortion
-for i = 1:n
+sweepFile = char(sweepFile);
+
+if ~exist(sweepFile,'file')
+    error('infoDistortionPlots:FileNotFound', ...
+        'Could not find sweep file:\n  %s', sweepFile);
+end
+
+[folder, name, ext] = fileparts(sweepFile);
+if ~strcmpi([name ext], 'sweepOutputs.mat')
+    error('infoDistortionPlots:NotSweepOutputs', ...
+        'Expected a file named sweepOutputs.mat, got:\n  %s', sweepFile);
+end
+
+fprintf('[infoDistortionPlots] Loading:\n  %s\n', sweepFile);
+
+% ------------------------------------------------------------
+% Load outputs using RAW mode (no isDoneStep logic)
+% ------------------------------------------------------------
+[outputs,~,~,~] = loadSweepOutputs(sweepFile, nSteps, 'raw');
+
+% ------------------------------------------------------------
+% Preallocate
+% ------------------------------------------------------------
+infoNorm       = nan(1, nSteps);
+distortionNorm = nan(1, nSteps);
+
+% ------------------------------------------------------------
+% Extract info / distortion values if present
+% ------------------------------------------------------------
+for i = 1:min(nSteps, numel(outputs))
     s = outputs{i};
-    distortionNorm(i) = s.distortionNormalized;
-    infoNorm(i) = s.infoNormalized;
+    if isempty(s) || ~isstruct(s)
+        continue;
+    end
+
+    % distortion
+    if isfield(s,'distortionNormalizedAchievedSweep') && ~isempty(s.distortionNormalizedAchievedSweep)
+        distortionNorm(i) = s.distortionNormalizedAchievedSweep;
+    elseif isfield(s,'distortionNormalized') && ~isempty(s.distortionNormalized)
+        distortionNorm(i) = s.distortionNormalized;
+    end
+
+    % info
+    if isfield(s,'infoNormalizedAchievedSweep') && ~isempty(s.infoNormalizedAchievedSweep)
+        infoNorm(i) = s.infoNormalizedAchievedSweep;
+    elseif isfield(s,'infoNormalized') && ~isempty(s.infoNormalized)
+        infoNorm(i) = s.infoNormalized;
+    end
 end
 
-% Only do this plotting to visualize the lambda case
-% figure();
-% subplot(1,2,1)
-% plot(linspace(0,1,30),infoNorm,'-ko',LineWidth=2,MarkerSize=10)
-% title('Info (norm) as a function of Lambda')
-% xlabel('Lambda','FontSize',12)
-% ylabel('Info Normalized','FontSize',12)
-% ylim([0 (max(infoNorm)+(max(infoNorm)/8))])
-% axis square
-% subplot(1,2,2)
-% plot(linspace(0,1,30),distortionNorm,'-ko',LineWidth=2,MarkerSize=10)
-% title('Distortion (norm) as a function of Lambda')
-% xlabel('Lambda','FontSize',12)
-% ylabel('Distortion Normalized','FontSize',12)
-% ylim([0 (max(distortionNorm)+(max(distortionNorm)/8))])
-% axis square
-
+% ------------------------------------------------------------
+% Plot
+% ------------------------------------------------------------
 if bPLOT == 1
-if Live
     figVis = 'on';
-else
-    figVis = 'off';
+    if ~Live
+        figVis = 'off';
+    end
+
+    figure('Color','w','Visible',figVis);
+    plot(distortionNorm, infoNorm, '-o', ...
+        'LineWidth',2, 'MarkerSize',8, ...
+        'MarkerFaceColor','w', 'Color','k');
+    grid on;
+    axis square;
+    xlabel('distortionNormalized');
+    ylabel('infoNormalized');
+    title(sprintf('Loaded: %s', folder), 'Interpreter','none');
 end
 
-% Plot the distortion vs info 
-figure('Color','w');
-plot(distortionNorm, infoNorm, '-o', 'LineWidth',2, 'MarkerSize',8, 'MarkerFaceColor','w', 'Color','k');
-grid on; axis square;
-xlabel('distortionNormalized');
-ylabel('infoNormalized');
-
-end
-% Save the plots if you want
+% ------------------------------------------------------------
+% Save figure next to sweepOutputs.mat
+% ------------------------------------------------------------
 if Save
-    outPath = fullfile(rootDir,'info_vs_distortion.png');
+    outPath = fullfile(folder, 'info_vs_distortion.png');
     try
-        exportgraphics(gca, outPath, 'Resolution',200,'BackgroundColor','w');
+        exportgraphics(gca, outPath, ...
+            'Resolution',200,'BackgroundColor','w');
     catch
-        set(f,'PaperPositionMode','auto');
-        print(f, outPath, '-dpng','-r200');
+        set(gcf,'PaperPositionMode','auto');
+        print(gcf, outPath, '-dpng','-r200');
     end
     fprintf('[infoDistortionPlots] wrote: %s\n', outPath);
 end
 
-
-
 end
+
+% function [infoNorm, distortionNorm] = infoDistortionPlots(sweepFile, nSteps, Live, Save, bPLOT)
+% % infoDistortionPlots_strict  Load ONE specific sweepOutputs.mat (no recursion, no guessing)
+% %
+% % Inputs
+% %   sweepFile : full path to sweepOutputs.mat
+% %   nSteps    : number of steps you expect to plot/return
+% %   Live      : true/false show figure
+% %   Save      : true/false save png next to sweepOutputs.mat
+% %   bPLOT     : 1/0 whether to plot
+% %
+% % Outputs
+% %   infoNorm, distortionNorm : 1 x nSteps arrays (NaN where missing)
+% 
+% if nargin < 5, bPLOT = 1; end
+% if nargin < 4, Save  = false; end
+% if nargin < 3, Live  = true; end
+% 
+% sweepFile = char(sweepFile);
+% 
+% if ~exist(sweepFile,'file')
+%     error('infoDistortionPlots:FileNotFound', ...
+%         'Could not find sweep file:\n  %s', sweepFile);
+% end
+% 
+% [folder, name, ext] = fileparts(sweepFile);
+% if ~strcmpi([name ext], 'sweepOutputs.mat')
+%     error('infoDistortionPlots:NotSweepOutputs', ...
+%         'Expected a file named sweepOutputs.mat, got:\n  %s', sweepFile);
+% end
+% 
+% fprintf('[infoDistortionPlots_strict] Loading:\n  %s\n', sweepFile);
+% 
+% % ---- Load outputs ----
+% S = load(sweepFile, 'outputs');
+% if ~isfield(S,'outputs') || isempty(S.outputs)
+%     error('infoDistortionPlots:BadSweepFile', ...
+%         'File does not contain a nonempty variable named "outputs":\n  %s', sweepFile);
+% end
+% outputs = S.outputs;
+% 
+% % ---- Preallocate ----
+% infoNorm       = nan(1, nSteps);
+% distortionNorm = nan(1, nSteps);
+% 
+% % ---- Extract
+% for i = 1:min(nSteps, numel(outputs))
+%     s = outputs{i};
+%     if isempty(s) || ~isstruct(s), continue; end
+% 
+%     % distortion
+%     if isfield(s,'distortionNormalizedAchievedSweep') && ~isempty(s.distortionNormalizedAchievedSweep)
+%         distortionNorm(i) = s.distortionNormalizedAchievedSweep;
+%     elseif isfield(s,'distortionNormalized') && ~isempty(s.distortionNormalized)
+%         distortionNorm(i) = s.distortionNormalized;
+%     end
+% 
+%     % info
+%     if isfield(s,'infoNormalizedAchievedSweep') && ~isempty(s.infoNormalizedAchievedSweep)
+%         infoNorm(i) = s.infoNormalizedAchievedSweep;
+%     elseif isfield(s,'infoNormalized') && ~isempty(s.infoNormalized)
+%         infoNorm(i) = s.infoNormalized;
+%     end
+% end
+% 
+% % ---- Plot ----
+% if bPLOT == 1
+%     figVis = 'on';
+%     if ~Live, figVis = 'off'; end
+% 
+%     figure('Color','w','Visible',figVis);
+%     plot(distortionNorm, infoNorm, '-o', 'LineWidth',2, 'MarkerSize',8, ...
+%         'MarkerFaceColor','w', 'Color','k');
+%     grid on; axis square;
+%     xlabel('distortionNormalized');
+%     ylabel('infoNormalized');
+%     title(sprintf('Loaded: %s', folder), 'Interpreter','none');
+% end
+% 
+% % ---- Save next to the sweepOutputs.mat ----
+% if Save
+%     outPath = fullfile(folder, 'info_vs_distortion.png');
+%     try
+%         exportgraphics(gca, outPath, 'Resolution',200,'BackgroundColor','w');
+%     catch
+%         set(gcf,'PaperPositionMode','auto');
+%         print(gcf, outPath, '-dpng','-r200');
+%     end
+%     fprintf('[infoDistortionPlots_strict] wrote: %s\n', outPath);
+% end
+% 
+% end
