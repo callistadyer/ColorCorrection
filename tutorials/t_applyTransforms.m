@@ -1,307 +1,273 @@
 
-% APPLY SAVED BEST TRANSFORMS FROM A SOURCE RESOLUTION TO A TARGET RESOLUTION
-% This script reuses best.T learned on a low-resolution image and applies it to a higher-resolution version of the same image without re-optimizing.
+% Compare a single sweep of info or distortion across multiple metrics
 
 clear;
 clc;
 
-
-% %%%%%%%%%%%%%%%%%%%% Settings %%%%%%%%%%%%%%%%%%%%%
-
-% Name of the image file to process
-imgType = 'fruit.png';
-
-% Type of dichromacy to simulate
+% Settings
+imgType = 'flower1.png';
 dichromatType = 'Deuteranopia';
-
-% Set type (usually 1 unless using Ishihara images)
 setType = 1;
-
-% Which sweep was run originally: 'info' or 'distortion' (must match the saved run folder)
+% Choose which sweep you are comparing across metrics:
+%   'distortion' = distortion sweep results across info metrics
+%   'info'       = info sweep results across info metrics
 sweepAxis = 'distortion';
 
-% Number of steps in the saved sweep
+% How many steps?
 nSteps = 20;
 
-% Which sweep steps to visualize (can be 1:5, 1:20, [1 3 7], etc.)
-stepsToShow = 1:20;
+% Which sweep steps to show (columns)
+stepsToShow = 1:7;
 
-% Size of the image used during optimization
+% Resolution used during optimization (must match saved folder)
 mSource = 61;
 nSource = 61;
 
-% Size of the image to apply the transform to
+% Resolution you want to apply transforms to
 mTarget = 128;
 nTarget = 128;
 
-% Optional extra folder name if your saved runs include e.g. "FreshStart" (leave '' if none)
 extraRunFolder = '';
 
-% Whether to clamp RGB values to [0,1] after applying the transform (helps when the 61x61 solution is slightly out of gamut on 128x128)
+% Clamp RGB into [0,1] after applying transform 
+% Gotta do this because when we apply the low res transform to the high res
+% image, sometimes there are pixels that go out of gamut
 doClamp = true;
-printGamutStats = true;
 
+% Print min/max and out-of-gamut fraction each step
+printGamutStats = false;
 
-% %%%%%%%%%%%%%%%%%%%%% Metrics (must match the saved run) %%%%%%%%%%%%%%%%%%%%% 
+%%%%%%%%%%%%% Metrics %%%%%%%%%%%%%
+% Which info metrics to compare
+infoFcns = { ...
+    @computeInfo_regressCIE, ...
+    @computeInfo_regressSquared ...
+};
 
-% Handle to the information metric function (MUST match the saved run folder naming)
-infoFcn = @computeInfo_regressCIE;
-
-% Parameters used by the information metric (MUST match the saved run folder naming)
+% Info params
 infoParams = struct('predictingWhat','L,M,S','predictingFromWhat','L and S');
 
-% Handle to the distortion metric function (MUST match the saved run folder naming)
+% Distortion metric
 distortionFcn = @computeDistortion_DE2000;
-
-% Parameters used by the distortion metric (typically empty, but keep consistent with saved run)
 distortionParams = struct();
 
-% Rendering function used to simulate dichromat perception (used only for visualization here)
+% Render function (for visualization only)
+% If you want, we can use the original brettel here. We will just need to
+% do some clipping again
 renderFcn = @DichromRenderLinear;
 
-
-%%%%%%%%%%%%%%%%%%%%% Which steps to show? %%%%%%%%%%%%%%%%%%%%%
-
-% Ensure step list is a row vector with unique values
+% Check that the steps you want to show actually exist
 stepsToShow = unique(stepsToShow(:).');
-
-% Remove any invalid step indices
 stepsToShow = stepsToShow(stepsToShow >= 1 & stepsToShow <= nSteps);
-
-% Error if nothing remains after validation
 assert(~isempty(stepsToShow), 'stepsToShow is empty after validation.');
 
-% Number of steps that will actually be displayed
-nShow = numel(stepsToShow);
+nShow    = numel(stepsToShow);
+nMetrics = numel(infoFcns);
+assert(nMetrics >= 1, 'infoFcns is empty.');
 
-
-% %%%%%%%%%%%%%%%%%%%%% Build paths to the saved run %%%%%%%%%%%%%%%%%%%%%
-
-% Name of the project (used for MATLAB preferences)
+%%%%%%%%%%%%%%%%%%%%%% Paths for grabing the files %%%%%%%%%%%%%%%%%%%%%%
 projectName = 'ColorCorrection';
+outputDir   = getpref(projectName, 'outputDir');
 
-% Base output directory used by computeSweep
-outputDir = getpref(projectName, 'outputDir');
+% '/Users/callista/Aguirre-Brainard Lab Dropbox/Callista Dyer/DALT_analysis/ColorCorrection/testImagesTransformed'
+saveBase    = fullfile(outputDir, 'testImagesTransformed');
 
-% Root directory where transformed images are stored
-saveBase = fullfile(outputDir, 'testImagesTransformed');
+% e.g., 'distortion_20steps'
+runFolder   = sprintf('%s_%dsteps', lower(char(sweepAxis)), nSteps);
 
-% Folder name encoding the metric choices (must match computeSweep)
-metricFolder = buildMetricFolderName(infoFcn, infoParams, distortionFcn);
-
-% Folder name encoding the sweep axis and number of steps (must match computeSweep)
-runFolder = sprintf('%s_%dsteps', lower(char(sweepAxis)), nSteps);
-
-% Construct the source path name (matching computeSweep conventions)
+% e.g., 'Deuteranopia/ishi45.png/s1_m61_n61'
 if isempty(extraRunFolder)
-
-    % Path without extra nesting
     pathNameSource = fullfile(dichromatType, imgType, sprintf('s%d_m%d_n%d', setType, mSource, nSource));
-
 else
-
-    % Path with extra nesting (e.g. FreshStart)
     pathNameSource = fullfile(dichromatType, imgType, extraRunFolder, sprintf('s%d_m%d_n%d', setType, mSource, nSource));
-
 end
 
-% Full directory of the saved sweep run
-saveSubdirSource = fullfile(saveBase, pathNameSource, metricFolder, runFolder);
+% For each metric, computeSweep stored results under:
+%   saveBase / pathNameSource / metricFolder / runFolder / best / step_### / best.mat
+metricFolders = cell(1, nMetrics);
+bestSubdirs = cell(1, nMetrics);
 
-% Directory containing per-step best solutions
-bestSubdirSource = fullfile(saveSubdirSource, 'best');
+for k = 1:nMetrics
+    % e.g., 'computeInfo_regressCIE__L_M_S_from_L_and_S__computeDistortion_DE2000'
+    metricFolders{k} = buildMetricFolderName(infoFcns{k}, infoParams, distortionFcn);
+    bestSubdirs{k} = fullfile(saveBase, pathNameSource, metricFolders{k}, runFolder, 'best');
+    assert(exist(bestSubdirs{k}, 'dir') == 7, sprintf('Missing best folder for metric %d:\n%s', k, bestSubdirs{k}));
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Error if the best directory does not exist
-assert(exist(bestSubdirSource, 'dir') == 7, sprintf('Could not find saved best directory:\n%s', bestSubdirSource));
-
-
-% %%%%%%%%%%%%%%%%%%%%% Generate the target (high res) image %%%%%%%%%%%%%%%%%%%%%
-
-% Do not clear existing cached data inside colorCorrectionGenerateImages
+% Generate the high res image
+% Apply saved transforms to this image (no optimization happens here)
 clearFlag = 0;
-
-% Generate the higher-resolution target image (no optimization is run here)
 [LMS_target, ~, ~, ~, Disp, imgParams_target, ~] = colorCorrectionGenerateImages(imgType, setType, mTarget, nTarget, dichromatType, clearFlag);
 
-% Convert target LMS to linear RGB (CalFormat, 3xN)
+% Convert target LMS -> linear RGB 
 RGBCalFormat_target = Disp.M_cones2rgb * LMS_target;
 
-% Convert linear RGB to RGB contrast (THIS is where T is applied)
+% Convert linear RGB -> RGB contrast (where T is applied)
 RGBContrast_target = (RGBCalFormat_target - Disp.grayRGB) ./ Disp.grayRGB;
 
-% Convert target LMS to LMS contrast (used by info metric)
+% Convert LMS -> LMS contrast (info metrics use that)
 LMSContrast_target = (LMS_target - Disp.grayLMS) ./ Disp.grayLMS;
 
-
-% %%%%%%%%%%%%%%%%%%%%% Compute normalizers to get the achieved metrics %%%%%%%%%%%%%%%%%%%%%
-
+% Build the normalizier
 [protLMS, ~, ~] = DichromRenderLinear(LMS_target, 'Protanopia', Disp);
 [deutLMS, ~, ~] = DichromRenderLinear(LMS_target, 'Deuteranopia', Disp);
 [tritLMS, ~, ~] = DichromRenderLinear(LMS_target, 'Tritanopia', Disp);
 
-% Build a reference LMS image by mixing the available cone signals from each dichromat simulation
-LMS_ref = [protLMS(1, :); deutLMS(2, :); tritLMS(3, :)];
-
-% Convert the reference LMS image into LMS contrast space
+LMS_ref = [protLMS(1,:); deutLMS(2,:); tritLMS(3,:)];
 LMSContrast_ref = (LMS_ref - Disp.grayLMS) ./ Disp.grayLMS;
 
-% Compute the information normalizer (passing normalizingValue = 1 returns the raw scale)
-infoNormalizer = infoFcn(LMSContrast_target, LMSContrast_ref, imgParams_target, dichromatType, 1, Disp, infoParams);
+% Info normalizers are metric-specific
+infoNormalizers = cell(1, nMetrics);
+for k = 1:nMetrics
+    infoNormalizers{k} = infoFcns{k}(LMSContrast_target, LMSContrast_ref, imgParams_target, dichromatType, 1, Disp, infoParams);
+end
 
-% Compute the distortion normalizer (passing normalizingValue = 1 returns the raw scale)
+% Distortion normalizer is shared
 distortionNormalizer = distortionFcn(LMS_target, LMS_ref, imgParams_target, 1, Disp, distortionParams);
 
+rgbTriImg = cell(nShow, nMetrics);
+rgbDiImg = cell(nShow, nMetrics);
+tileLabels = strings(nShow, nMetrics);
 
-% %%%%%%%%%%%%%%%%%%%%% Preallocate %%%%%%%%%%%%%%%%%%%%%
-
-% Storage for trichromat images that will be displayed (m x n x 3 x nShow)
-rgbTriAll = zeros(mTarget, nTarget, 3, nShow);
-% Storage for dichromat-rendered images that will be displayed (m x n x 3 x nShow)
-rgbDiAll = zeros(mTarget, nTarget, 3, nShow);
-tileLabels = strings(1, nShow);
-
-
-% %%%%%%%%%%%%%%%%%%%%% Apply the saved transforms to the target image %%%%%%%%%%%%%%%%%%%%%
-
-% Loop over each step
+% Load and apply the transformations
 for jj = 1:nShow
-
-    % Convert from "display index" jj to the actual sweep step i
+    % Grab the steps you wanna show
     i = stepsToShow(jj);
 
-    % Build the path to the saved best.mat file for this step
-    bestFile = fullfile(bestSubdirSource, sprintf('step_%03d', i), 'best.mat');
+    for k = 1:nMetrics
 
-    % Verify the best.mat file exists
-    assert(exist(bestFile, 'file') == 2, sprintf('Missing best.mat:\n%s', bestFile));
+        % Load best solution for this metric and this step
+        bestFile = fullfile(bestSubdirs{k}, sprintf('step_%03d', i), 'best.mat');
+        assert(exist(bestFile,'file')==2, sprintf('Missing best.mat:\n%s', bestFile));
 
-    % Load the saved structure (contains S.best and usually S.thisX)
-    S = load(bestFile);
+        S = load(bestFile);
 
-    % Extract the saved 3x3 transform matrix that was optimized on the 61x61 image
-    T = S.best.T;
+        % Extract 3x3 transform
+        T = S.best.T;
 
-    % Apply the transform to RGB CONTRAST (critical: this matches lossFunction and colorCorrectionOptimize)
-    newRGBContrast = T * RGBContrast_target;
+        % thisX is the target value used in the sweep (info or distortion)
+        targetX = S.thisX;
 
-    % Convert back to linear RGB by re-adding gray (undo contrast normalization)
-    newRGBCalFormat = newRGBContrast .* Disp.grayRGB + Disp.grayRGB;
+        % Apply transform to RGB contrast
+        newRGBContrast = T * RGBContrast_target;
 
-    % Optionally print out-of-gamut summary diagnostics before clamping
-    if printGamutStats
-        fprintf('step %02d: min=%g max=%g frac<0=%.3f frac>1=%.3f\n', i, min(newRGBCalFormat, [], 'all'), max(newRGBCalFormat, [], 'all'), mean(newRGBCalFormat(:) < 0), mean(newRGBCalFormat(:) > 1));
-    end
+        % Convert back to linear RGB
+        newRGBLinCalFormat = newRGBContrast .* Disp.grayRGB + Disp.grayRGB;
 
-    % Optionally clamp RGB into [0,1] to keep the image in gamut for visualization
-    if doClamp
-        newRGBCalFormat(newRGBCalFormat < 0) = 0;
-        newRGBCalFormat(newRGBCalFormat > 1) = 1;
-    end
+        % If you want, show how much we have to clip
+        if printGamutStats
+            fprintf('step %02d metric %02d: min=%g max=%g frac<0=%.3f frac>1=%.3f\n', i, k, min(newRGBLinCalFormat, [], 'all'), max(newRGBLinCalFormat, [], 'all'), mean(newRGBLinCalFormat(:) < 0), mean(newRGBLinCalFormat(:) > 1));
+        end
 
-    % Convert transformed RGB back to LMS (so distortion uses the correct domain)
-    newLMS = Disp.M_rgb2cones * newRGBCalFormat;
+        % Cut the stuff to keep in gamut
+        if doClamp
+            newRGBLinCalFormat = min(max(newRGBLinCalFormat, 0), 1);
+        end
 
-    % Convert transformed LMS to LMS contrast (so info uses the correct domain)
-    newLMSContrast = (newLMS - Disp.grayLMS) ./ Disp.grayLMS;
+        % Convert transformed RGB -> LMS
+        newLMSCalFormat = Disp.M_rgb2cones * newRGBLinCalFormat;
 
-    % Render the transformed LMS image for the dichromat (returns linear RGB)
-    [~, rgbLin_di, ~] = renderFcn(newLMS, dichromatType, Disp);
+        % Convert transformed LMS -> LMS contrast (for info)
+        newLMSContrastCalFormat = (newLMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
 
-    % Convert the transformed trichromat linear RGB into display RGB for viewing
-    rgbTriDisp = rgbLin2RGB(newRGBCalFormat, Disp);
+        % Render transformed LMS for the dichromat
+        [~, rgbLin_di, ~] = renderFcn(newLMSCalFormat, dichromatType, Disp);
 
-    % Store the trichromat image as an m x n x 3 image for montage/tiled display
-    rgbTriAll(:, :, :, jj) = CalFormatToImage(rgbTriDisp, mTarget, nTarget);
+        % Convert to display RGB
+        RGBTriCalFormat = rgbLin2RGB(newRGBLinCalFormat, Disp);
+        RGBDiCalFormat  = rgbLin2RGB(rgbLin_di, Disp);
 
-    % Convert the dichromat-rendered linear RGB into display RGB for viewing
-    rgbDiDisp = rgbLin2RGB(rgbLin_di, Disp);
+        % Store image-formatted versions for imagesc
+        rgbTriImg{jj,k} = CalFormatToImage(RGBTriCalFormat, mTarget, nTarget);
+        rgbDiImg{jj,k}  = CalFormatToImage(RGBDiCalFormat,  mTarget, nTarget);
 
-    % Store the dichromat image as an m x n x 3 image for montage/tiled display
-    rgbDiAll(:, :, :, jj) = CalFormatToImage(rgbDiDisp, mTarget, nTarget);
+        % Compute achieved distortion
+        [~, achievedDist] = distortionFcn(LMS_target, newLMSCalFormat, imgParams_target, distortionNormalizer, Disp, distortionParams);
 
-    % If the saved sweep was an INFO sweep, label target info and achieved info for this high-res application
-    if strcmpi(sweepAxis, 'info')
+        % Compute achieved info
+        [~, achievedInfo] = infoFcns{k}(LMSContrast_target, newLMSContrastCalFormat, imgParams_target, dichromatType, infoNormalizers{k}, Disp, infoParams);
 
-        % Pull the target info value that was used at this sweep step (saved in best.mat)
-        targetVal = S.thisX;
-
-        % Recompute achieved info at the target resolution using the same normalizer definition
-        [~, achievedVal] = infoFcn(LMSContrast_target, newLMSContrast, imgParams_target, dichromatType, infoNormalizer, Disp, infoParams);
-
-        % Construct the tile label (step index + target + achieved)
-        tileLabels(jj) = sprintf('step %d\ninfo target=%.3g\ninfo achieved=%.3g', i, targetVal, achievedVal);
-
-    else
-
-        % Pull the target distortion value that was used at this sweep step (saved in best.mat)
-        targetVal = S.thisX;
-
-        % Recompute achieved distortion at the target resolution using the same normalizer definition
-        [~, achievedVal] = distortionFcn(LMS_target, newLMS, imgParams_target, distortionNormalizer, Disp, distortionParams);
-
-        % Construct the tile label (step index + target + achieved)
-        tileLabels(jj) = sprintf('step %d\ndist target=%.3g\ndist achieved=%.3g', i, targetVal, achievedVal);
-
+        if strcmpi(sweepAxis,'distortion')
+            tileLabels(jj,k) = sprintf('step %d\nDist target=%.4g\nDist achieved=%.4g\nInfo achieved=%.4g', ...
+                i, targetX, achievedDist, achievedInfo);
+        else
+            tileLabels(jj,k) = sprintf('step %d\nInfo target=%.4g\nInfo achieved=%.4g\nDist achieved=%.4g', ...
+                i, targetX, achievedInfo, achievedDist);
+        end
     end
 end
 
+% Make titles for the graph
+metricNames = cellfun(@func2str, infoFcns, 'UniformOutput', false);
+metricsTitleStr = strjoin(metricNames, ' | ');
 
-%%%%%%%%%%%%%%%%%%%%% Plot %%%%%%%%%%%%%%%%%%%%%
+% FIGURE 1: Trichromat grid
+figTri = figure('Position',[4 420 1714 607],'Color','w','Name','Trichromat','NumberTitle','off');
+tTri = tiledlayout(nMetrics, nShow, 'TileSpacing','compact', 'Padding','compact');
+tTri.Padding = 'loose';
 
-nCols = ceil(sqrt(nShow));
-nRows = ceil(nShow / nCols);
+sgtitle(sprintf('%s | sweep=%s | %dx%d -> %dx%d | %s', dichromatType, lower(string(sweepAxis)), mSource, nSource, mTarget, nTarget, metricsTitleStr), 'Interpreter','none');
 
-infoName = func2str(infoFcn);
-distName = func2str(distortionFcn);
+for k = 1:nMetrics
+    for c = 1:nShow
+        ax = nexttile((k-1)*nShow + c);
+        imagesc(ax, rgbTriImg{c,k});
+        axis(ax,'image');
 
-% Initialize the printed info-parameter string
-infoParamStr = "";
+        ax.XTick = [];
+        ax.YTick = [];
+        ax.Box = 'off';
 
-% Only attempt to print params if infoParams is a struct
-if isstruct(infoParams)
-
-    % If predictingWhat is provided, include it in the figure title
-    if isfield(infoParams, 'predictingWhat')
-        infoParamStr = infoParamStr + " predictingWhat=" + string(infoParams.predictingWhat);
+        title(ax, tileLabels(c,k), 'Interpreter','none', 'FontSize', 9);
     end
+end
 
-    % If predictingFromWhat is provided, include it in the figure title
-    if isfield(infoParams, 'predictingFromWhat')
-        infoParamStr = infoParamStr + " predictingFromWhat=" + string(infoParams.predictingFromWhat);
+for k = 1:nMetrics
+    leftTileIdx = (k-1)*nShow + 1;
+    ax = nexttile(leftTileIdx);
+
+    ylabel(ax, metricNames{k}, 'FontWeight','bold', 'FontSize', 12, 'Interpreter','none', 'Color','k');
+
+    ax.Clipping = 'off';
+    ax.YLabel.Clipping = 'off';
+
+    ax.YLabel.Units = 'normalized';
+    ax.YLabel.Position(1) = -0.12;
+end
+
+% FIGURE 2: Dichromat grid
+figDi = figure('Position',[4 302 1714 607],'Color','w','Name','Dichromat','NumberTitle','off');
+tDi = tiledlayout(nMetrics, nShow, 'TileSpacing','compact', 'Padding','compact');
+tDi.Padding = 'loose';
+
+sgtitle(sprintf('%s render | sweep=%s | %dx%d -> %dx%d | %s', ...
+    dichromatType, lower(string(sweepAxis)), mSource, nSource, mTarget, nTarget, metricsTitleStr), ...
+    'Interpreter','none');
+
+for k = 1:nMetrics
+    for c = 1:nShow
+        ax = nexttile((k-1)*nShow + c);
+        imagesc(ax, rgbDiImg{c,k});
+        axis(ax,'image');
+
+        ax.XTick = [];
+        ax.YTick = [];
+        ax.Box = 'off';
+
+        title(ax, tileLabels(c,k), 'Interpreter','none', 'FontSize', 9);
     end
 end
 
-% Create the trichromat figure
-figure('Color', 'w', 'Name', 'Trichromat labeled grid', 'NumberTitle', 'off');
+for k = 1:nMetrics
+    leftTileIdx = (k-1)*nShow + 1;
+    ax = nexttile(leftTileIdx);
 
-% Create the tiled layout for the trichromat figure
-tiledlayout(nRows, nCols, 'TileSpacing', 'compact', 'Padding', 'compact');
+    ylabel(ax, metricNames{k}, 'FontWeight','bold', 'FontSize', 12, 'Interpreter','none', 'Color','k');
 
-% Add figure-level title describing metrics and sweep settings (no clamp info printed)
-sgtitle(sprintf('%s | sweep=%s | %dx%d → %dx%d\nINFO: %s%s\nDIST: %s', dichromatType, lower(string(sweepAxis)), mSource, nSource, mTarget, nTarget, infoName, infoParamStr, distName), 'Interpreter', 'none');
+    ax.Clipping = 'off';
+    ax.YLabel.Clipping = 'off';
 
-% Plot each trichromat image with its label
-for jj = 1:nShow
-    nexttile;
-    imagesc(rgbTriAll(:, :, :, jj));
-    axis image off;
-    title(tileLabels(jj), 'Interpreter', 'none', 'FontSize', 9);
+    ax.YLabel.Units = 'normalized';
+    ax.YLabel.Position(1) = -0.12;
 end
-
-% Create the dichromat figure
-figure('Color', 'w', 'Name', 'Dichromat labeled grid', 'NumberTitle', 'off');
-
-% Create the tiled layout for the dichromat figure
-tiledlayout(nRows, nCols, 'TileSpacing', 'compact', 'Padding', 'compact');
-
-% Add figure-level title describing metrics and sweep settings (no clamp info printed)
-sgtitle(sprintf('%s | sweep=%s | %dx%d → %dx%d\nINFO: %s%s\nDIST: %s', dichromatType, lower(string(sweepAxis)), mSource, nSource, mTarget, nTarget, infoName, infoParamStr, distName), 'Interpreter', 'none');
-
-% Plot each dichromat image with its label
-for jj = 1:nShow
-    nexttile;
-    imagesc(rgbDiAll(:, :, :, jj));
-    axis image off;
-    title(tileLabels(jj), 'Interpreter', 'none', 'FontSize', 9);
-end
-
