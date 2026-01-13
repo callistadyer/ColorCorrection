@@ -17,7 +17,7 @@ function [distortion, distortionNormalized] = computeDistortion_DE2000(LMSCalFor
 %                         (large value = high distortion)
 %
 % Example:
-%   distortion = ...
+%  
 
 % Number of pixels in image
 nPixels = imgParams.m * imgParams.n;
