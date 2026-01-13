@@ -4,8 +4,7 @@ imageTypes = {'flower1.png'};
 %     'fruit.png', ...
 %     'Gaugin.png', ...
 %     'ishi45.png'};
-% imageTypes = {'flower1.png', ...
-%     'fruit.png'};
+
 % Set type (choose 1 unless ishihara)
 setType       = 1;
 
@@ -20,21 +19,20 @@ n = 61;
 nSteps = 20;
 
 sweepAxis = 'distortion';
-%   'info'  = run info sweep only
+%   'info'        = run info sweep only
 %   'distortion'  = run distortion sweep only
-%   'both'  = run both sweeps + overlay plot
+%   'both'        = run both sweeps 
 
 % Do you want to clear the image transformation results if it already
 % exists (0)? Or do you want to load the image result if it exists (1)?
 clearFlag     = 0;
 
 
-%% Define objective functions
+%% Define metric functions
+
 %%%%%%%%% INFO FUNCTION %%%%%%%%%
 infoFcn = @computeInfo_regressCIE;
 % infoFcn = @computeInfo_regressSquared;
-% infoFcn = @computeInfo_regress;
-
 % infoFcn = @computeInfo_LMdifference;
 % infoFcn = @computeInfo_Wade;
 
@@ -71,7 +69,7 @@ for ii = 1:numel(imageTypes)
         distortionFcn, distortionParams, ...
         renderFcn, renderParams, ...
         Disp);
-    
+
     %% Info and distortion sweeps
     %   (1) Run an info sweep (minimize distortion at each target info)
     %   (2) Run a distortion sweep (maximize info at each target distortion)
@@ -175,40 +173,26 @@ for ii = 1:numel(imageTypes)
         title(diMontageDist, sprintf('Dichromat render (%s)', dichromatType));
 
     end
-    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Overlay achieved info vs achieved distortion (both sweeps)
-    % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % figure();
-    % plot(distNormAch_info, infoNormAch_info, 'o-','LineWidth',1.5,'DisplayName','Info sweep (minimize distortion)'); hold on;
-    % plot(distNormAch_dist, infoNormAch_dist, 's-','LineWidth',1.5,'DisplayName','Distortion sweep (maximize info)');
-    % grid on;
-    % axis square;
-    % xlabel('Achieved Distortion (normalized)');
-    % ylabel('Achieved Info (normalized)');
-    % title(sprintf('%s — %s — %d steps', imgType, dichromatType, nSteps));
-    % subtitle('Achieved Info vs Distortion for both sweeps')
-    % legend('Location','southeast');
 
+    %%%%%%%% Info-Distortion curve %%%%%%%%
     figure();
 
+    % If you did the info sweep, then go ahead and plot the info-distortion
+    % curve for that sweep
     if ranInfo
          
-        plot(distNormAch_info, infoNormAch_info, 'o-', ...
-            'LineWidth', 1.5, ...
-            'DisplayName', 'Info sweep (minimize distortion)');
+        plot(distNormAch_info, infoNormAch_info, 'o-', 'LineWidth', 1.5, 'DisplayName', 'Info sweep (minimize distortion)');
         hold on;
 
+        % Add lines for the target info 
         for k = 1:numel(targetInfoNorm_info)
-            yline(targetInfoNorm_info(k), ':', ...
-                'HandleVisibility','off');   % keeps legend clean
-        end
-        for k = 1:numel(targetDistNorm_info)
-            xline(targetDistNorm_info(k), ':', ...
-                'HandleVisibility','off');
+            yline(targetInfoNorm_info(k), ':', 'HandleVisibility','off'); 
         end
 
     end
 
+    % If you did the distortion sweep, then go ahead and plot the info-distortion
+    % curve for that sweep
     if ranDist
 
         plot(distNormAch_dist, infoNormAch_dist, 's-', ...
@@ -216,10 +200,7 @@ for ii = 1:numel(imageTypes)
             'DisplayName', 'Distortion sweep (maximize info)');
         hold on;
 
-        for k = 1:numel(targetInfoNorm_dist)
-            yline(targetInfoNorm_dist(k), ':', ...
-                'HandleVisibility','off');   % keeps legend clean
-        end
+        % Add lines for the target distortion 
         for k = 1:numel(targetDistNorm_dist)
             xline(targetDistNorm_dist(k), ':', ...
                 'HandleVisibility','off');
@@ -227,17 +208,19 @@ for ii = 1:numel(imageTypes)
 
     end
 
+    % Make it pretty 
     grid off; axis square;
     xlabel('Achieved Distortion (normalized)');
     ylabel('Achieved Info (normalized)');
     title(sprintf('%s — %s — %d steps', imgType, dichromatType, nSteps));
 
+    % Titles and stuff
     if ranInfo && ranDist
         subtitle('Achieved Info vs Distortion for both sweeps');
     elseif ranInfo
-        subtitle('Achieved Info vs Distortion (info sweep only)');
+        subtitle('Achieved Info vs Distortion (info sweep)');
     else
-        subtitle('Achieved Info vs Distortion (distortion sweep only)');
+        subtitle('Achieved Info vs Distortion (distortion sweep)');
     end
 
     legend('Location','southeast');
@@ -245,6 +228,7 @@ for ii = 1:numel(imageTypes)
 
 end
 
+% This make prettier info-distortion curves. Maybe use this for plotting.
 projectName = 'ColorCorrection';
 outputDir   = getpref(projectName,'outputDir');
 saveBase    = fullfile(outputDir,'testImagesTransformed');
@@ -254,13 +238,13 @@ metricFolder = buildMetricFolderName(theDaltonizer.infoFcn, theDaltonizer.infoPa
 if ranInfo
     sweepFileInfo = fullfile(saveBase, pathName, metricFolder, sprintf('info_%dsteps', nSteps), 'sweepOutputs.mat');
     if exist(sweepFileInfo,'file')
-        infoDistortionPlots(sweepFileInfo, nSteps, true, false, 1);
+        infoDistortionPlots(sweepFileInfo, nSteps, false, 1);
     end
 end
 
 if ranDist
     sweepFileDist = fullfile(saveBase, pathName, metricFolder, sprintf('distortion_%dsteps', nSteps), 'sweepOutputs.mat');
     if exist(sweepFileDist,'file')
-        infoDistortionPlots(sweepFileDist, nSteps, true, false, 1);
+        infoDistortionPlots(sweepFileDist, nSteps, false, 1);
     end
 end
