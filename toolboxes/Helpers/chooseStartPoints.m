@@ -5,10 +5,10 @@ function [best, startPtSolns, candNames, candTinit] = chooseStartPoints(i, sweep
 % Syntax:
 %   [best, startPtSolns] = chooseStartPoints(i, sweepAxis, thisX, ...
 %       T_I, T_prev, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
-%       LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp)
+%       LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp, saveSubdir, passName)
 %
 % Description:
-%   This helper takes all possible start-point sources (identity, previous step, info-sweep seed,
+%   This takes all possible start-point sources (identity, previous step, info-sweep seed,
 %   and any feasibility-seeking starts) and (1) builds the candidate list for this step i, (2) runs
 %   colorCorrectionOptimize from each candidate, and (3) returns the best feasible solution according
 %   to the sweep's objective (loss) while respecting constraints.
@@ -36,6 +36,7 @@ function [best, startPtSolns, candNames, candTinit] = chooseStartPoints(i, sweep
 %   candNames    - Cell array of candidate names that were tested (1 x K)
 %   candTinit    - Cell array of candidate 3x3 start matrices (1 x K)
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%% CHOOSE START POINT OPTIONS %%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Build candidate name list
@@ -50,19 +51,19 @@ candTinit{end+1} = T_I;
 candNames{end+1} = 'T_prev';
 candTinit{end+1} = T_prev;
 
-% Try info-sweep solution at this step (if provided)
+% Try info-sweep solution at this step 
 if exist('T_infoSeeds','var') && ~isempty(T_infoSeeds) && numel(T_infoSeeds) >= i && ~isempty(T_infoSeeds{i})
     candNames{end+1} = 'infoSoln';
     candTinit{end+1} = T_infoSeeds{i};
 end
 
-% Try feasibility-start that hits desired distortion (if provided)
+% Try feasibility-start that hits desired distortion 
 if exist('T_findDesiredDist','var') && ~isempty(T_findDesiredDist) && numel(T_findDesiredDist) >= i && ~isempty(T_findDesiredDist{i})
     candNames{end+1} = 'findDesiredDist';
     candTinit{end+1} = T_findDesiredDist{i};
 end
 
-% Try feasibility-start that hits desired info (if provided)
+% Try feasibility-start that hits desired info
 if exist('T_findDesiredInfo','var') && ~isempty(T_findDesiredInfo) && numel(T_findDesiredInfo) >= i && ~isempty(T_findDesiredInfo{i})
     candNames{end+1} = 'findDesiredInfo';
     candTinit{end+1} = T_findDesiredInfo{i};
