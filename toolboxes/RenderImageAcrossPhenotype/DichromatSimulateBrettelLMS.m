@@ -19,7 +19,6 @@ function diLMSCalFormat = DichromatSimulateBrettelLMS(LMSCalFormat, dichromatTyp
 % Outputs:
 %   diLMSCalFormat  - 3 x N dichromat LMS 
 
-% Map dichromatType string -> cbType integer for xyz2lms
 switch lower(string(dichromatType))
     case "protanopia"
         cbType = 1;
@@ -43,14 +42,15 @@ M_lms2xyz_stock = colorTransformMatrix('lms2xyz');     % Stockman LMS to XYZ
 % LMS to XYZ 
 xyzCalFormat = M_lms2xyz * LMSCalFormat;
 
-% xyz2lms expects image-shaped input
+% xyz2lms expects image shaped input
 xyzImage = CalFormatToImage(xyzCalFormat, m, n);
 
 % Brettel XYZ image to dichromat LMS image 
 % The Brettel algorithm is implemented inside xyz2lms, which I think outputs LMS
 % values in the Stockman LMS coordinate system (colorTransformMatrix('xyz2lms')).
 % I think we must convert to xyz, then go from xyz back to our LMS
-lmsDiImage_stock = xyz2lms(xyzImage, cbType, whiteXYZ);
+%%%%%% This is where Brettel is implemented!! %%%%%%
+lmsDiImage_stock = xyz2lms(xyzImage, cbType, whiteXYZ); % is it ok to use our whiteXYZ here?
 
 % Stockman LMS to XYZ 
 xyzDiImage = imageLinearTransform(lmsDiImage_stock, M_lms2xyz_stock);

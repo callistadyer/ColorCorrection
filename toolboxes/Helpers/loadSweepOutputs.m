@@ -1,21 +1,17 @@
-function [outputs, startStep, allDone, loaded] = loadSweepOutputs(saveFile, nSteps, mode)
-% loadSweepOutputsIfPresent
+function [outputs, startStep, allDone, loaded] = loadSweepOutputs(saveFile, nSteps)
+% loadSweepOutputs
 % Load a previous sweepOutputs.mat if present, determine resume step,
-% and (if fully complete) materialize final sweep arrays for early return.
+% and get final sweep arrays 
 %
 % Inputs
-%   saveFile   : full path to sweepOutputs.mat
-%   nSteps     : expected number of steps
+%   saveFile   - full path to sweepOutputs.mat
+%   nSteps     - expected number of steps
 %
 % Outputs
-%   outputs   : 1 x nSteps cell array (completed steps copied in; others empty)
-%   startStep : first step index to run (lastDone+1), in [1..nSteps+1]
-%   allDone   : true if all steps 1..nSteps are done
-%   loaded    : struct of fully materialized return arrays if allDone==true,
-%               otherwise [].
-
-% Load sweepOutputs.mat if present, decide resume step, and optionally
-% materialize final outputs if all steps are complete.
+%   outputs   - 1 x nSteps cell array (completed steps copied in; others empty)
+%   startStep - first step index to run (lastDone+1), in [1..nSteps+1]
+%   allDone   - true if all steps 1..nSteps are done
+%   loaded    - if allDone==true 
 
 % Defaults
 outputs   = cell(1, nSteps);
@@ -23,8 +19,7 @@ startStep = 1;
 allDone   = false;
 loaded    = [];
 
-% Done-step definition
-% Centralized definition of what "completed" means
+% Is the step done?
 isDoneStep = @(s) isstruct(s) ...
     && isfield(s,'stepCompleted') && isequal(s.stepCompleted,true) ...
     && isfield(s,'transformRGBmatrix') && ~isempty(s.transformRGBmatrix) ...
@@ -46,21 +41,6 @@ if ~isfield(S,'outputs') || isempty(S.outputs)
 end
 
 old = S.outputs;
-
-if strcmpi(mode, 'raw')
-    for ii = 1:min(nSteps, numel(old))
-        outputs{ii} = old{ii};
-    end
-
-    % In raw mode, "done" is not a concept. But if you want a boolean:
-    % allDone = true only if every cell 1..nSteps is non-empty.
-    allDone = all(~cellfun(@isempty, outputs));
-
-    % Not resuming an optimization in raw mode
-    startStep = nSteps + 1;
-
-    return;
-end
 
 % Copy completed steps
 for ii = 1:min(nSteps, numel(old))

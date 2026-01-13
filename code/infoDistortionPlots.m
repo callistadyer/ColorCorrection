@@ -26,7 +26,8 @@ end
 fprintf('[infoDistortionPlots] Loading:\n  %s\n', sweepFile);
 
 % Load outputs
-[outputs,~,~,~] = loadSweepOutputs(sweepFile, nSteps, 'raw');
+S = load(sweepFile,'outputs');
+outputs = S.outputs;
 
 infoNorm       = nan(1, nSteps);
 distortionNorm = nan(1, nSteps);
