@@ -1,7 +1,6 @@
 
 function [infoNorm, distortionNorm] = infoDistortionPlots(sweepFile, nSteps, Save, bPLOT)
-% infoDistortionPlots  Load ONE specific sweepOutputs.mat and plot info vs distortion
-% (uses RAW loading mode: no isDoneStep logic, no recursion, no guessing)
+% infoDistortionPlots  Load sweepOutputs.mat and plot info vs distortion
 %
 % Inputs
 %   sweepFile - full path to sweepOutputs.mat
