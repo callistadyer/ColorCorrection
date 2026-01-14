@@ -105,6 +105,11 @@ for k = 1:nCands
     thisName = candNames{k};
     T_init   = candTinit{k};
 
+    % Force it to be identity if it's the first step
+    if i == 1
+        T_init = eye(3);
+    end
+
     % Convert the current target into the correct argument position
     if strcmpi(sweepAxis,'info')
         lamArg = []; tgtInfoArg = thisX; tgtDistArg = [];
@@ -141,11 +146,14 @@ for k = 1:nCands
     % that start point
     if ~loadedOK
 
+        forceIdentityThisStep = (i == 1);
+
         % Run the optimizer from this start
         [LMS_k, rgbLin_k, T_k, ~, infoNorm_k, ~, distNorm_k, nonLinSatisfied_k] = colorCorrectionOptimize(sweepAxis, lamArg, tgtInfoArg, tgtDistArg, LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
             obj.infoParams, obj.distortionParams, ...
             infoNormalizer, distortionNormalizer, Disp, ...
             'T_init', T_init,...
+            'skipFmincon', forceIdentityThisStep, ...
             'pctTol', pctTol, ...     
             'absTolFloor', absTolFloor);
 

@@ -66,7 +66,15 @@ if exist(endpointFile, 'file')
 end
 
 % Compute endpoints
-[~,~,~,~, infoNormalized_0, ~, distortionNormalized0] = colorCorrectionOptimize("lambda", 0, [], [], LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, obj.infoParams, obj.distortionParams, infoNormalizer, distortionNormalizer, Disp);
+
+% Note: when you do the lambda=0 endpoint, you are saying "find me the
+% transformation with least distortion, don't even care about info." This
+% should return the identity. Usually it does, but occassionally it returns
+% something just barely different. This is annoying so we are just going to
+% force it to be the identity here by adding this to the call:
+% 'T_init', eye(3), 'skipFmincon', true
+% See inside colorCorrectionOptimize that this just forced the transformation to be identity
+[~,~,~,~, infoNormalized_0, ~, distortionNormalized0] = colorCorrectionOptimize("lambda", 0, [], [], LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, obj.infoParams, obj.distortionParams, infoNormalizer, distortionNormalizer, Disp,'T_init', eye(3), 'skipFmincon', true);
 
 [~,~,~,~, infoNormalized_1, ~, distortionNormalized1] = colorCorrectionOptimize("lambda", 1, [], [], LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, obj.infoParams, obj.distortionParams, infoNormalizer, distortionNormalizer, Disp);
 

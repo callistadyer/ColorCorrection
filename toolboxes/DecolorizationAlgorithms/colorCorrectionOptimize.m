@@ -74,6 +74,8 @@ end
 parser = inputParser;
 parser.addParameter('T_init', eye(3), @(x) isnumeric(x) && isequal(size(x),[3 3]));
 
+parser.addParameter('skipFmincon', false, @(x) islogical(x) && isscalar(x));
+
 % Relative/absolute band tolerance controls
 parser.addParameter('pctTol', 0.01, @(x) isnumeric(x) && isscalar(x) && x >= 0);
 parser.addParameter('absTolFloor', 1e-3, @(x) isnumeric(x) && isscalar(x) && x >= 0);
@@ -81,6 +83,7 @@ parser.addParameter('absTolFloor', 1e-3, @(x) isnumeric(x) && isscalar(x) && x >
 parser.parse(varargin{:});
 
 T_init      = parser.Results.T_init;
+skipFmincon = parser.Results.skipFmincon;
 pctTol      = parser.Results.pctTol;
 absTolFloor = parser.Results.absTolFloor;
 
@@ -169,15 +172,39 @@ switch lower(target)
 end
 
 % Now do the minimization with that 
-[transformRGB_opt, fval, exitflag, output] = fmincon(fun, T_init(:), ...            
-    A_total, b_total, ...           % Linear inequality constraints (gamut)
-    [], [], [], [], ...             % Aeq, beq, lb, ub 
-    nonlcon, ...                    % Nonlinear constraint
-    options);
+% [transformRGB_opt, fval, exitflag, output] = fmincon(fun, T_init(:), ...            
+%     A_total, b_total, ...           % Linear inequality constraints (gamut)
+%     [], [], [], [], ...             % Aeq, beq, lb, ub 
+%     nonlcon, ...                    % Nonlinear constraint
+%     options);
 
+if skipFmincon
+    % This is to make sure that the first step (in the forward pass, last
+    % step in backwards pass) always returns identity. Basically, don't
+    % even give the algorithm a chance to deviate from identity when it is
+    % the first step. 
+    transformRGB_opt = T_init(:);   % return identity (or whatever T_init was)
+    fval = NaN; exitflag = NaN; output = struct();
+    nlconSatisfied = true;   % forced endpoint; do not test nonlinear band
+else
+    [transformRGB_opt, fval, exitflag, output] = fmincon(fun, T_init(:), ...            
+        A_total, b_total, ...           
+        [], [], [], [], ...             
+        nonlcon, ...                    
+        options);
+end
+
+
+if skipFmincon
+    % forced endpoint
+    nlconSatisfied = true;
+
+elseif isempty(nonlcon)
+    % no nonlinear constraint to satisfy
+    nlconSatisfied = true;
 
 % Fallback if nonlinear constraint violated
-if ~isempty(nonlcon)
+else
 
     % We want cchk to be less than 0, that would mean that the solution is
     % within the constraint band
@@ -201,8 +228,6 @@ if ~isempty(nonlcon)
         transformRGB_opt = T_init(:);   % For the identity start, this will resort to using identity, for other it will resort to T_prev
         fprintf('Constraint violated: maxC=%.3g (<=0 is feasible). Returning T_init.\n', maxC);
     end
-else
-    nlconSatisfied = true;
 end
 
 disp('Just finished optimization')

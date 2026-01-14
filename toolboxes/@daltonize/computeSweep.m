@@ -72,7 +72,7 @@ outputs   = cell(1, nSteps);
 startStep = 1;
 
 % Load function
-[outputs, startStep, allDone, loaded] = loadSweepOutputs(saveFile, nSteps,[]);
+[outputs, startStep, allDone, loaded] = loadSweepOutputs(saveFile, nSteps);
 
 if allDone
     LMSDaltonizedCalFormatSweep            = loaded.LMSDaltonizedCalFormatSweep;
@@ -210,6 +210,16 @@ for i = startStep:nSteps
 
     thisX = xVec(i);
 
+    % Skip optimizing step 1 (we force identity at commit anyway)
+    if i == 1
+        % Don't worry, the info and distortion will be computed before save
+        forwardBest(i) = struct('name','ForcedIdentity','T',eye(3), ...
+            'LMS',[],'rgbLin',[],'infoNorm',NaN,'distNorm',NaN,'loss',NaN, ...
+            'nonLinSatisfied',true,'violation',0);
+        T_prev_fwd = eye(3);
+        continue;
+    end
+
     [bestF, ~] = chooseStartPoints(i, sweepAxis, thisX, T_I, T_prev_fwd, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
         LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp,...
         saveSubdir, 'forward');
@@ -237,6 +247,16 @@ for i = (nSteps-1):-1:startStep
 
     thisX = xVec(i);
 
+    % Skip optimizing step 1 (we force identity at commit anyway)
+    if i == 1
+        % Don't worry, the info and distortion will be computed before save
+        backwardBest(i) = struct('name','ForcedIdentity','T',eye(3), ...
+            'LMS',[],'rgbLin',[],'infoNorm',NaN,'distNorm',NaN,'loss',NaN, ...
+            'nonLinSatisfied',true,'violation',0);
+        T_prev_bwd = eye(3);
+        continue;
+    end
+
     [bestB, startPtSolns] = chooseStartPoints(i, sweepAxis, thisX, T_I, T_prev_bwd, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
         LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp,...
         saveSubdir, 'backward');
@@ -255,6 +275,83 @@ end
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for i = startStep:nSteps
 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Force step 1 (least distortion endpoint) to be identity
+    if i == 1
+        T_I = eye(3);
+
+        % Apply identity transform exactly (no optimizer)
+        triRGBCalFormat         = Disp.M_cones2rgb * LMSCalFormat;
+        triRGBContrastCalFormat = (triRGBCalFormat - Disp.grayRGB) ./ Disp.grayRGB;
+
+        triRGBContrastCalFormat_T = T_I * triRGBContrastCalFormat;      % identity
+        rgbLin_I = (triRGBContrastCalFormat_T .* Disp.grayRGB) + Disp.grayRGB;
+
+        % Safety clip (identity should already be in gamut)
+        % rgbLin_I(rgbLin_I > 1) = 1;
+        % rgbLin_I(rgbLin_I < 0) = 0;
+
+        LMS_I = Disp.M_rgb2cones * rgbLin_I;
+
+        % Evaluate metrics for bookkeeping (same path as optimizer uses)
+        [~, ~, infoNorm_I, ~, distNorm_I] = lossFunction('lambda', 0.0, T_I(:), ...
+            LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
+            infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+
+        best = struct( ...
+            'name',            'FORCED_IDENTITY', ...
+            'pass',            'forced', ...
+            'T',               T_I, ...
+            'LMS',             LMS_I, ...
+            'rgbLin',          rgbLin_I, ...
+            'infoNorm',        infoNorm_I, ...
+            'distNorm',        distNorm_I, ...
+            'loss',            NaN, ...
+            'nonLinSatisfied', true, ...
+            'violation',       0 );
+
+        % Commit forced step 1
+        LMSDaltonizedCalFormatSweep{i}       = best.LMS;
+        rgbLinDaltonizedCalFormatSweep{i}    = best.rgbLin;
+        transformRGBmatrixSweep{i}           = best.T;
+        infoNormalizedAchievedSweep(i)       = best.infoNorm;
+        distortionNormalizedAchievedSweep(i) = best.distNorm;
+
+        fprintf('step %2d | winner=%-12s | forced identity\n', i, best.name);
+
+        [LMSDaltonizedRenderedCalFormatSweep{i}, rgbLinDaltonizedRenderedCalFormatSweep{i}, ~] = ...
+            DichromRenderLinear(LMSDaltonizedCalFormatSweep{i}, dichromatType, Disp);
+
+        outputs{i} = struct( ...
+            'LMSDaltonizedCalFormat',            LMSDaltonizedCalFormatSweep{i}, ...
+            'rgbLinDaltonizedCalFormat',         rgbLinDaltonizedCalFormatSweep{i}, ...
+            'LMSDaltonizedRenderedCalFormat',    LMSDaltonizedRenderedCalFormatSweep{i}, ...
+            'rgbLinDaltonizedRenderedCalFormat', rgbLinDaltonizedRenderedCalFormatSweep{i}, ...
+            'transformRGBmatrix',                transformRGBmatrixSweep{i}, ...
+            'targetInfoNormalized',              targetInfoNormalized(i), ...
+            'targetDistortionNormalized',        targetDistortionNormalized(i), ...
+            'infoNormalizedAchievedSweep',       infoNormalizedAchievedSweep(i), ...
+            'distortionNormalizedAchievedSweep', distortionNormalizedAchievedSweep(i), ...
+            'imgParams',                         imgParams, ...
+            'Disp',                              Disp, ...
+            'sweepAxis',                         char(sweepAxis), ...
+            'stepCompleted',                     true, ...
+            'timestamp',                         datestr(now));
+
+        save(saveFile, 'outputs', '-v7.3');
+
+        bestStepDir = fullfile(bestSubdir, sprintf('step_%03d', i));
+        if ~exist(bestStepDir,'dir'); mkdir(bestStepDir); end
+        bestStepFile = fullfile(bestStepDir, 'best.mat');
+        thisX = xVec(i);  
+        save(bestStepFile, 'best', 'thisX', 'sweepAxis', 'i', '-v7.3');
+        fprintf('  [best] saved -> %s\n', bestStepFile);
+
+        continue;
+    end
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    % If it's not the endpoint, go ahead and get the best...
     thisX = xVec(i);
 
     bestF = forwardBest(i);
@@ -469,17 +566,6 @@ hAch = plot(hAx, nan, nan, 'o', 'Color', sweepColor, 'LineWidth', 1.5, 'MarkerSi
 if ~isempty(kSoFar)
     plot(hAx, achDist(kSoFar), achInfo(kSoFar), 'o', 'Color', sweepColor, 'LineWidth', 1.5, 'MarkerSize', 12, 'MarkerFaceColor', 'none', 'HandleVisibility','off');
 end
-
-% Create a dummy plot handle for violation points
-% hViol = plot(hAx, nan, nan, 'o', 'MarkerSize', 10, 'MarkerFaceColor', sweepColor,'MarkerEdgeColor', sweepColor);
-
-% Find indices of steps marked as violations
-% badIdx = kAll(violationStep(kAll));
-
-% Plot violation points as filled circles
-% if ~isempty(badIdx)
-%     plot(hAx, achDist(badIdx), achInfo(badIdx), 'o', 'MarkerSize', 12, 'MarkerFaceColor', sweepColor, 'MarkerEdgeColor', sweepColor, 'HandleVisibility','off');
-% end
 
 % Title
 switch sweepAxis

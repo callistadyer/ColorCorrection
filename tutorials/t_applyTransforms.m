@@ -24,8 +24,8 @@ mSource = 61;
 nSource = 61;
 
 % Resolution you want to apply transforms to
-mTarget = 128;
-nTarget = 128;
+mTarget = 128*2;
+nTarget = 128*2;
 
 extraRunFolder = '';
 
@@ -41,7 +41,9 @@ printGamutStats = false;
 % Which info metrics to compare
 infoFcns = { ...
     @computeInfo_regressCIE, ...
-    @computeInfo_regressSquared ...
+    @computeInfo_regressSquared, ...
+    @computeInfo_LMdifference ...
+
 };
 
 % Info params
