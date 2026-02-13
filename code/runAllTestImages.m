@@ -12,8 +12,8 @@ setType       = 1;
 dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
-m = 13;
-n = 13;
+m = 64;
+n = 64;
 
 % How many steps do you want in a transformation sweep?
 nSteps = 20;
@@ -31,8 +31,8 @@ clearFlag     = 0;
 %% Define metric functions
 
 %%%%%%%%% INFO FUNCTION %%%%%%%%%
-infoFcn = @computeInfo_regressCIE;
-% infoFcn = @computeInfo_regressSquared;
+% infoFcn = @computeInfo_regressCIE;
+infoFcn = @computeInfo_regressSquared;
 % infoFcn = @computeInfo_LMdifference;
 % infoFcn = @computeInfo_Wade;
 
