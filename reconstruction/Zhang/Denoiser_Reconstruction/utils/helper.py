@@ -1,4 +1,10 @@
-import argparse, cupy as cp
+# import argparse, cupy as cp
+import argparse
+try:
+    import cupy as cp
+except ImportError:
+    cp = None
+
 import h5py, torch, numpy as np, matplotlib.pyplot as plt
 from utils.dataset import test_model, gamma_correct
 from inverse.sampler import sample_prior
