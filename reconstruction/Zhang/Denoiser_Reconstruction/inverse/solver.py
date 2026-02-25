@@ -60,6 +60,10 @@ class RenderMatrix(Measurement):
         #
         self.R = R.to(device)
 
+    def to(self, device):
+        self.R = self.R.to(device)
+        return self
+
     def measure(self, x):
         '''
         Given (orthogonalized) render matrix R
@@ -84,55 +88,130 @@ class RenderMatrix(Measurement):
 
 class DichromatMatrix(Measurement):
     """
-    Implicit (2N x 3N) block-diagonal measurement operator using a per-pixel matrix A (2x3)
-    Equivalent to R_big = I_N ⊗ A, without explicitly building R_big
+    For each pixel i we apply the a 2x3 matrix A to that pixel's RGB (Converts RGB -> LMS -> dichromat)
+    That is: y_i(2x1) = A(2x3) @ x_i(3x1).
+
+    If you stacked all pixels into a single long vector x_big of shape (3N,),
+    the equivalent explicit linear operator would be:
+        R_big = I_N ⊗ A
+    with shape:
+        R_big: (2N, 3N)
+    but this is unweildy so this is an attempt to do it another way:
     """
 
     def __init__(self, A_2x3, im_size, device):
         """
-        A_2x3: torch.Tensor of shape (2,3)  (your ortho_mtx_small)
-        im_size: (3, H, W)
+        Inputs
+        ----------
+        A_2x3 : torch.Tensor
+            Shape (2,3). Per-pixel measurement matrix
+            Maps one pixel RGB (3,) -> 2D measurement (2,)
+        im_size : tuple
+            Expected image size in channel-first format: (3, H, W)
+        device : torch.device
+            Device where this should live (cpu/cuda/mps)
         """
-        self.im_size = im_size
-        self.device  = device
-        self.A       = A_2x3.to(device).float()     # (2,3)
-        self.AT      = self.A.T                     # (3,2)
+        self.im_size = im_size                 # stores (3, H, W) for reshaping in recon()
+        self.device  = device                  # stores current device the operator is on
+        self.A       = A_2x3.to(device).float()# move A to appropriate device, cast to float; shape (2,3)
+        self.AT      = self.A.T                # transpose of A; shape (3,2)
 
     def to(self, device):
-        self.device = device
-        self.A = self.A.to(device)
-        self.AT = self.A.T
-        return self
+        """
+        Move A and AT to appropriate device
+        Weird stuff is happening where different variables are "living" on different devices so this
+        is an attempt to make sure they are all on the same one
+        """
+        self.device = device                   # remember device
+        self.A      = self.A.to(device)        # move A; still shape (2,3)
+        self.AT     = self.A.T                 # recompute transpose on same device; shape (3,2)
+        return self                           
     
     def measure(self, x):
         """
-        x: (3,H,W)
-        returns msmt: (2N,) flattened
+        Apply the measurement operator
+
+        Inputs
+        -----
+        x : torch.Tensor
+            Image tensor of shape (3, H, W)
+
+        Output
+        ------
+        msmt : torch.Tensor
+            Flattened measurement vector of shape (2N,), where N = H*W 
+            This corresponds to concatenating each pixel's 2 measurements (2 because of dichromat)
         """
+
+        # If x is on GPU (mps/cuda) but A is on CPU (or vice versa), matmul will error
+        # This makes sure A is on x's device 
         if self.A.device != x.device:
             self.to(x.device)
-        H, W = x.shape[1], x.shape[2]
-        # (3,H,W) -> (N,3)
-        xN3 = x.permute(1, 2, 0).reshape(-1, 3)
-        # (N,3) -> (N,2)
-        yN2 = xN3 @ self.A.T
-        # return (2N,)
-        return yN2.reshape(-1)
+
+        # Read spatial dimensions from x
+        # x.shape is (3, H, W), so:
+        H, W = x.shape[1], x.shape[2]          # H, W are ints
+
+        # Reorder dimensions so pixels are rows:
+        # x: (3, H, W)  ->  (H, W, 3)
+        # Then flatten spatial dims: (H, W, 3) -> (N, 3), where N = H*W
+        xN3 = x.permute(1, 2, 0).reshape(-1, 3)# shape (N,3)
+
+        # Apply the same 2x3 matrix A to every pixel:
+        # xN3: (N,3)
+        # A.T: (3,2)
+        # result yN2: (N,2)
+        yN2 = xN3 @ self.A.T                   # shape (N,2)
+
+        # Flatten (N,2) into a single vector (2N,)
+        # This matches the convention used by RenderMatrix: return a 1D measurement vector
+        return yN2.reshape(-1)                 # shape (2N,)
 
     def recon(self, msmt):
         """
-        msmt: (2N,)
-        returns: (3,H,W)
+        Apply the reconstruction mapping
+
+        Input
+        -----
+        msmt : torch.Tensor
+            Measurement vector of shape (2N,)
+
+        Output
+        ------
+        x : torch.Tensor
+            Reconstructed image of shape (3, H, W)
+
+        Note:
+        - This is NOT the true inverse of A per pixel (A isn't square)
+        - It's a simple linear map from measurement space back to RGB space:
+              x_i(3,) = A^T(3x2) @ y_i(2,)
+          (or equivalently y_i @ A, depending on row/column convention)
         """
+
+        # Same device-safety guard as measure():
+        # if msmt is on GPU but A is on CPU, reshape+matmul will error later
         if self.A.device != msmt.device:
             self.to(msmt.device)
+
+        # Use stored image size for reshape:
+        # self.im_size is (3, H, W)
         H, W = self.im_size[1], self.im_size[2]
-        # (2N,) -> (N,2)
-        yN2 = msmt.reshape(-1, 2)
-        # (N,2) -> (N,3)
-        xN3 = yN2 @ self.AT.T   # (N,2) @ (2,3) = (N,3)
-        # (N,3) -> (3,H,W)
-        x = xN3.reshape(H, W, 3).permute(2, 0, 1)
+
+        # Undo the flattening of measurements:
+        # msmt: (2N,) -> (N,2)
+        yN2 = msmt.reshape(-1, 2)               # shape (N,2)
+
+        # Map measurement back to RGB space using A (or A^T)
+        # Here we want (N,3):
+        #   (N,2) @ (2,3) = (N,3)
+        #
+        # self.AT is (3,2), so self.A is (2,3)
+        xN3 = yN2 @ self.A                   # (N,2) @ (2,3) -> (N,3)
+
+        # Reshape rows back to image grid
+        # (N,3) -> (H, W, 3) -> (3, H, W)
+        x = xN3.reshape(H, W, 3).permute(2, 0, 1)  # shape (3,H,W)
+
         return x
 
 class ArrayMatrix(Measurement):
@@ -235,11 +314,33 @@ def linear_inverse(model, render, input, h_init=0.01, beta=0.01, sig_end=0.01,
     R = render.measure
     R_T = render.recon
 
+    # ---------------- SHAPE DEBUG (run once) ----------------
+    print("\n[DEBUG] Entering linear_inverse")
+    print(f"[DEBUG] input.dim(): {input.dim()}")
+    if input.dim() == 3:
+        print(f"[DEBUG] input image shape: {tuple(input.shape)}")
+    else:
+        print(f"[DEBUG] input measurement shape: {tuple(input.shape)}")
+
+    # Try a dry run through R and R_T to inspect shapes
+    if input.dim() == 3:
+        test_msmt = R(input)
+        print(f"[DEBUG] R(input) shape: {tuple(test_msmt.shape)}")
+
+        test_recon = R_T(test_msmt)
+        print(f"[DEBUG] R_T(R(input)) shape: {tuple(test_recon.shape)}")
+    else:
+        test_recon = R_T(input)
+        print(f"[DEBUG] R_T(input) shape: {tuple(test_recon.shape)}")
+    # --------------------------------------------------------
+
     # init variables
     if msmt_flag or input.dim() == 1:
         proj = R_T(input)
     elif input.dim() == 3:
         proj = R_T(R(input))
+
+    print(f"[DEBUG] proj shape: {tuple(proj.shape)}")
 
     e = torch.ones_like(proj)
     n = torch.numel(e)
