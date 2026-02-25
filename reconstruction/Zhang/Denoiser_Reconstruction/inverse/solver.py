@@ -80,6 +80,15 @@ class RenderMatrix(Measurement):
         # transpose such that flatten() result is column-major (MATLAB/Fortran)
         return torch.matmul(self.R.T, msmt).reshape(self.im_size).transpose(1, 2)
 
+# class DichromatMatrix(Measurement)
+#     def __init__(self, R, im_size, device):
+
+#     def measure(self, x):
+#         return
+
+#     def recon(self, msmt):
+#         return
+
 class ArrayMatrix(Measurement):
     '''
     Generalization of the RenderMatrix class to an array

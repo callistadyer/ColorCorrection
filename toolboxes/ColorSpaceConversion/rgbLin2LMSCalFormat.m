@@ -21,7 +21,9 @@ function lmsCalFormat = rgbLin2LMSCalFormat(rgbLinCalFormat,Disp)
 %
 
 % LMS image
+% [3 x 3] = [3 x 31] * [31 x 3]
 M_rgb2cones = Disp.T_cones*Disp.P_monitor;
+% [3 x N] = [3 x 3] * [3 x N] 
 lmsCalFormat = M_rgb2cones * rgbLinCalFormat;
 
 end
