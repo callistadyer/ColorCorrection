@@ -84,8 +84,8 @@ class RenderMatrix(Measurement):
 
 class DichromatMatrix(Measurement):
     """
-    Implicit (2N x 3N) block-diagonal measurement operator using a per-pixel matrix A (2x3).
-    Equivalent to R_big = I_N ⊗ A, without explicitly building R_big.
+    Implicit (2N x 3N) block-diagonal measurement operator using a per-pixel matrix A (2x3)
+    Equivalent to R_big = I_N ⊗ A, without explicitly building R_big
     """
 
     def __init__(self, A_2x3, im_size, device):
@@ -94,15 +94,23 @@ class DichromatMatrix(Measurement):
         im_size: (3, H, W)
         """
         self.im_size = im_size
-        self.device = device
-        self.A = A_2x3.to(device).float()     # (2,3)
-        self.AT = self.A.T                   # (3,2)
+        self.device  = device
+        self.A       = A_2x3.to(device).float()     # (2,3)
+        self.AT      = self.A.T                     # (3,2)
 
+    def to(self, device):
+        self.device = device
+        self.A = self.A.to(device)
+        self.AT = self.A.T
+        return self
+    
     def measure(self, x):
         """
         x: (3,H,W)
         returns msmt: (2N,) flattened
         """
+        if self.A.device != x.device:
+            self.to(x.device)
         H, W = x.shape[1], x.shape[2]
         # (3,H,W) -> (N,3)
         xN3 = x.permute(1, 2, 0).reshape(-1, 3)
@@ -116,6 +124,8 @@ class DichromatMatrix(Measurement):
         msmt: (2N,)
         returns: (3,H,W)
         """
+        if self.A.device != msmt.device:
+            self.to(msmt.device)
         H, W = self.im_size[1], self.im_size[2]
         # (2N,) -> (N,2)
         yN2 = msmt.reshape(-1, 2)
@@ -203,6 +213,11 @@ def linear_inverse(model, render, input, h_init=0.01, beta=0.01, sig_end=0.01,
     else:
         device = torch.device("cpu")
     model = model.eval().to(device)
+    
+    if hasattr(render, "to"):
+        render = render.to(device)
+    if torch.is_tensor(input):
+        input = input.to(device)
 
     # helper function for pytorch image to numpy image
     numpy_image = lambda y: y.detach().cpu() \
@@ -288,7 +303,13 @@ def linear_inverse(model, render, input, h_init=0.01, beta=0.01, sig_end=0.01,
 def noise_inverse(model, render, input, weight,
     h_init=0.01, beta=0.01, sig_end=0.01, stride=10):
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
     model = model.eval().to(device)
 
     # helper function for pytorch image to numpy image
