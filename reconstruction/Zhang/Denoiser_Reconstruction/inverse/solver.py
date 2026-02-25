@@ -57,6 +57,7 @@ class ConvMatrix(Measurement):
 class RenderMatrix(Measurement):
     def __init__(self, R, im_size, device):
         self.im_size = im_size
+        #
         self.R = R.to(device)
 
     def measure(self, x):
@@ -80,14 +81,49 @@ class RenderMatrix(Measurement):
         # transpose such that flatten() result is column-major (MATLAB/Fortran)
         return torch.matmul(self.R.T, msmt).reshape(self.im_size).transpose(1, 2)
 
-# class DichromatMatrix(Measurement)
-#     def __init__(self, R, im_size, device):
 
-#     def measure(self, x):
-#         return
+class DichromatMatrix(Measurement):
+    """
+    Implicit (2N x 3N) block-diagonal measurement operator using a per-pixel matrix A (2x3).
+    Equivalent to R_big = I_N ⊗ A, without explicitly building R_big.
+    """
 
-#     def recon(self, msmt):
-#         return
+    def __init__(self, A_2x3, im_size, device):
+        """
+        A_2x3: torch.Tensor of shape (2,3)  (your ortho_mtx_small)
+        im_size: (3, H, W)
+        """
+        self.im_size = im_size
+        self.device = device
+        self.A = A_2x3.to(device).float()     # (2,3)
+        self.AT = self.A.T                   # (3,2)
+
+    def measure(self, x):
+        """
+        x: (3,H,W)
+        returns msmt: (2N,) flattened
+        """
+        H, W = x.shape[1], x.shape[2]
+        # (3,H,W) -> (N,3)
+        xN3 = x.permute(1, 2, 0).reshape(-1, 3)
+        # (N,3) -> (N,2)
+        yN2 = xN3 @ self.A.T
+        # return (2N,)
+        return yN2.reshape(-1)
+
+    def recon(self, msmt):
+        """
+        msmt: (2N,)
+        returns: (3,H,W)
+        """
+        H, W = self.im_size[1], self.im_size[2]
+        # (2N,) -> (N,2)
+        yN2 = msmt.reshape(-1, 2)
+        # (N,2) -> (N,3)
+        xN3 = yN2 @ self.AT.T   # (N,2) @ (2,3) = (N,3)
+        # (N,3) -> (3,H,W)
+        x = xN3.reshape(H, W, 3).permute(2, 0, 1)
+        return x
 
 class ArrayMatrix(Measurement):
     '''
@@ -158,7 +194,14 @@ def linear_inverse(model, render, input, h_init=0.01, beta=0.01, sig_end=0.01,
     if not (seed is None):
         torch.manual_seed(seed)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # Callista changed this - think I had a problem with device 
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
     model = model.eval().to(device)
 
     # helper function for pytorch image to numpy image
