@@ -92,10 +92,7 @@ class DichromatMatrix(Measurement):
     That is: y_i(2x1) = A(2x3) @ x_i(3x1).
 
     If you stacked all pixels into a single long vector x_big of shape (3N,),
-    the equivalent explicit linear operator would be:
-        R_big = I_N ⊗ A
-    with shape:
-        R_big: (2N, 3N)
+    then you would need to build that large matrix R_big: (2N, 3N)
     but this is unweildy so this is an attempt to do it another way:
     """
 
@@ -179,13 +176,7 @@ class DichromatMatrix(Measurement):
         Output
         ------
         x : torch.Tensor
-            Reconstructed image of shape (3, H, W)
-
-        Note:
-        - This is NOT the true inverse of A per pixel (A isn't square)
-        - It's a simple linear map from measurement space back to RGB space:
-              x_i(3,) = A^T(3x2) @ y_i(2,)
-          (or equivalently y_i @ A, depending on row/column convention)
+            Reconstructed??? image of shape (3, H, W)
         """
 
         # Same device-safety guard as measure():
@@ -315,23 +306,23 @@ def linear_inverse(model, render, input, h_init=0.01, beta=0.01, sig_end=0.01,
     R_T = render.recon
 
     # ---------------- SHAPE DEBUG (run once) ----------------
-    print("\n[DEBUG] Entering linear_inverse")
-    print(f"[DEBUG] input.dim(): {input.dim()}")
-    if input.dim() == 3:
-        print(f"[DEBUG] input image shape: {tuple(input.shape)}")
-    else:
-        print(f"[DEBUG] input measurement shape: {tuple(input.shape)}")
+    # print("\n[DEBUG] Entering linear_inverse")
+    # print(f"[DEBUG] input.dim(): {input.dim()}")
+    # if input.dim() == 3:
+    #     print(f"[DEBUG] input image shape: {tuple(input.shape)}")
+    # else:
+    #     print(f"[DEBUG] input measurement shape: {tuple(input.shape)}")
 
-    # Try a dry run through R and R_T to inspect shapes
-    if input.dim() == 3:
-        test_msmt = R(input)
-        print(f"[DEBUG] R(input) shape: {tuple(test_msmt.shape)}")
+    # # Try a dry run through R and R_T to inspect shapes
+    # if input.dim() == 3:
+    #     test_msmt = R(input)
+    #     print(f"[DEBUG] R(input) shape: {tuple(test_msmt.shape)}")
 
-        test_recon = R_T(test_msmt)
-        print(f"[DEBUG] R_T(R(input)) shape: {tuple(test_recon.shape)}")
-    else:
-        test_recon = R_T(input)
-        print(f"[DEBUG] R_T(input) shape: {tuple(test_recon.shape)}")
+    #     test_recon = R_T(test_msmt)
+    #     print(f"[DEBUG] R_T(R(input)) shape: {tuple(test_recon.shape)}")
+    # else:
+    #     test_recon = R_T(input)
+    #     print(f"[DEBUG] R_T(input) shape: {tuple(test_recon.shape)}")
     # --------------------------------------------------------
 
     # init variables
