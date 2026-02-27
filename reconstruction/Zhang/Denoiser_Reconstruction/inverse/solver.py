@@ -305,7 +305,7 @@ def linear_inverse(model, render, input, h_init=0.01, beta=0.01, sig_end=0.01,
     R = render.measure
     R_T = render.recon
 
-    # ---------------- SHAPE DEBUG (run once) ----------------
+    # ---------------- SHAPE DEBUG  ----------------
     # print("\n[DEBUG] Entering linear_inverse")
     # print(f"[DEBUG] input.dim(): {input.dim()}")
     # if input.dim() == 3:
@@ -331,7 +331,7 @@ def linear_inverse(model, render, input, h_init=0.01, beta=0.01, sig_end=0.01,
     elif input.dim() == 3:
         proj = R_T(R(input))
 
-    print(f"[DEBUG] proj shape: {tuple(proj.shape)}")
+    # print(f"[DEBUG] proj shape: {tuple(proj.shape)}")
 
     e = torch.ones_like(proj)
     n = torch.numel(e)
