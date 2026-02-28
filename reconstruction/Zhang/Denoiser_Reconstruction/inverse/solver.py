@@ -282,6 +282,8 @@ def linear_inverse(model, render, input, h_init=0.01, beta=0.01, sig_end=0.01,
         device = torch.device("cuda")
     else:
         device = torch.device("cpu")
+
+    # Put the denoiser / score model in evaluation mode and move to device
     model = model.eval().to(device)
     
     if hasattr(render, "to"):
@@ -294,6 +296,8 @@ def linear_inverse(model, render, input, h_init=0.01, beta=0.01, sig_end=0.01,
                 .squeeze(0).permute(1, 2, 0).numpy()
 
     # the network calculates the noise residual
+    # Define log prior gradient function:
+    # model(y) predicts noise residual; minus sign gives gradient of log prior
     if with_grad:
         log_grad = lambda y: - model(y)
     else:
@@ -302,28 +306,11 @@ def linear_inverse(model, render, input, h_init=0.01, beta=0.01, sig_end=0.01,
                 return - model(y)
 
     # measurement matrix calculation
+    # Measurement operator R and backwards R_T
+    # R(x)    : image -> measurements
+    # R_T(a)  : measurements -> image-shaped backprojection
     R = render.measure
     R_T = render.recon
-
-    # ---------------- SHAPE DEBUG  ----------------
-    # print("\n[DEBUG] Entering linear_inverse")
-    # print(f"[DEBUG] input.dim(): {input.dim()}")
-    # if input.dim() == 3:
-    #     print(f"[DEBUG] input image shape: {tuple(input.shape)}")
-    # else:
-    #     print(f"[DEBUG] input measurement shape: {tuple(input.shape)}")
-
-    # # Try a dry run through R and R_T to inspect shapes
-    # if input.dim() == 3:
-    #     test_msmt = R(input)
-    #     print(f"[DEBUG] R(input) shape: {tuple(test_msmt.shape)}")
-
-    #     test_recon = R_T(test_msmt)
-    #     print(f"[DEBUG] R_T(R(input)) shape: {tuple(test_recon.shape)}")
-    # else:
-    #     test_recon = R_T(input)
-    #     print(f"[DEBUG] R_T(input) shape: {tuple(test_recon.shape)}")
-    # --------------------------------------------------------
 
     # init variables
     if msmt_flag or input.dim() == 1:
@@ -331,23 +318,29 @@ def linear_inverse(model, render, input, h_init=0.01, beta=0.01, sig_end=0.01,
     elif input.dim() == 3:
         proj = R_T(R(input))
 
-    # print(f"[DEBUG] proj shape: {tuple(proj.shape)}")
-
+    # Create an all-ones image with same shape as proj
     e = torch.ones_like(proj)
     n = torch.numel(e)
 
+    # Mean of the initial Gaussian sample:
     mu = 0.5 * (e - R_T(R(e))) + proj
+    # Sample initial image y ~ N(mu, I)
     y = torch.normal(mean=mu, std=1.0).unsqueeze(0).to(device)
     sigma = torch.norm(log_grad(y)) / np.sqrt(n)
 
     t = 1
     all_ys = []
+    # Main loop for denoising
     while sigma > sig_end:
         # update step size
         h = (h_init * t) / (1 + h_init * (t - 1))
 
         # projected log prior gradient
+        # (denoising direction)
         d = log_grad(y).squeeze(0)
+        # Project the update
+        # (I - A^T A) d       : remove measurable component of prior gradient
+        # proj - A^T A y      : data-consistency correction
         d = (d - R_T(R(d)) + proj -
             R_T(R(y.squeeze(0)))).unsqueeze(0)
 
