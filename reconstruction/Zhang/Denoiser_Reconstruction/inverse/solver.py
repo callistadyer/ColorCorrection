@@ -56,6 +56,7 @@ class ConvMatrix(Measurement):
 
 class RenderMatrix(Measurement):
     def __init__(self, R, im_size, device):
+        # (3, H, W)
         self.im_size = im_size
         # R (K, 3N)
         self.R = R.to(device)
@@ -74,7 +75,13 @@ class RenderMatrix(Measurement):
         (Row-Major vs Column-Major)
         '''
 
-
+        # x : (3, H, W)                   
+        # x.transpose(1, 2) : (3, W, H) 
+        # x.transpose(1, 2).flatten() : (3N,)  
+        # R : (K, 3N)            
+        # torch.matmul(R, x_flat) :
+        #   (K, 3N) @ (3N,) -> (K,)   
+        #   y : (K,)
         # transpose such that flatten() result is column-major (MATLAB/Fortran)
         return torch.matmul(self.R, x.transpose(1, 2).flatten())
 
@@ -87,7 +94,6 @@ class RenderMatrix(Measurement):
         # torch.matmul(R.T, msmt) (3N,)
         # after v.reshape(self.im_size).transpose(1, 2) (3, H, W)
         # transpose such that flatten() result is column-major (MATLAB/Fortran)
-        # (3, H, W)
         return torch.matmul(self.R.T, msmt).reshape(self.im_size).transpose(1, 2)
 
 
@@ -163,7 +169,7 @@ class DichromatMatrix(Measurement):
         # xN3: (N,3)
         # A.T: (3,2)
         # result yN2: (N,2)
-        yN2 = xN3 @ self.A.T                   # shape (N,2)
+        yN2 = xN3 @ self.A.T                  
 
         # Flatten (N,2) into a single vector (2N,)
         # This matches the convention used by RenderMatrix: return a 1D measurement vector
