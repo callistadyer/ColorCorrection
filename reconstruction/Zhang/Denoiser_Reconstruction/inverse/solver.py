@@ -57,7 +57,7 @@ class ConvMatrix(Measurement):
 class RenderMatrix(Measurement):
     def __init__(self, R, im_size, device):
         self.im_size = im_size
-        #
+        # R (K, 3N)
         self.R = R.to(device)
 
     def to(self, device):
@@ -74,6 +74,7 @@ class RenderMatrix(Measurement):
         (Row-Major vs Column-Major)
         '''
 
+
         # transpose such that flatten() result is column-major (MATLAB/Fortran)
         return torch.matmul(self.R, x.transpose(1, 2).flatten())
 
@@ -81,8 +82,12 @@ class RenderMatrix(Measurement):
         '''
         From measurement to image space
         '''
-
+        # R.T (3N,K)
+        # msmt (K,)
+        # torch.matmul(R.T, msmt) (3N,)
+        # after v.reshape(self.im_size).transpose(1, 2) (3, H, W)
         # transpose such that flatten() result is column-major (MATLAB/Fortran)
+        # (3, H, W)
         return torch.matmul(self.R.T, msmt).reshape(self.im_size).transpose(1, 2)
 
 
@@ -91,8 +96,8 @@ class DichromatMatrix(Measurement):
     For each pixel i we apply the a 2x3 matrix A to that pixel's RGB (Converts RGB -> LMS -> dichromat)
     That is: y_i(2x1) = A(2x3) @ x_i(3x1).
 
-    If you stacked all pixels into a single long vector x_big of shape (3N,),
-    then you would need to build that large matrix R_big: (2N, 3N)
+    If you stacked all pixels into a single long vector of shape (3N,),
+    then you would need to build that large matrix (2N, 3N)
     but this is unweildy so this is an attempt to do it another way:
     """
 
@@ -104,14 +109,14 @@ class DichromatMatrix(Measurement):
             Shape (2,3). Per-pixel measurement matrix
             Maps one pixel RGB (3,) -> 2D measurement (2,)
         im_size : tuple
-            Expected image size in channel-first format: (3, H, W)
+            Image size (3, H, W)
         device : torch.device
             Device where this should live (cpu/cuda/mps)
         """
-        self.im_size = im_size                 # stores (3, H, W) for reshaping in recon()
-        self.device  = device                  # stores current device the operator is on
-        self.A       = A_2x3.to(device).float()# move A to appropriate device, cast to float; shape (2,3)
-        self.AT      = self.A.T                # transpose of A; shape (3,2)
+        self.im_size = im_size                  # stores (3, H, W) for reshaping in recon()
+        self.device  = device                   # stores current device the operator is on
+        self.A       = A_2x3.to(device).float() # move A to appropriate device, cast to float; shape (2,3)
+        self.AT      = self.A.T                 # transpose of A; shape (3,2)
 
     def to(self, device):
         """
@@ -145,14 +150,14 @@ class DichromatMatrix(Measurement):
         if self.A.device != x.device:
             self.to(x.device)
 
-        # Read spatial dimensions from x
         # x.shape is (3, H, W), so:
-        H, W = x.shape[1], x.shape[2]          # H, W are ints
+        H, W = x.shape[1], x.shape[2]      
 
-        # Reorder dimensions so pixels are rows:
+        # (shape) = (number of rows, number of columns)
         # x: (3, H, W)  ->  (H, W, 3)
         # Then flatten spatial dims: (H, W, 3) -> (N, 3), where N = H*W
         xN3 = x.permute(1, 2, 0).reshape(-1, 3)# shape (N,3)
+        # x3N = x.permute(1, 2, 0).reshape(3, -1)# shape (3,N)
 
         # Apply the same 2x3 matrix A to every pixel:
         # xN3: (N,3)
@@ -162,7 +167,8 @@ class DichromatMatrix(Measurement):
 
         # Flatten (N,2) into a single vector (2N,)
         # This matches the convention used by RenderMatrix: return a 1D measurement vector
-        return yN2.reshape(-1)                 # shape (2N,)
+        # shape (2N,)
+        return yN2.reshape(-1)                 
 
     def recon(self, msmt):
         """
@@ -203,6 +209,7 @@ class DichromatMatrix(Measurement):
         # (N,3) -> (H, W, 3) -> (3, H, W)
         x = xN3.reshape(H, W, 3).permute(2, 0, 1)  # shape (3,H,W)
 
+        # (3,H,W)
         return x
 
 class ArrayMatrix(Measurement):
@@ -333,10 +340,8 @@ def linear_inverse(model, render, input, h_init=0.01, beta=0.01, sig_end=0.01,
     # Main loop for denoising
     while sigma > sig_end:
         # update step size
-        h = (h_init * t) / (1 + h_init * (t - 1))
+        h = (h_init * t) / (1 + h_init * (t - 1))     
 
-        # projected log prior gradient
-        # (denoising direction)
         d = log_grad(y).squeeze(0)
         # Project the update
         # (I - A^T A) d       : remove measurable component of prior gradient
@@ -362,6 +367,7 @@ def linear_inverse(model, render, input, h_init=0.01, beta=0.01, sig_end=0.01,
         noise = torch.randn(size=y.size(), device=device)
 
         # update image
+        #   y <- y + (projected prior step) + (noise)
         y = y + h * d + gamma * noise
 
         if stride > 0 and (t - 1) % stride == 0:
