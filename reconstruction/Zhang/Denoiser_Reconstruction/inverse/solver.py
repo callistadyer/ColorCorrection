@@ -202,7 +202,7 @@ class DichromatMatrix(Measurement):
 
         # Undo the flattening of measurements:
         # msmt: (2N,) -> (N,2)
-        yN2 = msmt.reshape(-1, 2)               # shape (N,2)
+        yN2 = msmt.reshape(-1, 3)               # shape (N,2)
 
         # Map measurement back to RGB space using A (or A^T)
         # Here we want (N,3):
@@ -388,7 +388,8 @@ def linear_inverse(model, render, input, h_init=0.01, beta=0.01, sig_end=0.01,
         if t > t_max:
             break
 
-    final = y + log_grad(y)
+    # final = y + log_grad(y)
+    final = y
     all_ys.append(numpy_image(final))
 
     if with_grad:
