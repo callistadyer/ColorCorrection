@@ -202,7 +202,7 @@ class DichromatMatrix(Measurement):
 
         # Undo the flattening of measurements:
         # msmt: (2N,) -> (N,2)
-        yN2 = msmt.reshape(-1, 3)               # shape (N,2)
+        yN2 = msmt.reshape(-1, 2)               # shape (N,2)
 
         # Map measurement back to RGB space using A (or A^T)
         # Here we want (N,3):
