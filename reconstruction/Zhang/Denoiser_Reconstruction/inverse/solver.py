@@ -100,126 +100,15 @@ class RenderMatrix(Measurement):
         return torch.matmul(self.R.T, msmt).reshape(self.im_size).transpose(1, 2)
 
 
-# class DichromatMatrix(Measurement):
-#     """
-#     Apply a 2x3 per-pixel measurement matrix A to an RGB image.
-
-#     This implementation uses ImToCalFormat / CalFormatToIm so that
-#     per-pixel bookkeeping is explicit:
-#       - image x has shape (3, H, W)
-#       - CalFormat has shape (3, N), one pixel per column
-#       - measurements are packed as [m1(all pixels), m2(all pixels)]
-#     """
-
-#     def __init__(self, A_2x3, im_size, device):
-#         """
-#         Inputs
-#         ----------
-#         A_2x3 : torch.Tensor
-#             Shape (2,3). Per-pixel measurement matrix.
-#             Maps one pixel RGB (3,) -> 2D measurement (2,)
-#         im_size : tuple
-#             Image size (3, H, W)
-#         device : torch.device
-#             Device where this should live (cpu/cuda/mps)
-#         """
-#         self.im_size = im_size
-#         self.device = device
-#         self.A = A_2x3.to(device).float()   # shape (2,3)
-#         self.AT = self.A.T                  # shape (3,2)
-
-#     def to(self, device):
-#         self.device = device
-#         self.A = self.A.to(device)
-#         self.AT = self.A.T
-#         return self
-
-#     def measure(self, x):
-#         """
-#         Apply the forward measurement operator.
-
-#         Input
-#         -----
-#         x : torch.Tensor
-#             Image tensor of shape (3, H, W)
-
-#         Output
-#         ------
-#         msmt : torch.Tensor
-#             Measurement vector of shape (2N,)
-#             ordered as [m1(all pixels), m2(all pixels)]
-#         """
-#         if self.A.device != x.device:
-#             self.to(x.device)
-
-#         # x starts with shape (3, H, W)
-
-#         # Convert image to CalFormat
-#         # shape changes from (3, H, W) to (3, N)
-#         # each column is one pixel in MATLAB pixel order
-#         x_cal = ImToCalFormat(x)            # shape (3, N)
-
-#         # Apply the 2x3 matrix A to each pixel column
-#         # self.A has shape (2, 3)
-#         # x_cal has shape (3, N)
-#         # result has shape (2, N)
-#         y_cal = self.A @ x_cal              # shape (2, N)
-
-#         # Pack measurements as [m1(all pixels), m2(all pixels)]
-#         # transpose changes shape from (2, N) to (N, 2)
-#         # reshape(-1) changes shape from (N, 2) to (2N,)
-#         msmt = y_cal.T.reshape(-1)          # shape (2N,)
-
-#         return msmt
-
-#     def recon(self, msmt):
-#         """
-#         Apply the adjoint/backprojection mapping.
-
-#         Input
-#         -----
-#         msmt : torch.Tensor
-#             Measurement vector of shape (2N,)
-#             ordered as [m1(all pixels), m2(all pixels)]
-
-#         Output
-#         ------
-#         x : torch.Tensor
-#             Backprojected image of shape (3, H, W)
-#         """
-#         if self.A.device != msmt.device:
-#             self.to(msmt.device)
-
-#         _, H, W = self.im_size
-#         N = H * W
-
-#         # msmt starts with shape (2N,)
-
-#         # Undo measurement packing
-#         # reshape(N, 2) changes shape from (2N,) to (N, 2)
-#         # transpose changes shape from (N, 2) to (2, N)
-#         y_cal = msmt.reshape(N, 2).T        # shape (2, N)
-
-#         # Apply the adjoint/backprojection per pixel
-#         # self.A.T has shape (3, 2)
-#         # y_cal has shape (2, N)
-#         # result has shape (3, N)
-#         x_cal = self.A.T @ y_cal            # shape (3, N)
-
-#         # Convert CalFormat back to image
-#         # shape changes from (3, N) to (3, H, W)
-#         x = CalFormatToIm(x_cal, (H, W, 3))
-
-#         return x
-    
 class DichromatMatrix(Measurement):
     """
     Apply a 2x3 per-pixel measurement matrix A to an RGB image.
 
-    This implementation is arranged so that its bookkeeping matches the
-    ordering convention used by RenderMatrix:
-      - input pixel order matches x.transpose(1, 2).flatten()
-      - output measurement order is [m1(all pixels), m2(all pixels)]
+    This implementation uses ImToCalFormat / CalFormatToIm-style bookkeeping
+    so that the pixel ordering stays consistent with MATLAB conventions:
+      - image x has shape (3, H, W)
+      - CalFormat has shape (3, N), with one pixel per column
+      - measurements are packed as [m1(all pixels), m2(all pixels)]
     """
 
     def __init__(self, A_2x3, im_size, device):
@@ -236,8 +125,8 @@ class DichromatMatrix(Measurement):
         """
         self.im_size = im_size
         self.device = device
-        self.A = A_2x3.to(device).float()   # (2,3)
-        self.AT = self.A.T                  # (3,2)
+        self.A = A_2x3.to(device).float()   # shape (2, 3)
+        self.AT = self.A.T                  # transpose swaps rows/cols: (2, 3) -> (3, 2)
 
     def to(self, device):
         self.device = device
@@ -263,17 +152,55 @@ class DichromatMatrix(Measurement):
         if self.A.device != x.device:
             self.to(x.device)
 
-        # Put pixels in the same order as RenderMatrix / MATLAB-style flattening.
-        # For x shape (3,H,W), this matches the pixel order implicit in:
-        # x.transpose(1, 2).flatten()
-        xN3 = x.permute(2, 1, 0).reshape(-1, 3)   # (N,3)
+        # x starts with shape (3, H, W)
 
-        # Apply the same 2x3 matrix to each pixel
-        yN2 = xN3 @ self.A.T                      # (N,2)
+        # Convert image to CalFormat.
+        # ImToCalFormat changes shape:
+        #   (3, H, W) -> (3, N), where N = H*W
+        #
+        # x_cal has layout:
+        #   [ R1   R2   R3   ...  RN
+        #     G1   G2   G3   ...  GN
+        #     B1   B2   B3   ...  BN ]
+        #
+        # rows = channels, columns = pixels in MATLAB pixel order
+        x_cal = ImToCalFormat(x)            # shape (3, N)
 
-        # Match RenderMatrix-style big-matrix output ordering:
-        # [m1(all pixels), m2(all pixels)]
-        return yN2.T.reshape(-1)                 # (2N,)
+        # Apply the 2x3 matrix A to each pixel column.
+        #
+        # self.A has shape (2, 3)
+        # x_cal has shape (3, N)
+        # matrix multiply changes shape:
+        #   (2, 3) @ (3, N) -> (2, N)
+        #
+        # y_cal has layout:
+        #   [ m1_1   m1_2   m1_3   ...  m1_N
+        #     m2_1   m2_2   m2_3   ...  m2_N ]
+        #
+        # rows = measurement channels, columns = pixels
+        y_cal = self.A @ x_cal              # shape (2, N)
+
+        # Pack measurements into one long vector.
+        #
+        # y_cal starts as:
+        #   [ m1_1   m1_2   ...  m1_N
+        #     m2_1   m2_2   ...  m2_N ]
+        #
+        # reshape(-1) flattens row-by-row in PyTorch, so shape changes:
+        #   (2, N) -> (2N,)
+        #
+        # msmt therefore has layout:
+        #   [ m1_1, m1_2, ..., m1_N,  m2_1, m2_2, ..., m2_N ]
+        #
+        # i.e. [m1(all pixels), m2(all pixels)]
+        #
+        # NOTE:
+        # We do not use CalFormatToVec here, because that would flatten
+        # column-by-column and instead produce:
+        #   [ m1_1, m2_1, m1_2, m2_2, ... ]
+        msmt = y_cal.reshape(-1)            # shape (2N,)
+
+        return msmt
 
     def recon(self, msmt):
         """
@@ -294,142 +221,61 @@ class DichromatMatrix(Measurement):
             self.to(msmt.device)
 
         _, H, W = self.im_size
+        N = H * W
 
-        # Undo measurement packing used in measure():
-        # [m1(all pixels), m2(all pixels)] -> (N,2)
-        yN2 = msmt.reshape(2, -1).T              # (N,2)
+        # msmt starts with shape (2N,)
+        #
+        # msmt has layout:
+        #   [ m1_1, m1_2, ..., m1_N,  m2_1, m2_2, ..., m2_N ]
 
-        # Backproject each pixel measurement into RGB space
-        # This is the adjoint-style mapping, analogous to RenderMatrix using R.T
-        xN3 = yN2 @ self.A                       # (N,3)
+        # Undo measurement packing.
+        #
+        # reshape(2, N) changes shape:
+        #   (2N,) -> (2, N)
+        #
+        # y_cal now has layout:
+        #   [ m1_1   m1_2   m1_3   ...  m1_N
+        #     m2_1   m2_2   m2_3   ...  m2_N ]
+        #
+        # rows = measurement channels, columns = pixels
+        y_cal = msmt.reshape(2, N)          # shape (2, N)
 
-        # Undo the pixel ordering used in measure():
-        # (N,3) -> (W,H,3) -> (3,H,W)
-        x = xN3.reshape(W, H, 3).permute(2, 1, 0)
+        # Apply the adjoint/backprojection per pixel.
+        #
+        # self.A.T has shape (3, 2)
+        # y_cal has shape (2, N)
+        # matrix multiply changes shape:
+        #   (3, 2) @ (2, N) -> (3, N)
+        #
+        # x_cal has layout:
+        #   [ R1   R2   R3   ...  RN
+        #     G1   G2   G3   ...  GN
+        #     B1   B2   B3   ...  BN ]
+        #
+        # rows = RGB channels, columns = pixels in MATLAB pixel order
+        x_cal = self.A.T @ y_cal            # shape (3, N)
+
+        # Convert the reconstructed 3 x N data back into image layout.
+        #
+        # x_cal currently stores channel values grouped by row:
+        #   [ R1   R2   R3   ...  RN
+        #     G1   G2   G3   ...  GN
+        #     B1   B2   B3   ...  BN ]
+        #
+        # reshape(self.im_size) changes shape:
+        #   (3, N) -> (3, H, W)
+        #
+        # but this alone does not yet match the RenderMatrix bookkeeping.
+        #
+        # transpose(1, 2) swaps the two spatial dimensions:
+        #   (3, H, W) -> (3, W, H)
+        #
+        # This is done here specifically so that the final output matches
+        # the same reshape/transpose convention used by RenderMatrix.recon().
+        x = x_cal.reshape(self.im_size).transpose(1, 2)
 
         return x
     
-# old old:
-# class DichromatMatrix(Measurement):
-#     """
-#     For each pixel i we apply the a 2x3 matrix A to that pixel's RGB (Converts RGB -> LMS -> dichromat)
-#     That is: y_i(2x1) = A(2x3) @ x_i(3x1).
-
-#     If you stacked all pixels into a single long vector of shape (3N,),
-#     then you would need to build that large matrix (2N, 3N)
-#     but this is unweildy so this is an attempt to do it another way:
-#     """
-
-#     def __init__(self, A_2x3, im_size, device):
-#         """
-#         Inputs
-#         ----------
-#         A_2x3 : torch.Tensor
-#             Shape (2,3). Per-pixel measurement matrix
-#             Maps one pixel RGB (3,) -> 2D measurement (2,)
-#         im_size : tuple
-#             Image size (3, H, W)
-#         device : torch.device
-#             Device where this should live (cpu/cuda/mps)
-#         """
-#         self.im_size = im_size                  # stores (3, H, W) for reshaping in recon()
-#         self.device  = device                   # stores current device the operator is on
-#         self.A       = A_2x3.to(device).float() # move A to appropriate device, cast to float; shape (2,3)
-#         self.AT      = self.A.T                 # transpose of A; shape (3,2)
-
-#     def to(self, device):
-#         """
-#         Move A and AT to appropriate device
-#         Weird stuff is happening where different variables are "living" on different devices so this
-#         is an attempt to make sure they are all on the same one
-#         """
-#         self.device = device                   # remember device
-#         self.A      = self.A.to(device)        # move A; still shape (2,3)
-#         self.AT     = self.A.T                 # recompute transpose on same device; shape (3,2)
-#         return self                           
-    
-#     def measure(self, x):
-#         """
-#         Apply the measurement operator
-
-#         Inputs
-#         -----
-#         x : torch.Tensor
-#             Image tensor of shape (3, H, W)
-
-#         Output
-#         ------
-#         msmt : torch.Tensor
-#             Flattened measurement vector of shape (2N,), where N = H*W 
-#             This corresponds to concatenating each pixel's 2 measurements (2 because of dichromat)
-#         """
-
-#         # If x is on GPU (mps/cuda) but A is on CPU (or vice versa), matmul will error
-#         # This makes sure A is on x's device 
-#         if self.A.device != x.device:
-#             self.to(x.device)
-
-#         # x.shape is (3, H, W), so:
-#         H, W = x.shape[1], x.shape[2]      
-
-#         # (shape) = (number of rows, number of columns)
-#         # x: (3, H, W)  ->  (H, W, 3)
-#         # Then flatten spatial dims: (H, W, 3) -> (N, 3), where N = H*W
-#         xN3 = x.permute(1, 2, 0).reshape(-1, 3)# shape (N,3)
-#         # x3N = x.permute(1, 2, 0).reshape(3, -1)# shape (3,N)
-
-#         # Apply the same 2x3 matrix A to every pixel:
-#         # xN3: (N,3)
-#         # A.T: (3,2)
-#         # result yN2: (N,2)
-#         yN2 = xN3 @ self.A.T                  
-
-#         # Flatten (N,2) into a single vector (2N,)
-#         # This matches the convention used by RenderMatrix: return a 1D measurement vector
-#         # shape (2N,)
-#         return yN2.reshape(-1)                 
-
-#     def recon(self, msmt):
-#         """
-#         Apply the reconstruction mapping
-
-#         Input
-#         -----
-#         msmt : torch.Tensor
-#             Measurement vector of shape (2N,)
-
-#         Output
-#         ------
-#         x : torch.Tensor
-#             Reconstructed??? image of shape (3, H, W)
-#         """
-
-#         # Same device-safety guard as measure():
-#         # if msmt is on GPU but A is on CPU, reshape+matmul will error later
-#         if self.A.device != msmt.device:
-#             self.to(msmt.device)
-
-#         # Use stored image size for reshape:
-#         # self.im_size is (3, H, W)
-#         H, W = self.im_size[1], self.im_size[2]
-
-#         # Undo the flattening of measurements:
-#         # msmt: (2N,) -> (N,2)
-#         yN2 = msmt.reshape(-1, 2)               # shape (N,2)
-
-#         # Map measurement back to RGB space using A (or A^T)
-#         # Here we want (N,3):
-#         #   (N,2) @ (2,3) = (N,3)
-#         #
-#         # self.AT is (3,2), so self.A is (2,3)
-#         xN3 = yN2 @ self.A                   # (N,2) @ (2,3) -> (N,3)
-
-#         # Reshape rows back to image grid
-#         # (N,3) -> (H, W, 3) -> (3, H, W)
-#         x = xN3.reshape(H, W, 3).permute(2, 0, 1)  # shape (3,H,W)
-
-#         # (3,H,W)
-#         return x
 
 class ArrayMatrix(Measurement):
     '''

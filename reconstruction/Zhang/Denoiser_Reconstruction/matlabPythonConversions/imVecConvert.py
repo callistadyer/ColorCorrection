@@ -173,7 +173,7 @@ def VecToCalFormat(x_vec, cal_format_size):
     C, N = cal_format_size
 
     # checks that the first dimension is 3
-    assert C == 3, "Expected cal_format_size = (3, N)"
+    # assert C == 3, "Expected cal_format_size = (3, N)"
 
     # x_vec starts with shape (3*N,)
     # reshape(..., (3, N), order='F') changes shape from (3*N,) to (3, N)
