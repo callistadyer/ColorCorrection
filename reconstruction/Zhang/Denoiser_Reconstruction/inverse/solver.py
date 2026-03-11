@@ -1,6 +1,9 @@
 import torch, numpy as np
 from abc import ABC, abstractmethod
 import warnings
+import sys
+sys.path.append("/Users/callista/Documents/MATLAB/projects/ColorCorrection/reconstruction/Zhang/Denoiser_Reconstruction/matlabPythonConversions")
+from imVecConvert import ImToVec, VecToIm, CalFormatToVec, VecToCalFormat, ImToCalFormat, CalFormatToIm
 
 # base class for measurement matrix
 class Measurement(ABC):
@@ -97,6 +100,118 @@ class RenderMatrix(Measurement):
         return torch.matmul(self.R.T, msmt).reshape(self.im_size).transpose(1, 2)
 
 
+# class DichromatMatrix(Measurement):
+#     """
+#     Apply a 2x3 per-pixel measurement matrix A to an RGB image.
+
+#     This implementation uses ImToCalFormat / CalFormatToIm so that
+#     per-pixel bookkeeping is explicit:
+#       - image x has shape (3, H, W)
+#       - CalFormat has shape (3, N), one pixel per column
+#       - measurements are packed as [m1(all pixels), m2(all pixels)]
+#     """
+
+#     def __init__(self, A_2x3, im_size, device):
+#         """
+#         Inputs
+#         ----------
+#         A_2x3 : torch.Tensor
+#             Shape (2,3). Per-pixel measurement matrix.
+#             Maps one pixel RGB (3,) -> 2D measurement (2,)
+#         im_size : tuple
+#             Image size (3, H, W)
+#         device : torch.device
+#             Device where this should live (cpu/cuda/mps)
+#         """
+#         self.im_size = im_size
+#         self.device = device
+#         self.A = A_2x3.to(device).float()   # shape (2,3)
+#         self.AT = self.A.T                  # shape (3,2)
+
+#     def to(self, device):
+#         self.device = device
+#         self.A = self.A.to(device)
+#         self.AT = self.A.T
+#         return self
+
+#     def measure(self, x):
+#         """
+#         Apply the forward measurement operator.
+
+#         Input
+#         -----
+#         x : torch.Tensor
+#             Image tensor of shape (3, H, W)
+
+#         Output
+#         ------
+#         msmt : torch.Tensor
+#             Measurement vector of shape (2N,)
+#             ordered as [m1(all pixels), m2(all pixels)]
+#         """
+#         if self.A.device != x.device:
+#             self.to(x.device)
+
+#         # x starts with shape (3, H, W)
+
+#         # Convert image to CalFormat
+#         # shape changes from (3, H, W) to (3, N)
+#         # each column is one pixel in MATLAB pixel order
+#         x_cal = ImToCalFormat(x)            # shape (3, N)
+
+#         # Apply the 2x3 matrix A to each pixel column
+#         # self.A has shape (2, 3)
+#         # x_cal has shape (3, N)
+#         # result has shape (2, N)
+#         y_cal = self.A @ x_cal              # shape (2, N)
+
+#         # Pack measurements as [m1(all pixels), m2(all pixels)]
+#         # transpose changes shape from (2, N) to (N, 2)
+#         # reshape(-1) changes shape from (N, 2) to (2N,)
+#         msmt = y_cal.T.reshape(-1)          # shape (2N,)
+
+#         return msmt
+
+#     def recon(self, msmt):
+#         """
+#         Apply the adjoint/backprojection mapping.
+
+#         Input
+#         -----
+#         msmt : torch.Tensor
+#             Measurement vector of shape (2N,)
+#             ordered as [m1(all pixels), m2(all pixels)]
+
+#         Output
+#         ------
+#         x : torch.Tensor
+#             Backprojected image of shape (3, H, W)
+#         """
+#         if self.A.device != msmt.device:
+#             self.to(msmt.device)
+
+#         _, H, W = self.im_size
+#         N = H * W
+
+#         # msmt starts with shape (2N,)
+
+#         # Undo measurement packing
+#         # reshape(N, 2) changes shape from (2N,) to (N, 2)
+#         # transpose changes shape from (N, 2) to (2, N)
+#         y_cal = msmt.reshape(N, 2).T        # shape (2, N)
+
+#         # Apply the adjoint/backprojection per pixel
+#         # self.A.T has shape (3, 2)
+#         # y_cal has shape (2, N)
+#         # result has shape (3, N)
+#         x_cal = self.A.T @ y_cal            # shape (3, N)
+
+#         # Convert CalFormat back to image
+#         # shape changes from (3, N) to (3, H, W)
+#         x = CalFormatToIm(x_cal, (H, W, 3))
+
+#         return x
+    
 class DichromatMatrix(Measurement):
     """
     Apply a 2x3 per-pixel measurement matrix A to an RGB image.
@@ -193,6 +308,8 @@ class DichromatMatrix(Measurement):
         x = xN3.reshape(W, H, 3).permute(2, 1, 0)
 
         return x
+    
+# old old:
 # class DichromatMatrix(Measurement):
 #     """
 #     For each pixel i we apply the a 2x3 matrix A to that pixel's RGB (Converts RGB -> LMS -> dichromat)
