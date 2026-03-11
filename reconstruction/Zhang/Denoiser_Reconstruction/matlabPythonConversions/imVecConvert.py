@@ -227,6 +227,22 @@ def ImToCalFormat(x_image):
 
     return cal_format
 
+# 1) What CalFormatToIm expects
+#
+# CalFormatToIm expects a true CalFormat matrix of shape (3, N), where
+# each COLUMN is one pixel, and pixels are ordered in MATLAB pixel order.
+#
+# EXPECTED:
+#
+#   cal_format =
+#   [ R1   R2   R3   ...  RN
+#     G1   G2   G3   ...  GN
+#     B1   B2   B3   ...  BN ]
+#
+# So CalFormatToIm assumes:
+#   - rows = channels
+#   - columns = pixels
+
 
 def CalFormatToIm(cal_format, image_size):
     """
