@@ -12,8 +12,8 @@ setType       = 1;
 dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
-m = 64;
-n = 64;
+m = 10;
+n = 10;
 
 % How many steps do you want in a transformation sweep?
 nSteps = 20;

@@ -73,6 +73,7 @@ info = -sum(residual.^2, 'all'); % when residual is 0, then info is 0
                                  % when residual is high, then info is negative
                                  % so "good" info will be close to 0 and "bad" info will
                                  % be very negative. Still maximizing info in this way
+% info = -mean(residual.^2, 'all');
 
 infoNormalized = info/normalizingValue;
 
