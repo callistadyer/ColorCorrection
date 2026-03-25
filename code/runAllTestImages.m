@@ -1,5 +1,5 @@
 % Image types
-imageTypes = {'flower1.png'};
+imageTypes = {'fruit.png'};
 % imageTypes = {'flower1.png', ...
 %     'fruit.png', ...
 %     'Gaugin.png', ...
@@ -12,8 +12,8 @@ setType       = 1;
 dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
-m = 10;
-n = 10;
+m = 128;
+n = 128;
 
 % How many steps do you want in a transformation sweep?
 nSteps = 20;

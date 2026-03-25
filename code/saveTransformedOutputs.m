@@ -79,12 +79,13 @@ for i = 1:nSteps
     end
 
     % Trichromat image
-    triRGB = CalFormatToImage(rgbLin2RGB(stepOut.rgbLinDaltonizedCalFormat, Disp), m, n);
+    triRGB = CalFormatToImage(rgbLin2RGB(min(max(stepOut.rgbLinDaltonizedCalFormat, 0), 1), Disp), m, n);
     triName = sprintf('step%02d_%s_trichromat.png', i, labelStr);
     imwrite(min(max(triRGB,0),1), fullfile(imageSaveDir, triName));
 
     % Dichromat image
-    diRGB = CalFormatToImage(rgbLin2RGB(stepOut.rgbLinDaltonizedRenderedCalFormat, Disp), m, n);
+    diRGB = CalFormatToImage(rgbLin2RGB(min(max(stepOut.rgbLinDaltonizedRenderedCalFormat, 0), 1), Disp), m, n);
+    % diRGB = CalFormatToImage(rgbLin2RGB(stepOut.rgbLinDaltonizedRenderedCalFormat, Disp), m, n);
     diName = sprintf('step%02d_%s_dichromat.png', i, labelStr);
     imwrite(min(max(diRGB,0),1), fullfile(imageSaveDir, diName));
 end
@@ -97,7 +98,7 @@ fig1 = figure('Name', 'Trichromat Sweep', 'Visible', 'off', 'Color','w');
 for i = 1:nSteps
     subplot(nRows, nCols, i);
     m = outputs{i}.imgParams.m; n = outputs{i}.imgParams.n;
-    triRGB = CalFormatToImage(rgbLin2RGB(outputs{i}.rgbLinDaltonizedCalFormat, Disp), m, n);
+    triRGB = CalFormatToImage(rgbLin2RGB(min(max(outputs{i}.rgbLinDaltonizedCalFormat, 0), 1), Disp), m, n);
     imshow(min(max(triRGB,0),1));
     switch axisTag
         case 'info'
@@ -120,7 +121,7 @@ fig2 = figure('Name', 'Dichromat Sweep', 'Visible', 'off', 'Color','w');
 for i = 1:nSteps
     subplot(nRows, nCols, i);
     m = outputs{i}.imgParams.m; n = outputs{i}.imgParams.n;
-    diRGB = CalFormatToImage(rgbLin2RGB(outputs{i}.rgbLinDaltonizedRenderedCalFormat, Disp), m, n);
+    diRGB = CalFormatToImage(rgbLin2RGB(min(max(outputs{i}.rgbLinDaltonizedRenderedCalFormat, 0), 1), Disp), m, n);
     imshow(min(max(diRGB,0),1));
     switch axisTag
         case 'info'
