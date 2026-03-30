@@ -1,4 +1,4 @@
-function [info,infoNormalized] = computeInfo_regressSquared(LMSContrastCalFormat_old, LMSContrastCalFormat_new, imgParams, dichromatType, normalizingValue, Disp, paramsStruct)
+function [info,infoNormalized,y,y_hat,residual] = computeInfo_regressSquared(LMSContrastCalFormat_old, LMSContrastCalFormat_new, imgParams, dichromatType, normalizingValue, Disp, paramsStruct)
 %  Syntax:
 %     [info,infoNormalized] = computeInfo_regressSquared(LMSContrastCalFormat_old, LMSContrastCalFormat_new, imgParams, dichromatType, normalizingValue, Disp, paramsStruct)
 %

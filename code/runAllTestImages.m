@@ -1,5 +1,5 @@
 % Image types
-imageTypes = {'fruit.png'};
+imageTypes = {'ishi45.png'};
 % imageTypes = {'flower1.png', ...
 %     'fruit.png', ...
 %     'Gaugin.png', ...
@@ -31,8 +31,8 @@ clearFlag     = 0;
 %% Define metric functions
 
 %%%%%%%%% INFO FUNCTION %%%%%%%%%
-% infoFcn = @computeInfo_regressCIE;
-infoFcn = @computeInfo_regressSquared;
+infoFcn = @computeInfo_regressCIE;
+% infoFcn = @computeInfo_regressSquared;
 % infoFcn = @computeInfo_LMdifference;
 % infoFcn = @computeInfo_Wade;
 
