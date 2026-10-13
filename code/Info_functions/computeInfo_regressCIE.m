@@ -99,8 +99,8 @@ LMSCalFormat_pred = (LMSContrast_pred.*Disp.grayLMS) + Disp.grayLMS;
 [distortion, ~] = computeDistortion_DE2000(LMSCalFormat_old, LMSCalFormat_pred, imgParams, 1, Disp, paramsStruct);
 info = -distortion;
 
-% infoNormalized = info/normalizingValue;
-infoNormalized = 1 - info/normalizingValue;
+infoNormalized = info/normalizingValue;
+% infoNormalized = 1 - info/normalizingValue;
 
 end
 

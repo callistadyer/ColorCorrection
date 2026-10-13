@@ -235,10 +235,7 @@ disp('Just finished optimization')
 
 % Compute the info and distortion values for the transformation matrix that
 % ultimately was chosen after the optimization
-[~, info, infoNormalized, distortion, distortionNormalized,LMSCalFormat_pred] = ...
-    lossFunction('lambda', 0.0, transformRGB_opt, ...
-        triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
-        infoNormalizer, distortionNormalizer, Disp,paramsStruct);
+[~, info, infoNormalized, distortion, distortionNormalized,LMSCalFormat_pred] = lossFunction('lambda', 0.0, transformRGB_opt, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, infoNormalizer, distortionNormalizer, Disp,paramsStruct);
 
 
 % rgbCalFormat_pred = LMS2rgbLinCalFormat(LMSCalFormat_pred,Disp);
@@ -289,10 +286,9 @@ end
 triRGBCalFormatOpt = rgbLin2RGB(rgbLinDaltonizedCalFormat,Disp);
 
 RGBimg = CalFormatToImage(triRGBCalFormatOpt,imgParams.m,imgParams.n);
-% 
+
 % figure();
 % imagesc(RGBimg); axis square
-
 
 % Get LMS values to output
 LMSDaltonizedCalFormat = Disp.M_rgb2cones * rgbLinDaltonizedCalFormat;

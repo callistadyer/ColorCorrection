@@ -20,7 +20,7 @@
 %   (lambda = 1).
 
 % Image types
-imageTypes = {'Gaugin.png'};
+imageTypes = {'flower1.png'};
 % imageTypes = {'flower1.png', ...
 %     'fruit.png', ...
 %     'Gaugin.png', ...
@@ -39,7 +39,7 @@ n = 30;
 % How many steps do you want in a transformation sweep?
 nSteps = 20;
 
-sweepAxis = 'distortion';
+sweepAxis = 'info';
 %   'info'        = run info sweep only. this chooses set of info scores and minimizes distortion. 
 %   'distortion'  = run distortion sweep only
 %   'both'        = run both sweeps 
@@ -82,10 +82,7 @@ for ii = 1:numel(imageTypes)
     fprintf('Processing image type: %s\n', imgType);
 
     % Generate input image
-    [LMSCalFormat, rgbLinCalFormat, LMSCalFormatRendered, rgbLinCalFormatRendered, ...
-        Disp, imgParams, pathName] = colorCorrectionGenerateImages( ...
-        imgType, setType, m, n, dichromatType, 0);
-
+    [LMSCalFormat, rgbLinCalFormat, LMSCalFormatRendered, rgbLinCalFormatRendered, Disp, imgParams, pathName] = colorCorrectionGenerateImages(imgType, setType, m, n, dichromatType, 0);
     % Set up daltonizer object
     theDaltonizer = daltonize(infoFcn, infoParams,distortionFcn, distortionParams,renderFcn, renderParams, Disp);
 
@@ -104,48 +101,46 @@ for ii = 1:numel(imageTypes)
         ranInfo = true;
         sweepAxis_info = 'info';
 
-        [LMSSweep_info, rgbLinSweep_info, ...
-            LMSRenderedSweep_info, rgbLinRenderedSweep_info, ...
-            TSweep_info, targetInfoNorm_info, targetDistNorm_info, ...
-            infoNormAch_info, distNormAch_info] = computeSweep(theDaltonizer,LMSCalFormat, imgParams, dichromatType,nSteps, pathName, sweepAxis_info);
+        % Compute the sweep over info targets!!
+        [LMSSweep_info, rgbLinSweep_info, LMSRenderedSweep_info, rgbLinRenderedSweep_info,TSweep_info, targetInfoNorm_info, targetDistNorm_info, infoNormAch_info, distNormAch_info] = ...
+            computeSweep(theDaltonizer,LMSCalFormat, imgParams, dichromatType,nSteps, pathName, sweepAxis_info);
    
-
         % Target vs achieved info
         fprintf('\nInfo sweep (n=%d): target vs achieved info\n', numel(targetInfoNorm_info));
         disp([targetInfoNorm_info(:), infoNormAch_info(:)]);
 
         % Image montage
-        rgbTriImgFormat_optAllInfo = zeros(m, n, 3, nSteps);
-        rgbDiImgFormat_optAllInfo  = zeros(m, n, 3, nSteps);
+        RGBTriImgFormat_optAllInfo = zeros(m, n, 3, nSteps);
+        RGBDiImgFormat_optAllInfo  = zeros(m, n, 3, nSteps);
 
         for i = 1:nSteps
             rgbLinSweep_info{i}(rgbLinSweep_info{i}<0) = 0;
             rgbLinSweep_info{i}(rgbLinSweep_info{i}>1) = 1;
 
-
             % Trichromat (optimized) image for step i
-            rgbTriCalFormat_opt = rgbLin2RGB(rgbLinSweep_info{i}, Disp);
-            rgbTriImgFormat_opt = CalFormatToImage(rgbTriCalFormat_opt,m,n);
-            rgbTriImgFormat_optAllInfo(:,:,:,i) = rgbTriImgFormat_opt;
+            RGBTriCalFormat_opt = rgbLin2RGB(rgbLinSweep_info{i}, Disp);
+            RGBTriImgFormat_opt = CalFormatToImage(RGBTriCalFormat_opt,m,n);
+            RGBTriImgFormat_optAllInfo(:,:,:,i) = RGBTriImgFormat_opt;
 
             % Dichromat render of the optimized image for step i
-            rgbDiCalFormat_opt = rgbLin2RGB(rgbLinRenderedSweep_info{i}, Disp);
-            rgbDiImgFormat_opt = CalFormatToImage(rgbDiCalFormat_opt,m,n);
-            rgbDiImgFormat_optAllInfo(:,:,:,i) = rgbDiImgFormat_opt;
+            RGBDiCalFormat_opt = rgbLin2RGB(rgbLinRenderedSweep_info{i}, Disp);
+            RGBDiImgFormat_opt = CalFormatToImage(RGBDiCalFormat_opt,m,n);
+            RGBDiImgFormat_optAllInfo(:,:,:,i) = RGBDiImgFormat_opt;
         end
 
+        % Figure stuff
         figName_info = sprintf('%s — %s — %d-step info sweep', imgType, dichromatType, nSteps);
-        figInfo = figure('Color','w','Name', figName_info);
-        tlInfo  = tiledlayout(figInfo, 1, 2, 'TileSpacing','compact', 'Padding','compact');
+        figInfo      = figure('Color','w','Name', figName_info);
+        tlInfo       = tiledlayout(figInfo, 1, 2, 'TileSpacing','compact', 'Padding','compact');
 
         % Left panel: Trichromat grid
         triMontageInfo = nexttile(tlInfo, 1);
-        montage(rgbTriImgFormat_optAllInfo, 'Size', [nRows nCols], 'Parent', triMontageInfo,'BorderSize', 1, 'BackgroundColor', 'w');
+        montage(RGBTriImgFormat_optAllInfo, 'Size', [nRows nCols], 'Parent', triMontageInfo,'BorderSize', 1, 'BackgroundColor', 'w');
         title(triMontageInfo, 'Trichromat (optimized)');
 
         % Right panel: Dichromat grid
         diMontageInfo = nexttile(tlInfo, 2);
-        montage(rgbDiImgFormat_optAllInfo, 'Size', [nRows nCols], 'Parent', diMontageInfo,'BorderSize', 1, 'BackgroundColor', 'w');
+        montage(RGBDiImgFormat_optAllInfo, 'Size', [nRows nCols], 'Parent', diMontageInfo,'BorderSize', 1, 'BackgroundColor', 'w');
         title(diMontageInfo, sprintf('Dichromat render (%s)', dichromatType));
     end
 
@@ -157,90 +152,87 @@ for ii = 1:numel(imageTypes)
         ranDist = true;
         sweepAxis_dist = 'distortion';
 
-        [LMSSweep_dist, rgbLinSweep_dist, ...
-            LMSRenderedSweep_dist, rgbLinRenderedSweep_dist, ...
-            TSweep_dist, targetInfoNorm_dist, targetDistNorm_dist, ...
-            infoNormAch_dist, distNormAch_dist] = computeSweep(theDaltonizer,LMSCalFormat, imgParams, dichromatType, nSteps, pathName, sweepAxis_dist);
+        % Compute the sweep over info targets!!
+        [LMSSweep_dist, rgbLinSweep_dist, LMSRenderedSweep_dist, rgbLinRenderedSweep_dist, TSweep_dist, targetInfoNorm_dist, targetDistNorm_dist, infoNormAch_dist, distNormAch_dist] = ...
+            computeSweep(theDaltonizer,LMSCalFormat, imgParams, dichromatType, nSteps, pathName, sweepAxis_dist);
 
         % Target vs achieved distortion (normalized)
         fprintf('\nDistortion sweep (n=%d): target vs achieved distortion\n', numel(targetDistNorm_dist));
         disp([targetDistNorm_dist(:), distNormAch_dist(:)]);
 
         % Image montage
-        rgbTriImgFormat_optAllDist = zeros(m, n, 3, nSteps);
-        rgbDiImgFormat_optAllDist  = zeros(m, n, 3, nSteps);
+        RGBTriImgFormat_optAllDist = zeros(m, n, 3, nSteps);
+        RGBDiImgFormat_optAllDist  = zeros(m, n, 3, nSteps);
 
         for i = 1:nSteps
-            % Trichromat (optimized) image for step i
             % rgbLinSweep_dist{i}(rgbLinSweep_dist{i} < 0) = 0;
             % rgbLinSweep_dist{i}(rgbLinSweep_dist{i} > 1) = 1;
-            rgbTriCalFormat_opt = rgbLin2RGB(rgbLinSweep_dist{i}, Disp);
-            rgbTriImgFormat_opt = CalFormatToImage(rgbTriCalFormat_opt,m,n);
-            rgbTriImgFormat_optAllDist(:,:,:,i) = rgbTriImgFormat_opt;
+
+            % Trichromat (optimized) image for step i
+            RGBTriCalFormat_opt = rgbLin2RGB(rgbLinSweep_dist{i}, Disp);
+            RGBTriImgFormat_opt = CalFormatToImage(RGBTriCalFormat_opt,m,n);
+            RGBTriImgFormat_optAllDist(:,:,:,i) = RGBTriImgFormat_opt;
 
             % Dichromat render of the optimized image for step i
-            rgbDiCalFormat_opt = rgbLin2RGB(rgbLinRenderedSweep_dist{i}, Disp);
-            rgbDiImgFormat_opt = CalFormatToImage(rgbDiCalFormat_opt,m,n);
-            rgbDiImgFormat_optAllDist(:,:,:,i) = rgbDiImgFormat_opt;
+            RGBDiCalFormat_opt = rgbLin2RGB(rgbLinRenderedSweep_dist{i}, Disp);
+            RGBDiImgFormat_opt = CalFormatToImage(RGBDiCalFormat_opt,m,n);
+            RGBDiImgFormat_optAllDist(:,:,:,i) = RGBDiImgFormat_opt;
         end
 
+        % Figure stuff
         figNameDist = sprintf('%s — %s — %d-step distortion sweep', imgType, dichromatType, nSteps);
         figDist = figure('Color','w','Name', figNameDist);
         tlDist  = tiledlayout(figDist, 1, 2, 'TileSpacing','compact', 'Padding','compact');
 
         % Left panel: Trichromat grid
         triMontageDist = nexttile(tlDist, 1);
-        montage(rgbTriImgFormat_optAllDist, 'Size', [nRows nCols], 'Parent', triMontageDist,'BorderSize', 1, 'BackgroundColor', 'w');
+        montage(RGBTriImgFormat_optAllDist, 'Size', [nRows nCols], 'Parent', triMontageDist,'BorderSize', 1, 'BackgroundColor', 'w');
         title(triMontageDist, 'Trichromat (optimized)');
 
         % Right panel: Dichromat grid
         diMontageDist = nexttile(tlDist, 2);
-        montage(rgbDiImgFormat_optAllDist, 'Size', [nRows nCols], 'Parent', diMontageDist,'BorderSize', 1, 'BackgroundColor', 'w');
+        montage(RGBDiImgFormat_optAllDist, 'Size', [nRows nCols], 'Parent', diMontageDist,'BorderSize', 1, 'BackgroundColor', 'w');
         title(diMontageDist, sprintf('Dichromat render (%s)', dichromatType));
 
     end
 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%% Info-Distortion curve %%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     figure();
 
     % If you did the info sweep, then go ahead and plot the info-distortion
     % curve for that sweep
+    nPlot = 20;
     if ranInfo
-         
-        plot(distNormAch_info, infoNormAch_info, 'o-', 'LineWidth', 1.5, 'DisplayName', 'Info sweep (minimize distortion)');
+        idx = 1:min(nPlot, numel(distNormAch_info));
+        plot(distNormAch_info(idx), infoNormAch_info(idx), 'ko-', 'LineWidth', 2,'MarkerFaceColor','w', 'MarkerSize',10 , 'DisplayName', 'Info sweep (minimize distortion)');
         hold on;
-
-        % Add lines for the target info 
-        for k = 1:numel(targetInfoNorm_info)
-            yline(targetInfoNorm_info(k), ':', 'HandleVisibility','off'); 
+        for k = idx
+            yline(targetInfoNorm_info(k), ':', 'HandleVisibility','off');
         end
-
     end
 
     % If you did the distortion sweep, then go ahead and plot the info-distortion
     % curve for that sweep
     if ranDist
-
-        plot(distNormAch_dist, infoNormAch_dist, 's-', ...
-            'LineWidth', 1.5, ...
-            'DisplayName', 'Distortion sweep (maximize info)');
+        idx = 1:min(nPlot, numel(distNormAch_dist));
+        plot(distNormAch_dist(idx), infoNormAch_dist(idx), 'ko-', 'LineWidth', 2, 'MarkerFaceColor','w', 'MarkerSize',10 ,'DisplayName', 'Distortion sweep (maximize info)');
         hold on;
-
-        % Add lines for the target distortion 
-        for k = 1:numel(targetDistNorm_dist)
-            xline(targetDistNorm_dist(k), ':', ...
-                'HandleVisibility','off');
+        for k = idx
+            xline(targetDistNorm_dist(k), ':', 'HandleVisibility','off');
         end
-
     end
 
-    % Make it pretty 
+    % Make it pretty
     grid off; axis square;
-    xlabel('Achieved Distortion (normalized)');
-    ylabel('Achieved Info (normalized)');
-    title(sprintf('%s — %s — %d steps', imgType, dichromatType, nSteps));
+    ax = gca;
+    ax.LineWidth = 1.5;
+    ax.FontSize = 15;
+    xlabel('Achieved Distortion (normalized)','FontSize',15);
+    ylabel('Achieved Info (normalized)','FontSize',15);
+    title(sprintf('%s — %s — %d steps', imgType, dichromatType, nSteps),'FontSize',20);
 
-    % Titles and stuff
     if ranInfo && ranDist
         subtitle('Achieved Info vs Distortion for both sweeps');
     elseif ranInfo
@@ -253,118 +245,4 @@ for ii = 1:numel(imageTypes)
 
 
 end
-nPlot = 10
-%%%%%%% Info-Distortion curve %%%%%%%%
-figure();
-
-if ranInfo
-    idx = 1:min(nPlot, numel(distNormAch_info));
-
-    plot(distNormAch_info(idx), infoNormAch_info(idx), 'o-', ...
-        'LineWidth', 1.5, ...
-        'DisplayName', 'Info sweep (minimize distortion)');
-    hold on;
-
-    % optional: only show matching target lines for plotted points
-    for k = idx
-        yline(targetInfoNorm_info(k), ':', 'HandleVisibility','off');
-    end
-end
-
-if ranDist
-    idx = 1:min(nPlot, numel(distNormAch_dist));
-
-    plot(distNormAch_dist(idx), infoNormAch_dist(idx), 's-', ...
-        'LineWidth', 1.5, ...
-        'DisplayName', 'Distortion sweep (maximize info)');
-    hold on;
-
-    % optional: only show matching target lines for plotted points
-    for k = idx
-        xline(targetDistNorm_dist(k), ':', 'HandleVisibility','off');
-    end
-end
-
-grid off; axis square;
-xlabel('Achieved Distortion (normalized)');
-ylabel('Achieved Info (normalized)');
-title(sprintf('%s — %s — %d steps', imgType, dichromatType, nSteps));
-
-if ranInfo && ranDist
-    subtitle('Achieved Info vs Distortion for both sweeps');
-elseif ranInfo
-    subtitle('Achieved Info vs Distortion (info sweep)');
-else
-    subtitle('Achieved Info vs Distortion (distortion sweep)');
-end
-
-legend('Location','southeast');
-
-
-% This make prettier info-distortion curves. Maybe use this for plotting.
-projectName = 'ColorCorrection';
-outputDir   = getpref(projectName,'outputDir');
-saveBase    = fullfile(outputDir,'testImagesTransformed');
-
-metricFolder = buildMetricFolderName(theDaltonizer.infoFcn, theDaltonizer.infoParams, theDaltonizer.distortionFcn);
-
-if ranInfo
-    sweepFileInfo = fullfile(saveBase, pathName, metricFolder, sprintf('info_%dsteps', nSteps), 'sweepOutputs.mat');
-    if exist(sweepFileInfo,'file')
-        infoDistortionPlots(sweepFileInfo, nSteps, false, 1);
-    end
-end
-
-if ranDist
-    sweepFileDist = fullfile(saveBase, pathName, metricFolder, sprintf('distortion_%dsteps', nSteps), 'sweepOutputs.mat');
-    if exist(sweepFileDist,'file')
-        infoDistortionPlots(sweepFileDist, nSteps, false, 1);
-    end
-end
-
-
-% 
-% %%%%%%% Info-Distortion curve %%%%%%%%
-% figure();
-% nPlot=15
-% if ranInfo
-%     idx = 1:min(nPlot, numel(distNormAch_info));
-%     % 
-%     % plot(distNormAch_info(idx), infoNormAch_info(idx), 'o-', ...
-%     %     'LineWidth', 1, MarkerFaceColor,'white','MarkerSize',10, 'MarkerEdgeColor'...
-%     %     'DisplayName', 'Info sweep (minimize distortion)');
-%     hold on;
-% 
-%     % optional: only show matching target lines for plotted points
-%     % for k = idx
-%     %     yline(targetInfoNorm_info(k), ':', 'HandleVisibility','off');
-%     % end
-% end
-% 
-% if ranDist
-%     idx = 1:min(nPlot, numel(distNormAch_dist));
-% 
-%     plot(distNormAch_dist(idx), infoNormAch_dist(idx), 'ko-', ...
-%         'LineWidth', 2, 'MarkerFaceColor','white','MarkerSize',10, 'MarkerEdgeColor','k')
-%     hold on;
-% 
-%     % optional: only show matching target lines for plotted points
-%     % for k = idx
-%     %     xline(targetDistNorm_dist(k), ':', 'HandleVisibility','off');
-%     % end
-% end
-% 
-% grid off; axis square;
-% xlabel('Achieved Distortion (normalized)');
-% ylabel('Achieved Info (normalized)');
-% title(sprintf('%s — %s — %d steps', imgType, dichromatType, nSteps));
-% 
-% if ranInfo && ranDist
-%     subtitle('Achieved Info vs Distortion for both sweeps');
-% elseif ranInfo
-%     subtitle('Achieved Info vs Distortion (info sweep)');
-% else
-%     subtitle('Achieved Info vs Distortion (distortion sweep)');
-% end
-% 
-% legend('Location','southeast');
+-
