@@ -2,7 +2,7 @@ function startPts = findStartPoints(modes, sweepAxis, nSteps, startStep, xVec, t
 % function startPts = findStartPoints(modes, sweepAxis, nSteps, startStep, xVec, transformRGBmatrixSweep, saveBase, pathName, metricFolder, LMSCalFormat, imgParams, dichromatType, infoNormalizer, distortionNormalizer, Disp, obj)
 % 
 % Description:
-%   This helper builds a set of initialization transforms (T_init)
+%   This builds a set of initialization transforms (T_init)
 %   that computeSweep can use when optimizing each sweep step. The goal is
 %   to (1) resume smoothly from previous results and/or (2) get better
 %   starting points for difficult constrained problems (especially the
@@ -248,8 +248,7 @@ if wantFindDesiredInfo && strcmpi(sweepAxis,'info')
         loadedOK = false;
         if exist(stepFile, 'file')
             S = load(stepFile);
-            if isfield(S,'completed') && isequal(S.completed,true) && ...
-                    isfield(S,'T_feas_vec') && ~isempty(S.T_feas_vec)
+            if isfield(S,'completed') && isequal(S.completed,true) && isfield(S,'T_feas_vec') && ~isempty(S.T_feas_vec)
                 T_feas_vec = S.T_feas_vec;
                 loadedOK = true;
                 fprintf('[findDesiredInfo] LOADED step %2d from cache: %s\n', i, stepFile);
@@ -268,16 +267,8 @@ if wantFindDesiredInfo && strcmpi(sweepAxis,'info')
         end
 
         % Diagnostics
-        [~, ~, infoNorm, ~, ~] = lossFunction( ...
-            'lambda', 0.0, T_feas_vec, ...
-            LMSCalFormat, imgParams, dichromatType, ...
-            obj.infoFcn, obj.distortionFcn, ...
-            infoNormalizer, distortionNormalizer, ...
-            Disp, obj.infoParams);
-
-
-        fprintf('[findDesiredInfo] step %2d: target=%.6g achieved=%.6g delta=%.3g\n', ...
-            i, targetInfo, infoNorm, abs(infoNorm - targetInfo));
+        [~, ~, infoNorm, ~, ~] = lossFunction('lambda', 0.0, T_feas_vec,LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
+        fprintf('[findDesiredInfo] step %2d: target=%.6g achieved=%.6g delta=%.3g\n', i, targetInfo, infoNorm, abs(infoNorm - targetInfo));
 
         T_findDesiredInfo{i} = reshape(T_feas_vec, 3, 3);
         T_seed = T_findDesiredInfo{i};
@@ -291,8 +282,10 @@ end
 end
 
 function f = localDistObjective(t_vec, targetDist, LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp)
-
 % Squared error between achieved and target distortion
+% Note: it does not matter if lambda is 0 or 1 or anything. Each call to
+% lambda will still return the normalized info and distortion scores. That
+% is all we care about obtaining here.
 
 [~, ~, ~, ~, distNorm] = lossFunction('lambda', 0.0, t_vec, LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
 
@@ -302,8 +295,10 @@ end
 
 
 function f = localInfoObjective(t_vec, targetInfo, LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp)
-
 % Squared error between achieved and target info
+% Note: it does not matter if lambda is 0 or 1 or anything. Each call to
+% lambda will still return the normalized info and distortion scores. That
+% is all we care about obtaining here.
 
 [~, ~, infoNorm, ~, ~] = lossFunction('lambda', 0.0, t_vec, LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, infoNormalizer, distortionNormalizer, Disp, obj.infoParams);
 

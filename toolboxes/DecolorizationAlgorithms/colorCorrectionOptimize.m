@@ -143,8 +143,8 @@ switch lower(target)
 
     case 'info'
         % Minimize distortion subject to info constraint (=targetInfo)
-        epsInfo = max(absTolFloor, pctTol * targetInfo);   % relative
-
+        % epsInfo = max(absTolFloor, pctTol * targetInfo);   % relative
+        epsInfo = max(absTolFloor, pctTol * abs(targetInfo));
 
         % Minimize distortion only (lambda=0)
         fun = @(t_vec) lossFunction('lambda', 0.0, t_vec, ...

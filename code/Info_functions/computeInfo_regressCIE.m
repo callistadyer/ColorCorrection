@@ -70,6 +70,11 @@ else
     residual = y - y_hat;             % Difference between actual and predicted (unexplained stuff)
 end
 
+beta_L = X \ L_old(:);
+beta_M = X \ M_old(:);
+beta_S = X \ S_old(:);
+
+beta2 = [beta_L, beta_M, beta_S];
 
 % Build reconstructed full LMS contrast (3×N)
 LMSContrast_pred = LMSContrastCalFormat_new;   % start from available (transformed) contrasts
@@ -94,7 +99,8 @@ LMSCalFormat_pred = (LMSContrast_pred.*Disp.grayLMS) + Disp.grayLMS;
 [distortion, ~] = computeDistortion_DE2000(LMSCalFormat_old, LMSCalFormat_pred, imgParams, 1, Disp, paramsStruct);
 info = -distortion;
 
-infoNormalized = info/normalizingValue;
+% infoNormalized = info/normalizingValue;
+infoNormalized = 1 - info/normalizingValue;
 
 end
 

@@ -41,27 +41,24 @@ if ~exist('sweepAxis','var') || isempty(sweepAxis)
     sweepAxis = 'info';
 end
 
-%%%%%%%%%%%%%%%%%%%%%%% Load it %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-projectName = 'ColorCorrection';
-outputDir   = getpref(projectName, 'outputDir');
-saveBase    = fullfile(outputDir, 'testImagesTransformed');
-
-metricFolder = buildMetricFolderName(obj.infoFcn, obj.infoParams, obj.distortionFcn);
-runFolder    = sprintf('%s_%dsteps', lower(char(sweepAxis)), nSteps);
-
-saveSubdir = fullfile(saveBase, pathName, metricFolder, runFolder);
-saveFile   = fullfile(saveSubdir, 'sweepOutputs.mat');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% Load it %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+projectName   = 'ColorCorrection';
+outputDir     = getpref(projectName, 'outputDir');
+saveBase      = fullfile(outputDir, 'testImagesTransformed');
+metricFolder  = buildMetricFolderName(obj.infoFcn, obj.infoParams, obj.distortionFcn);
+runFolder     = sprintf('%s_%dsteps', lower(char(sweepAxis)), nSteps);
+saveSubdir    = fullfile(saveBase, pathName, metricFolder, runFolder);
+saveFile      = fullfile(saveSubdir, 'sweepOutputs.mat');
 % Best folder (final chosen per-step winners)
-bestSubdir = fullfile(saveSubdir, 'best');
+bestSubdir    = fullfile(saveSubdir, 'best');
 if ~exist(bestSubdir, 'dir'); mkdir(bestSubdir); end
-bestSaveFile = fullfile(bestSubdir, 'sweepOutputs_best.mat');   % separate from main
-
-
+bestSaveFile  = fullfile(bestSubdir, 'sweepOutputs_best.mat');   % separate from main
 if ~exist(saveSubdir, 'dir'); mkdir(saveSubdir); end
-
-forwardDir  = fullfile(saveSubdir, 'forward');
-backwardDir = fullfile(saveSubdir, 'backward');
-bestDir     = fullfile(saveSubdir, 'best');
+forwardDir    = fullfile(saveSubdir, 'forward');
+backwardDir   = fullfile(saveSubdir, 'backward');
+bestDir       = fullfile(saveSubdir, 'best');
 
 if ~exist(forwardDir,'dir');  mkdir(forwardDir);  end
 if ~exist(backwardDir,'dir'); mkdir(backwardDir); end
@@ -96,7 +93,6 @@ Disp = obj.Disp;
 LMSContrastCalFormat = (LMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
 
 % Get the dichromat renderings of the original, which is used for the normalizer
-
 %%%% MAYBE JUST TAKE THE DEUTERANOPE VERSION TO COMPARE WITH THE ORIGINAL
 [calFormatLMS_prot, ~, ~] = DichromRenderLinear(LMSCalFormat, 'Protanopia', Disp);
 [calFormatLMS_deut, ~, ~] = DichromRenderLinear(LMSCalFormat, 'Deuteranopia', Disp);
@@ -176,6 +172,7 @@ end
 
 
 % Sweep through target vals
+% sweepAxis = 'lambda'
 switch lower(sweepAxis)
     case 'info'
         xVec = targetInfoNormalized;
@@ -191,18 +188,14 @@ startPts = findStartPoints(modes, sweepAxis, nSteps, startStep, xVec, transformR
 
 T_I    = startPts.T_I;
 T_prev = startPts.T_prev0;
-
 T_infoSeeds       = startPts.T_infoSeeds;
 T_findDesiredDist = startPts.T_findDesiredDist;
 T_findDesiredInfo = startPts.T_findDesiredInfo;
 
-violationStep = false(1, nSteps);
-
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % FORWARD PASS (startStep -> nSteps)
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%`
-forwardBest = repmat(struct('name','','T',[],'LMS',[],'rgbLin',[], ...
-    'infoNorm',NaN,'distNorm',NaN,'loss',Inf,'nonLinSatisfied',false,'violation',Inf), 1, nSteps);
+forwardBest = repmat(struct('name','','T',[],'LMS',[],'rgbLin',[], 'infoNorm',NaN,'distNorm',NaN,'loss',Inf,'nonLinSatisfied',false,'violation',Inf), 1, nSteps);
 
 T_prev_fwd = T_prev;   % your existing startPts.T_prev0
 
@@ -213,16 +206,12 @@ for i = startStep:nSteps
     % Skip optimizing step 1 (we force identity at commit anyway)
     if i == 1
         % Don't worry, the info and distortion will be computed before save
-        forwardBest(i) = struct('name','ForcedIdentity','T',eye(3), ...
-            'LMS',[],'rgbLin',[],'infoNorm',NaN,'distNorm',NaN,'loss',NaN, ...
-            'nonLinSatisfied',true,'violation',0);
+        forwardBest(i) = struct('name','ForcedIdentity','T',eye(3), 'LMS',[],'rgbLin',[],'infoNorm',NaN,'distNorm',NaN,'loss',NaN, 'nonLinSatisfied',true,'violation',0);
         T_prev_fwd = eye(3);
         continue;
     end
 
-    [bestF, ~] = chooseStartPoints(i, sweepAxis, thisX, T_I, T_prev_fwd, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
-        LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp,...
-        saveSubdir, 'forward');
+    [bestF, ~] = chooseStartPoints(i, sweepAxis, thisX, T_I, T_prev_fwd, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp, saveSubdir, 'forward');
 
     forwardBest(i) = bestF;
 
@@ -236,8 +225,7 @@ end
 % BACKWARD PASS (nSteps-1 -> startStep)
 % Initialize T_prev using the *forward* end-point
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-backwardBest = repmat(struct('name','','T',[],'LMS',[],'rgbLin',[], ...
-    'infoNorm',NaN,'distNorm',NaN,'loss',Inf,'nonLinSatisfied',false,'violation',Inf), 1, nSteps);
+backwardBest = repmat(struct('name','','T',[],'LMS',[],'rgbLin',[], 'infoNorm',NaN,'distNorm',NaN,'loss',Inf,'nonLinSatisfied',false,'violation',Inf), 1, nSteps);
 
 % When going backwards, don't start from identity.
 % Start at the second-to-last point, using T_prev from the previous solution (the forward final point).
@@ -270,7 +258,7 @@ for i = (nSteps-1):-1:startStep
 end
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% FINAL: choose per-step winner between forward vs backward
+% Choose per-step winner between forward vs backward
 % Rule: constraints first, then lower loss.
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for i = startStep:nSteps
@@ -374,16 +362,9 @@ for i = startStep:nSteps
     infoNormalizedAchievedSweep(i)       = best.infoNorm;
     distortionNormalizedAchievedSweep(i) = best.distNorm;
 
-    fprintf('step %2d | winner=%-12s | from=%-8s | nonLinOK=%d | loss=%.4g | viol=%.4g\n', ...
-        i, best.name, best.pass, best.nonLinSatisfied, best.loss, best.violation);
+    fprintf('step %2d | winner=%-12s | from=%-8s | nonLinOK=%d | loss=%.4g | viol=%.4g\n', i, best.name, best.pass, best.nonLinSatisfied, best.loss, best.violation);
 
-    % debugPlot_InfoVsDistSingleSweep(i, sweepAxis, ...
-    %     distortionNormalizedAchievedSweep, infoNormalizedAchievedSweep, ...
-    %     targetDistortionNormalized, targetInfoNormalized, ...
-    %     violationStep, thisX, pathName);
-
-    [LMSDaltonizedRenderedCalFormatSweep{i}, rgbLinDaltonizedRenderedCalFormatSweep{i}, ~] = ...
-        DichromRenderLinear(LMSDaltonizedCalFormatSweep{i}, dichromatType, Disp);
+    [LMSDaltonizedRenderedCalFormatSweep{i}, rgbLinDaltonizedRenderedCalFormatSweep{i}, ~] = DichromRenderLinear(LMSDaltonizedCalFormatSweep{i}, dichromatType, Disp);
 
     % DOES THIS WORK?
     % [LMSDaltonizedRenderedCalFormat{i}, rgbLinDaltonizedRenderedCalFormat{i}, ~] = obj.renderFcn(LMSDaltonizedCalFormat{i}, dichromatType, Disp);
@@ -434,159 +415,40 @@ saveTransformedOutputs(outputs, pathName, nSteps, obj.infoFcn, obj.infoParams, o
 
 end
 
-
-
-% Choose between two candidate solutions (nested) =====
+% Choose between two candidate solutions (nested)
 function best = pickBetterSolution(bestF, bestB)
-% Add pass labels for logging
-bestF.pass = 'forward';
-bestB.pass = 'backward';
-
-% 1) If only one satisfies nonlinear constraints -> take it
-if bestF.nonLinSatisfied && ~bestB.nonLinSatisfied
-    best = bestF; return;
-elseif bestB.nonLinSatisfied && ~bestF.nonLinSatisfied
-    best = bestB; return;
-end
-
-% 2) If both satisfy constraints -> choose lower loss
-if bestF.nonLinSatisfied && bestB.nonLinSatisfied
-    if bestF.loss <= bestB.loss
+    % Add pass labels for logging
+    bestF.pass = 'forward';
+    bestB.pass = 'backward';
+    
+    % 1) If only one satisfies nonlinear constraints -> take it
+    if bestF.nonLinSatisfied && ~bestB.nonLinSatisfied
+        best = bestF; return;
+    elseif bestB.nonLinSatisfied && ~bestF.nonLinSatisfied
+        best = bestB; return;
+    end
+    
+    % 2) If both satisfy constraints -> choose lower loss
+    if bestF.nonLinSatisfied && bestB.nonLinSatisfied
+        if bestF.loss <= bestB.loss
+            best = bestF;
+        else
+            best = bestB;
+        end
+        return;
+    end
+    
+    % 3) If neither satisfies constraints -> smaller violation wins, then lower loss
+    if bestF.violation < bestB.violation
         best = bestF;
-    else
+    elseif bestB.violation < bestF.violation
         best = bestB;
-    end
-    return;
-end
-
-% 3) If neither satisfies constraints -> smaller violation wins, then lower loss
-if bestF.violation < bestB.violation
-    best = bestF;
-elseif bestB.violation < bestF.violation
-    best = bestB;
-else
-    % tie on violation: choose lower loss
-    if bestF.loss <= bestB.loss
-        best = bestF;
     else
-        best = bestB;
+        % tie on violation: choose lower loss
+        if bestF.loss <= bestB.loss
+            best = bestF;
+        else
+            best = bestB;
+        end
     end
 end
-end
-
-
-% Helper function to draw the info–distortion curve after each optimization step
-function debugPlot_InfoVsDistSingleSweep(i, sweepAxis, ...
-    achDist, achInfo, ...
-    targetDistortionNormalized, targetInfoNormalized, ...
-    violationStep, ...
-    thisX, runID)
-
-% Declare persistent maps so each (runID, sweepAxis) pair keeps its own figure
-persistent hFigMap hAxMap
-
-% Initialize the persistent maps on first call
-if isempty(hFigMap) 
-    hFigMap = containers.Map('KeyType','char','ValueType','any');
-    hAxMap  = containers.Map('KeyType','char','ValueType','any');
-end
-
-% Build a unique key identifying this run and sweep type
-key = sprintf('%s__%s', char(string(runID)), lower(char(sweepAxis)));
-
-% If no figure exists for this key (or it was closed), create a new one
-if ~isKey(hFigMap, key) || ~isvalid(hFigMap(key))
-    hFig = figure('Name', sprintf('Info vs Distortion (debug) | %s | sweep=%s', char(string(runID)), lower(char(sweepAxis))), 'NumberTitle','off');
-
-    % Create axes inside the new figure
-    hAx  = axes('Parent', hFig);
-
-    % Store the handles so future calls reuse them
-    hFigMap(key) = hFig;
-    hAxMap(key)  = hAx;
-else
-    % Reuse the existing axes for this run/sweep
-    hAx = hAxMap(key);
-end
-
-infoColor = [0.55 0.20 0.80];
-distColor = [0.10 0.70 0.85];
-lineStyle = ':';
-lineWidth = 0.8;
-
-switch sweepAxis
-    case 'info'
-        sweepColor = infoColor;
-    case 'distortion'
-        sweepColor = distColor;
-    otherwise
-        sweepColor = [0.35 0.35 0.35];
-end
-
-cla(hAx);
-hold(hAx,'on');
-grid(hAx,'off');
-axis(hAx,'square');
-
-xlabel(hAx,'Distortion (normalized)');
-ylabel(hAx,'Info (normalized)');
-
-% Draw horizontal dotted lines for all target info values
-if exist('yline','file') && ~isempty(targetInfoNormalized)
-    for kk = 1:numel(targetInfoNormalized)
-        h = yline(hAx, targetInfoNormalized(kk), lineStyle, 'Color', infoColor, 'LineWidth', lineWidth);
-        h.HandleVisibility = 'off';
-    end
-end
-
-% Draw vertical dotted lines for all target distortion values
-if exist('xline','file') && ~isempty(targetDistortionNormalized)
-    for kk = 1:numel(targetDistortionNormalized)
-        h = xline(hAx, targetDistortionNormalized(kk), lineStyle, 'Color', distColor, 'LineWidth', lineWidth);
-        h.HandleVisibility = 'off';
-    end
-end
-
-% Find steps where both achieved distortion and info are defined
-valid = ~isnan(achDist) & ~isnan(achInfo);
-kAll = find(valid);
-
-% Indices of steps up through and including the current step
-kSoFar = kAll(kAll <= i);
-
-% Plot the achieved info–distortion curve up to the current step
-if ~isempty(kSoFar)
-    plot(hAx, achDist(kSoFar), achInfo(kSoFar), '-', 'Color', sweepColor, 'LineWidth', 1.5);
-end
-
-% Create a dummy plot handle for achieved points (for legend)
-hAch = plot(hAx, nan, nan, 'o', 'Color', sweepColor, 'LineWidth', 1.5, 'MarkerSize', 10, 'MarkerFaceColor', 'none');
-
-% Plot achieved points as open circles
-if ~isempty(kSoFar)
-    plot(hAx, achDist(kSoFar), achInfo(kSoFar), 'o', 'Color', sweepColor, 'LineWidth', 1.5, 'MarkerSize', 12, 'MarkerFaceColor', 'none', 'HandleVisibility','off');
-end
-
-% Title
-switch sweepAxis
-    case 'info'
-        titleStr = sprintf([ ...
-            'Info vs Distortion (single sweep) | info | up to step %d\n' ...
-            'TargetInfo=%.6g | AchievedInfo=%.6g | delta=%.3g'], ...
-            i, thisX, achInfo(i), abs(achInfo(i) - thisX));
-
-    case 'distortion'
-        titleStr = sprintf([ ...
-            'Info vs Distortion (single sweep) | distortion | up to step %d\n' ...
-            'TargetDist=%.6g | AchievedDist=%.6g | delta=%.3g'], ...
-            i, thisX, achDist(i), abs(achDist(i) - thisX));
-end
-title(hAx, titleStr);
-
-% Legend
-% legend(hAx, [hAch hViol], {sprintf('Achieved (%s sweep)', sweepAxis), sprintf('Violation (%s sweep)', sweepAxis)}, 'Location','best');
-
-drawnow;
-
-end
-

@@ -1,5 +1,26 @@
+%% COLOR CORRECTION: INFORMATION–DISTORTION OPTIMIZATION
+%
+% PURPOSE
+%   This script evaluates image transformations designed to improve the
+%   color information available to dichromatic observers while minimizing
+%   changes to the original image.
+%
+%
+% OPTIMIZATION
+%   The script supports two types of constrained optimization:
+%
+%   1. Information sweep ('info'):
+%      Minimize distortion subject to achieving a target information score.
+%
+%   2. Distortion sweep ('distortion'):
+%      Maximize information subject to a target distortion level.
+%
+%   Target values are sampled between the solutions obtained by
+%   minimizing distortion (lambda = 0) and maximizing information
+%   (lambda = 1).
+
 % Image types
-imageTypes = {'ishi45.png'};
+imageTypes = {'Gaugin.png'};
 % imageTypes = {'flower1.png', ...
 %     'fruit.png', ...
 %     'Gaugin.png', ...
@@ -12,25 +33,23 @@ setType       = 1;
 dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
-m = 128;
-n = 128;
+m = 30;
+n = 30;
 
 % How many steps do you want in a transformation sweep?
 nSteps = 20;
 
 sweepAxis = 'distortion';
-%   'info'        = run info sweep only
+%   'info'        = run info sweep only. this chooses set of info scores and minimizes distortion. 
 %   'distortion'  = run distortion sweep only
 %   'both'        = run both sweeps 
-
-% Do you want to clear the image transformation results if it already
-% exists (0)? Or do you want to load the image result if it exists (1)?
-clearFlag     = 0;
 
 
 %% Define metric functions
 
-%%%%%%%%% INFO FUNCTION %%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%% INFO FUNCTION %%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 infoFcn = @computeInfo_regressCIE;
 % infoFcn = @computeInfo_regressSquared;
 % infoFcn = @computeInfo_LMdifference;
@@ -42,12 +61,16 @@ infoParams = struct( ...
     'predictingFromWhat', 'L and S');           % options: 'L and S' or 'deltaL and deltaS' or 'deltaL+M and delta S'
 % infoParams = struct();
 
-%%%%%%% DISTORTION FUNCTION %%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%% DISTORTION FUNCTION %%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % distortionFcn = @computeDistortion_squared;
 distortionFcn = @computeDistortion_DE2000;
 distortionParams = struct();
 
-%%%%%%%%% RENDER FUNCTION %%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%% RENDER FUNCTION %%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 renderFcn = @DichromRenderLinear;
 renderParams = struct();
 
@@ -61,14 +84,10 @@ for ii = 1:numel(imageTypes)
     % Generate input image
     [LMSCalFormat, rgbLinCalFormat, LMSCalFormatRendered, rgbLinCalFormatRendered, ...
         Disp, imgParams, pathName] = colorCorrectionGenerateImages( ...
-        imgType, setType, m, n, dichromatType, clearFlag);
+        imgType, setType, m, n, dichromatType, 0);
 
     % Set up daltonizer object
-    theDaltonizer = daltonize( ...
-        infoFcn, infoParams, ...
-        distortionFcn, distortionParams, ...
-        renderFcn, renderParams, ...
-        Disp);
+    theDaltonizer = daltonize(infoFcn, infoParams,distortionFcn, distortionParams,renderFcn, renderParams, Disp);
 
     %% Info and distortion sweeps
     %   (1) Run an info sweep (minimize distortion at each target info)
@@ -89,6 +108,7 @@ for ii = 1:numel(imageTypes)
             LMSRenderedSweep_info, rgbLinRenderedSweep_info, ...
             TSweep_info, targetInfoNorm_info, targetDistNorm_info, ...
             infoNormAch_info, distNormAch_info] = computeSweep(theDaltonizer,LMSCalFormat, imgParams, dichromatType,nSteps, pathName, sweepAxis_info);
+   
 
         % Target vs achieved info
         fprintf('\nInfo sweep (n=%d): target vs achieved info\n', numel(targetInfoNorm_info));
@@ -99,6 +119,10 @@ for ii = 1:numel(imageTypes)
         rgbDiImgFormat_optAllInfo  = zeros(m, n, 3, nSteps);
 
         for i = 1:nSteps
+            rgbLinSweep_info{i}(rgbLinSweep_info{i}<0) = 0;
+            rgbLinSweep_info{i}(rgbLinSweep_info{i}>1) = 1;
+
+
             % Trichromat (optimized) image for step i
             rgbTriCalFormat_opt = rgbLin2RGB(rgbLinSweep_info{i}, Disp);
             rgbTriImgFormat_opt = CalFormatToImage(rgbTriCalFormat_opt,m,n);
@@ -148,6 +172,8 @@ for ii = 1:numel(imageTypes)
 
         for i = 1:nSteps
             % Trichromat (optimized) image for step i
+            % rgbLinSweep_dist{i}(rgbLinSweep_dist{i} < 0) = 0;
+            % rgbLinSweep_dist{i}(rgbLinSweep_dist{i} > 1) = 1;
             rgbTriCalFormat_opt = rgbLin2RGB(rgbLinSweep_dist{i}, Disp);
             rgbTriImgFormat_opt = CalFormatToImage(rgbTriCalFormat_opt,m,n);
             rgbTriImgFormat_optAllDist(:,:,:,i) = rgbTriImgFormat_opt;
@@ -227,6 +253,53 @@ for ii = 1:numel(imageTypes)
 
 
 end
+nPlot = 10
+%%%%%%% Info-Distortion curve %%%%%%%%
+figure();
+
+if ranInfo
+    idx = 1:min(nPlot, numel(distNormAch_info));
+
+    plot(distNormAch_info(idx), infoNormAch_info(idx), 'o-', ...
+        'LineWidth', 1.5, ...
+        'DisplayName', 'Info sweep (minimize distortion)');
+    hold on;
+
+    % optional: only show matching target lines for plotted points
+    for k = idx
+        yline(targetInfoNorm_info(k), ':', 'HandleVisibility','off');
+    end
+end
+
+if ranDist
+    idx = 1:min(nPlot, numel(distNormAch_dist));
+
+    plot(distNormAch_dist(idx), infoNormAch_dist(idx), 's-', ...
+        'LineWidth', 1.5, ...
+        'DisplayName', 'Distortion sweep (maximize info)');
+    hold on;
+
+    % optional: only show matching target lines for plotted points
+    for k = idx
+        xline(targetDistNorm_dist(k), ':', 'HandleVisibility','off');
+    end
+end
+
+grid off; axis square;
+xlabel('Achieved Distortion (normalized)');
+ylabel('Achieved Info (normalized)');
+title(sprintf('%s — %s — %d steps', imgType, dichromatType, nSteps));
+
+if ranInfo && ranDist
+    subtitle('Achieved Info vs Distortion for both sweeps');
+elseif ranInfo
+    subtitle('Achieved Info vs Distortion (info sweep)');
+else
+    subtitle('Achieved Info vs Distortion (distortion sweep)');
+end
+
+legend('Location','southeast');
+
 
 % This make prettier info-distortion curves. Maybe use this for plotting.
 projectName = 'ColorCorrection';
@@ -248,3 +321,50 @@ if ranDist
         infoDistortionPlots(sweepFileDist, nSteps, false, 1);
     end
 end
+
+
+% 
+% %%%%%%% Info-Distortion curve %%%%%%%%
+% figure();
+% nPlot=15
+% if ranInfo
+%     idx = 1:min(nPlot, numel(distNormAch_info));
+%     % 
+%     % plot(distNormAch_info(idx), infoNormAch_info(idx), 'o-', ...
+%     %     'LineWidth', 1, MarkerFaceColor,'white','MarkerSize',10, 'MarkerEdgeColor'...
+%     %     'DisplayName', 'Info sweep (minimize distortion)');
+%     hold on;
+% 
+%     % optional: only show matching target lines for plotted points
+%     % for k = idx
+%     %     yline(targetInfoNorm_info(k), ':', 'HandleVisibility','off');
+%     % end
+% end
+% 
+% if ranDist
+%     idx = 1:min(nPlot, numel(distNormAch_dist));
+% 
+%     plot(distNormAch_dist(idx), infoNormAch_dist(idx), 'ko-', ...
+%         'LineWidth', 2, 'MarkerFaceColor','white','MarkerSize',10, 'MarkerEdgeColor','k')
+%     hold on;
+% 
+%     % optional: only show matching target lines for plotted points
+%     % for k = idx
+%     %     xline(targetDistNorm_dist(k), ':', 'HandleVisibility','off');
+%     % end
+% end
+% 
+% grid off; axis square;
+% xlabel('Achieved Distortion (normalized)');
+% ylabel('Achieved Info (normalized)');
+% title(sprintf('%s — %s — %d steps', imgType, dichromatType, nSteps));
+% 
+% if ranInfo && ranDist
+%     subtitle('Achieved Info vs Distortion for both sweeps');
+% elseif ranInfo
+%     subtitle('Achieved Info vs Distortion (info sweep)');
+% else
+%     subtitle('Achieved Info vs Distortion (distortion sweep)');
+% end
+% 
+% legend('Location','southeast');
