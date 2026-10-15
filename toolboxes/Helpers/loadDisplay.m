@@ -48,6 +48,14 @@ T_cones = SplineCmf(S_cones_ss2,T_cones_ss2,wls);
 % Conversions from rgb to cones 
 M_rgb2cones = T_cones*P_monitor;
 
+% Conversions from rgb to xyz
+load T_xyz1931.mat
+T_xyz = SplineCmf(S_xyz1931,T_xyz1931,wls);
+M_rgb2xyz = T_xyz * P_monitor;
+M_lms2xyz = M_rgb2xyz * inv(M_rgb2cones);
+
+labWhiteXYZ = M_rgb2xyz * [1 1 1]';
+
 % Put parameters into Disp structure
 Disp.wls       = wls;
 Disp.d         = d;
@@ -56,6 +64,10 @@ Disp.T_cones   = T_cones;
 
 Disp.M_rgb2cones = Disp.T_cones*Disp.P_monitor;
 Disp.M_cones2rgb = inv(M_rgb2cones);
+Disp.M_rgb2xyz   = M_rgb2xyz;
+Disp.M_lms2xyz   = M_lms2xyz;
+
+Disp.labWhiteXYZ = labWhiteXYZ;
 Disp.grayRGB     = [0.5 0.5 0.5]';
 Disp.grayLMS     = M_rgb2cones*Disp.grayRGB;
 end
