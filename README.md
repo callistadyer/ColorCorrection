@@ -40,20 +40,51 @@ tbUseProject('ColorCorrection');
 
 This also deploys and runs the project's local hook (created from
 [configuration/ColorCorrectionLocalHookTemplate.m](configuration/ColorCorrectionLocalHookTemplate.m)),
-which sets the `ColorCorrection` MATLAB preference `outputDir` that the
-analysis scripts use to decide where output is written. Edit your local
-copy of the hook (in your ToolboxToolbox local hooks folder) to point the
-output wherever you like.
+which sets the MATLAB preferences described in the next section.
 
 ## Manual setup
 
 If you prefer not to use ToolboxToolbox, clone this repository and each of
 the dependencies in the table above, add them to your MATLAB path, and set
-the output directory preference by hand:
+the MATLAB preferences described in the next section by hand.
 
-```matlab
-setpref('ColorCorrection', 'outputDir', '/path/where/you/want/output');
-```
+## Local configuration: MATLAB preferences
+
+The code does not hard-code the locations of input and output data.
+Instead, it looks these up at run time from MATLAB preferences in the
+`ColorCorrection` preference group, and you need to point these at
+directories on your local machine before running the code.
+
+The preference currently used is:
+
+- `outputDir` — directory where the analysis scripts and tutorials write
+  their output. Point this anywhere convenient on your machine. Note that
+  this directory also contains data read by the code: the test images the
+  analyses operate on live in a `ColorCorrectionImages` subfolder of
+  `outputDir`, and intermediate results written by earlier stages of the
+  pipeline are read back by later ones.
+
+The test images are not included in this repository — we keep code and
+data separate. We plan to post them on an open science repository;
+until then, they are available from the authors upon request.
+
+How you set the preferences depends on your setup:
+
+- **ToolboxToolbox users.** The first run of
+  `tbUseProject('ColorCorrection')` copies the local hook template into
+  your ToolboxToolbox local hooks folder as `ColorCorrectionLocalHook.m`.
+  Edit that local copy (not the template in this repository) so that the
+  preferences point to your directories; the hook then sets them each time
+  the project is deployed.
+
+- **Everyone else.** Set the preferences directly, e.g.:
+
+  ```matlab
+  setpref('ColorCorrection', 'outputDir', '/path/where/you/want/output');
+  ```
+
+  MATLAB preferences persist across sessions, so this only needs to be
+  done once per machine.
 
 ## Repository organization
 
