@@ -49,8 +49,8 @@ plateCenter = [imgSize/2, imgSize/2];
 numDots = [80, 100, 550, 800, 400]; % Number of dots for each size
 radii   = [12, 10,  6,   5,   3];   % Radii for each dot 
 buffer = 1.2;                       % Some space between dots
-fontSize = 310;                     % Font size of embedded number
-
+% fontSize = 310;                     % Font size of embedded number
+fontSize = round(imgSize * 0.75);
 % Plate parameters
 % numDots = [10, 10, 150, 250, 450]*.8;
 % radii   = [12, 10,  6,   5,   3]*.2;
@@ -83,10 +83,17 @@ close(fig);
 % imshow(numberMask);
 % title(['Binary Mask for "', textStr, '"']);
 
-f = figure('Visible', 'off', 'Units', 'pixels', 'Position', [100, 100, imgSize, imgSize]);
+% f = figure('Visible', 'off', 'Units', 'pixels', 'Position', [100, 100, imgSize, imgSize]);
 % f = figure('Visible', 'off', 'Units', 'pixels', ...
 %     'Position', [100, 100, imgSize, imgSize], ...
 %     'Color', [0.5 0.5 0.5]);  % Set whole figure background to gray
+f  = figure('Visible','off','Units','pixels','Position',[100 100 imgSize imgSize],'Color','w');
+ax = axes('Parent',f,'Units','normalized','Position',[0 0 1 1]);
+axis(ax,'off'); axis(ax,'equal');
+set(ax,'LooseInset',[0 0 0 0]);        % remove margins
+xlim(ax,[0.5 imgSize+0.5]);            % padding to avoid clipping
+ylim(ax,[0.5 imgSize+0.5]);
+hold(ax,'on');
 
 
 
@@ -190,7 +197,10 @@ for i = 1:length(radii)
     positions = placeCircles(positions, numDots(i), radii(i));
 end
 
-frame = getframe(ax);
+% frame = getframe(ax);
+frame  = getframe(f);
+imgRGB = imresize(frame.cdata, [outputSize outputSize]);
+
 % cdata has the rgb information
 % resize the image so it's not sooo slow in the correction algorithm
 imgRGB = imresize(frame.cdata, [outputSize outputSize]);
