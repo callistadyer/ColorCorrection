@@ -75,7 +75,6 @@ function [loss, info, infoNormalized, distortion, distortionNormalized, LMSCalFo
 
     % Loss functions
     fminconFactor = 1e8;
-
     % if strcmp(lower(useLambdaOrTarget), 'info')
     %     % Squared difference from the desired info value
     %     info_diff = infoNormalized - lambdaOrTarget;

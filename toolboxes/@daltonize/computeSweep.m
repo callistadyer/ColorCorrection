@@ -98,6 +98,8 @@ LMSContrastCalFormat = (LMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
 [calFormatLMS_deut, ~, ~] = DichromRenderLinear(LMSCalFormat, 'Deuteranopia', Disp);
 [calFormatLMS_trit, ~, ~] = DichromRenderLinear(LMSCalFormat, 'Tritanopia', Disp);
 LMSCalFormat_new = [calFormatLMS_prot(1,:); calFormatLMS_deut(2,:); calFormatLMS_trit(3,:)];
+% LMSCalFormat_new = [LMSCalFormat(1,:); calFormatLMS_deut(2,:); LMSCalFormat(3,:)];
+
 % LMSCalFormat_new = calFormatLMS_deut;
 LMSContrastCalFormat_new = (LMSCalFormat_new - Disp.grayLMS) ./ Disp.grayLMS;
 
@@ -105,6 +107,7 @@ LMSContrastCalFormat_new = (LMSCalFormat_new - Disp.grayLMS) ./ Disp.grayLMS;
 normalizerValueToGetRawValue = 1;
 % Info takes in the contrast image
 infoNormalizer       = obj.infoFcn(LMSContrastCalFormat, LMSContrastCalFormat_new, imgParams, dichromatType, normalizerValueToGetRawValue, Disp, obj.infoParams);
+infoNormalizer       = abs(infoNormalizer);
 % Distortion takes in the regular LMS image (not contrast)
 distortionNormalizer = obj.distortionFcn(LMSCalFormat, LMSCalFormat_new, imgParams, normalizerValueToGetRawValue, Disp, obj.distortionParams);
 
@@ -123,6 +126,15 @@ distortionNormalizer = obj.distortionFcn(LMSCalFormat, LMSCalFormat_new, imgPara
 % Get target info values interpolated between lambdas 0 and 1
 targetInfoNormalized       = linspace(infoNormalized_0, infoNormalized_1, nSteps);
 targetDistortionNormalized = linspace(distortionNormalized0, distortionNormalized1, nSteps);
+
+% Information range between the two endpoints
+infoRange = abs(infoNormalized_1 - infoNormalized_0);
+distRange = abs(distortionNormalized1 - distortionNormalized0);
+% Allow 1% deviation relative to the information range
+infoTolerance = 0.01 * infoRange;
+distTolerance = 0.01 * distRange;
+fprintf('Info range: %.6f\n', infoRange);
+fprintf('Info tolerance: %.6f\n', infoTolerance);
 
 % Preallocate outputs
 LMSDaltonizedCalFormatSweep              = cell(1, nSteps);
@@ -211,7 +223,7 @@ for i = startStep:nSteps
         continue;
     end
 
-    [bestF, ~] = chooseStartPoints(i, sweepAxis, thisX, T_I, T_prev_fwd, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp, saveSubdir, 'forward');
+    [bestF, ~] = chooseStartPoints(i, sweepAxis, thisX, T_I, T_prev_fwd, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp, saveSubdir, 'forward',infoTolerance,distTolerance);
 
     forwardBest(i) = bestF;
 
@@ -247,7 +259,7 @@ for i = (nSteps-1):-1:startStep
 
     [bestB, startPtSolns] = chooseStartPoints(i, sweepAxis, thisX, T_I, T_prev_bwd, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
         LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp,...
-        saveSubdir, 'backward');
+        saveSubdir, 'backward',infoTolerance,distTolerance);
 
     backwardBest(i) = bestB;
 

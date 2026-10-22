@@ -1,11 +1,10 @@
 function [best, startPtSolns, candNames, candTinit] = chooseStartPoints(i, sweepAxis, thisX, T_I, T_prev, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
-    LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp, saveSubdir, passName)
-% chooseStartPoints  Build a list of candidate start points and run the optimizer from each, then pick the best.
-%
+    LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp, saveSubdir, passName,infoTolerance,distTolerance)
 % Syntax:
 %   [best, startPtSolns] = chooseStartPoints(i, sweepAxis, thisX, ...
 %       T_I, T_prev, T_infoSeeds, T_findDesiredDist, T_findDesiredInfo, ...
-%       LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp, saveSubdir, passName)
+%       LMSCalFormat, imgParams, dichromatType, obj, infoNormalizer, distortionNormalizer, Disp, saveSubdir, passName, ...
+%       infoTolerance, distTolerance)
 %
 % Description:
 %   This takes all possible start-point sources (identity, previous step, info-sweep seed,
@@ -29,6 +28,12 @@ function [best, startPtSolns, candNames, candTinit] = chooseStartPoints(i, sweep
 %   infoNormalizer     - Scalar normalizer returned by obj.infoFcn(...)
 %   distortionNormalizer - Scalar normalizer returned by obj.distortionFcn(...)
 %   Disp               - Display struct
+%   saveSubdir         - Run folder; candidate solutions are cached under <saveSubdir>/<passName>/step_###/
+%   passName           - 'forward' or 'backward'
+%   infoTolerance      - Half-width of the info band around thisX (info sweep), set in computeSweep
+%   distTolerance      - Half-width of the distortion band around thisX (distortion sweep), set in computeSweep
+%                        The chosen one is used both by the optimizer's constraint and by the
+%                        violation check below, so there is one band definition.
 %
 % Outputs:
 %   best         - Struct for the chosen winner (fields: name, T, LMS, rgbLin, infoNorm, distNorm, loss, nonLinSatisfied, violation)
@@ -78,10 +83,6 @@ if ~exist(passDir, 'dir'); mkdir(passDir); end
 
 stepDir = fullfile(passDir, sprintf('step_%03d', i));
 if ~exist(stepDir, 'dir'); mkdir(stepDir); end
-
-%%%%%%%%%% Tolerances for constraints %%%%%%%%%%
-pctTol      = 0.05;
-absTolFloor = 5e-3;
 
 % Run each candidate start and collect results
 nCands = numel(candNames);
@@ -148,14 +149,26 @@ for k = 1:nCands
 
         forceIdentityThisStep = (i == 1);
 
+        % Band half-width for this sweep. Used for the optimizer's constraint
+        % AND the violation check below, so both agree on what "on target" means.
+        switch lower(sweepAxis)
+            case 'info'
+                bandTol = infoTolerance;
+
+            case 'distortion'
+                bandTol = distTolerance;
+
+            otherwise
+                bandTol = [];   % lambda sweep has no band
+        end
+
         % Run the optimizer from this start
         [LMS_k, rgbLin_k, T_k, ~, infoNorm_k, ~, distNorm_k, nonLinSatisfied_k] = colorCorrectionOptimize(sweepAxis, lamArg, tgtInfoArg, tgtDistArg, LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
             obj.infoParams, obj.distortionParams, ...
             infoNormalizer, distortionNormalizer, Disp, ...
             'T_init', T_init,...
             'skipFmincon', forceIdentityThisStep, ...
-            'pctTol', pctTol, ...     
-            'absTolFloor', absTolFloor);
+            'bandTol', bandTol);
 
         % Compute the loss that corresponds to this sweep objective
         switch lower(sweepAxis)
@@ -168,8 +181,8 @@ for k = 1:nCands
                 % Absolute distance from target value
                 rawDelta = abs(infoNorm_k - thisX);
 
-                % Allowed tolerance band around the target
-                epsBand = max(absTolFloor, pctTol * thisX);
+                % Allowed tolerance band around the target (same band the optimizer used)
+                epsBand = bandTol;
 
                 if rawDelta <= epsBand
                     % Within allowed tolerance = no violation
@@ -187,8 +200,8 @@ for k = 1:nCands
                 % Absolute distance from target value
                 rawDelta = abs(distNorm_k - thisX);
 
-                % Allowed tolerance band around the target
-                epsBand = max(absTolFloor, pctTol * thisX);
+                % Allowed tolerance band around the target (same band the optimizer used)
+                epsBand = bandTol;
 
                 if rawDelta <= epsBand
                     % Within allowed tolerance = no violation

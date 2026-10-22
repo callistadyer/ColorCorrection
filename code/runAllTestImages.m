@@ -20,11 +20,10 @@
 %   (lambda = 1).
 
 % Image types
-imageTypes = {'flower1.png'};
+imageTypes = {'Gaugin.png'};
 % imageTypes = {'flower1.png', ...
 %     'fruit.png', ...
-%     'Gaugin.png', ...
-%     'ishi45.png'};
+%     'Gaugin.png'};
 
 % Set type (choose 1 unless ishihara)
 setType       = 1;
@@ -33,11 +32,16 @@ setType       = 1;
 dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
-m = 30;
-n = 30;
+
+m = 67;
+n = 67;
+
+% THIS WAS FOR THE OLD NORMALIZING... WHERE IT WAS NO ABS() 
+% m = 69;
+% n = 69;
 
 % How many steps do you want in a transformation sweep?
-nSteps = 20;
+nSteps = 10;
 
 sweepAxis = 'info';
 %   'info'        = run info sweep only. this chooses set of info scores and minimizes distortion. 
@@ -56,10 +60,13 @@ infoFcn = @computeInfo_regressCIE;
 % infoFcn = @computeInfo_Wade;
 
 % infoParams only necessary when infoFcn is regress
+% infoParams = struct( ...
+%     'predictingWhat',     'L,M,S', ...          % options: 'M' or 'L-M' or 'L,M,S'
+%     'predictingFromWhat', 'L and S');           % options: 'L and S' or 'deltaL and deltaS' or 'deltaL+M and delta S'
 infoParams = struct( ...
-    'predictingWhat',     'L,M,S', ...          % options: 'M' or 'L-M' or 'L,M,S'
+    'predictingWhat',     'M', ...          % options: 'M' or 'L-M' or 'L,M,S'
     'predictingFromWhat', 'L and S');           % options: 'L and S' or 'deltaL and deltaS' or 'deltaL+M and delta S'
-% infoParams = struct();
+    % infoParams = struct();
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%% DISTORTION FUNCTION %%%%%%%%%%%%%%
@@ -85,6 +92,57 @@ for ii = 1:numel(imageTypes)
     [LMSCalFormat, rgbLinCalFormat, LMSCalFormatRendered, rgbLinCalFormatRendered, Disp, imgParams, pathName] = colorCorrectionGenerateImages(imgType, setType, m, n, dichromatType, 0);
     % Set up daltonizer object
     theDaltonizer = daltonize(infoFcn, infoParams,distortionFcn, distortionParams,renderFcn, renderParams, Disp);
+
+
+    %% Let's do some R squared tests on this image - how much do the L and S cones explain without transforming at all?
+    % Cone contrast of the original image (same as lossFunction)
+    % C = (LMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
+    % L = C(1,:)'; M = C(2,:)'; S = C(3,:)';
+    % 
+    % % Same regression as computeInfo_regressCIE: predict M from L and S, no intercept
+    % X     = [L S];
+    % w     = X \ M;
+    % Mhat  = X * w;
+    % resid = M - Mhat;
+    % R2_noIntercept = 1 - sum(resid.^2) / sum(M.^2);
+    % 
+    % % Standard centered R^2 (with intercept), so the mean color can't inflate it
+    % Xc     = [ones(size(L)) L S];
+    % residC = M - Xc * (Xc \ M);
+    % R2_centered = 1 - sum(residC.^2) / sum((M - mean(M)).^2);
+    % 
+    % fprintf('corr(L,M) = %.3f\n', corr(L, M));
+    % fprintf('M = %.2f*L + %.2f*S\n', w(1), w(2));
+    % fprintf('R2 (no intercept) = %.4f, R2 (centered) = %.4f\n', R2_noIntercept, R2_centered);
+    % fprintf('rms of M = %.3f, rms of leftover = %.3f\n', sqrt(mean(M.^2)), sqrt(mean(resid.^2)));
+    % 
+    % 
+    % figure; scatter(L, M, 8, 'filled',MarkerEdgeColor='black',MarkerFaceColor='white'); hold on; axis equal; grid on
+    % plot(xlim, xlim, 'k--')
+    % axis square
+    % xlabel('L cone contrast'); 
+    % ylabel('M cone contrast')
+    % title(sprintf('corr(L,M) = %.3f', corr(L, M)))
+    % 
+    % lim = max(abs(M));
+    % figure; tiledlayout(1,2)
+    % nexttile; imagesc(reshape(M, m, n), [-lim lim]); axis image off; colorbar; title('M contrast')
+    % nexttile; imagesc(reshape(resid, m, n), [-lim lim]); axis image off; colorbar; title('M not predictable from L,S')
+    % colormap(gray)
+    % 
+    % Cpred = C; Cpred(2,:) = Mhat';
+    % LMSpred = Cpred .* Disp.grayLMS + Disp.grayLMS;
+    % 
+    % Lab1 = XYZToLab(Disp.M_lms2xyz * LMSCalFormat, Disp.labWhiteXYZ);
+    % Lab2 = XYZToLab(Disp.M_lms2xyz * LMSpred,      Disp.labWhiteXYZ);
+    % dE   = ComputeDE2000_Lab(Lab1', Lab2');
+    % 
+    % toImg = @(LMS) CalFormatToImage(rgbLin2RGB(min(max(Disp.M_cones2rgb * LMS, 0), 1), Disp), m, n);
+    % figure; tiledlayout(1,3)
+    % nexttile; imshow(toImg(LMSCalFormat)); title('original')
+    % nexttile; imshow(toImg(LMSpred));      title('M replaced by prediction from L,S')
+    % nexttile; imagesc(reshape(dE, m, n)); axis image off; colorbar; title(sprintf('\\DeltaE2000, mean %.1f', mean(dE)))
+
 
     %% Info and distortion sweeps
     %   (1) Run an info sweep (minimize distortion at each target info)
@@ -165,8 +223,8 @@ for ii = 1:numel(imageTypes)
         RGBDiImgFormat_optAllDist  = zeros(m, n, 3, nSteps);
 
         for i = 1:nSteps
-            % rgbLinSweep_dist{i}(rgbLinSweep_dist{i} < 0) = 0;
-            % rgbLinSweep_dist{i}(rgbLinSweep_dist{i} > 1) = 1;
+            rgbLinSweep_dist{i}(rgbLinSweep_dist{i} < 0) = 0;
+            rgbLinSweep_dist{i}(rgbLinSweep_dist{i} > 1) = 1;
 
             % Trichromat (optimized) image for step i
             RGBTriCalFormat_opt = rgbLin2RGB(rgbLinSweep_dist{i}, Disp);
@@ -217,7 +275,7 @@ for ii = 1:numel(imageTypes)
     % curve for that sweep
     if ranDist
         idx = 1:min(nPlot, numel(distNormAch_dist));
-        plot(distNormAch_dist(idx), infoNormAch_dist(idx), 'ko-', 'LineWidth', 2, 'MarkerFaceColor','w', 'MarkerSize',10 ,'DisplayName', 'Distortion sweep (maximize info)');
+        plot(distNormAch_dist(idx), infoNormAch_dist(idx), 'ks-', 'LineWidth', 2, 'MarkerFaceColor','w', 'MarkerSize',10 ,'DisplayName', 'Distortion sweep (maximize info)');
         hold on;
         for k = idx
             xline(targetDistNorm_dist(k), ':', 'HandleVisibility','off');
@@ -245,4 +303,3 @@ for ii = 1:numel(imageTypes)
 
 
 end
--

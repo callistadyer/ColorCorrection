@@ -49,7 +49,14 @@ function [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, transformRGBmatrix,
 %   - RGB values must be between 0 and 1
 %
 % Optional key/value pairs:
-%   None
+%   'T_init'                   3x3 starting transformation (default eye(3)).
+%   'skipFmincon'              If true, return T_init without optimizing (default false).
+%   'bandTol'                  Half-width of the allowed band around targetInfo
+%                              or targetDist. Required when target='info' or
+%                              'distortion'. computeSweep sets it (1% of the
+%                              endpoint range) and chooseStartPoints passes the
+%                              same value to its violation check, so there is
+%                              one band definition.
 %
 % Examples are included within the code
 
@@ -76,26 +83,26 @@ parser.addParameter('T_init', eye(3), @(x) isnumeric(x) && isequal(size(x),[3 3]
 
 parser.addParameter('skipFmincon', false, @(x) islogical(x) && isscalar(x));
 
-% Relative/absolute band tolerance controls
-parser.addParameter('pctTol', 0.01, @(x) isnumeric(x) && isscalar(x) && x >= 0);
-parser.addParameter('absTolFloor', 1e-3, @(x) isnumeric(x) && isscalar(x) && x >= 0);
+% Half-width of the band around the target (no default: the caller must set it)
+parser.addParameter('bandTol', [], @(x) isempty(x) || (isnumeric(x) && isscalar(x) && x >= 0));
 
 parser.parse(varargin{:});
 
 T_init      = parser.Results.T_init;
 skipFmincon = parser.Results.skipFmincon;
-pctTol      = parser.Results.pctTol;
-absTolFloor = parser.Results.absTolFloor;
+bandTol     = parser.Results.bandTol;
 
 switch lower(target)
     case 'lambda'
         if isempty(lambda), error('target ''lambda'' requires a lambda.'); end
     case 'info'
         if isempty(targetInfo), error('target ''info'' requires target info.'); end
+        if isempty(bandTol), error('target ''info'' requires ''bandTol''.'); end
     case 'distortion'
         if isempty(targetDist)
             error('target ''distortion'' requires target distortion');
         end
+        if isempty(bandTol), error('target ''distortion'' requires ''bandTol''.'); end
     otherwise
         error('target must be ''lambda'', ''targetinfo'', or ''targetdist''.');
 end
@@ -143,8 +150,6 @@ switch lower(target)
 
     case 'info'
         % Minimize distortion subject to info constraint (=targetInfo)
-        % epsInfo = max(absTolFloor, pctTol * targetInfo);   % relative
-        epsInfo = max(absTolFloor, pctTol * abs(targetInfo));
 
         % Minimize distortion only (lambda=0)
         fun = @(t_vec) lossFunction('lambda', 0.0, t_vec, ...
@@ -154,11 +159,10 @@ switch lower(target)
         nonlcon = @(t_vec) constraintBand( ...
                         t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
                         infoNormalizer, distortionNormalizer, paramsStruct, Disp, ...
-                        'info', targetInfo, epsInfo);
+                        'info', targetInfo, bandTol);
 
     case 'distortion'
         % Maximize info subject to distortion constraint (=targetDist)
-        epsDist = max(absTolFloor, pctTol * targetDist);
 
         % Maximize info only (lambda=1)
         fun = @(t_vec) lossFunction('lambda', 1.0, t_vec, ...
@@ -168,7 +172,7 @@ switch lower(target)
         nonlcon = @(t_vec) constraintBand( ...
                         t_vec, triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, ...
                         infoNormalizer, distortionNormalizer, paramsStruct, Disp, ...
-                        'distortion', targetDist, epsDist);
+                        'distortion', targetDist, bandTol);
 end
 
 % Now do the minimization with that 
