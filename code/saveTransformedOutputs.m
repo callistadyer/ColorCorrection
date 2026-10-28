@@ -24,21 +24,12 @@ projectName = 'ColorCorrection';
 outputDir   = getpref(projectName, 'outputDir');
 saveBase    = fullfile(outputDir, 'testImagesTransformed');
 
-infoFcnName       = func2str(infoFcn);
-distortionFcnName = func2str(distortionFcn);
-
-% Build metric folder (include infoParams ONLY for computeInfo_regress)
-if strcmp(infoFcnName,'computeInfo_regress')
-    if ~isfield(infoParams,'predictingWhat') || ~isfield(infoParams,'predictingFromWhat')
-        error('infoParams must include predictingWhat and predictingFromWhat for computeInfo_regress.');
-    end
-    paramsStrRaw = sprintf('%s-from-%s', infoParams.predictingWhat, infoParams.predictingFromWhat);
-    paramsSlug   = regexprep(paramsStrRaw, '[^A-Za-z0-9]+', '_');
-    paramsSlug   = regexprep(paramsSlug, '^_+|_+$', '');
-    metricFolder = sprintf('%s__%s__%s', infoFcnName, paramsSlug, distortionFcnName);
-else
-    metricFolder = sprintf('%s__%s', infoFcnName, distortionFcnName);
-end
+% Build metric folder with the same helper computeSweep uses, so these images,
+% figures and the outputs copy land in the same run folder as the sweep results.
+% (The old code only added predictingWhat/predictingFromWhat for an info function
+% named exactly 'computeInfo_regress', so computeInfo_regressCIE runs with
+% different infoParams overwrote each other.)
+metricFolder = buildMetricFolderName(infoFcn, infoParams, distortionFcn);
 
 % Include sweep axis in the run folder
 stepFolder    = sprintf('%s_%dsteps', axisTag, nSteps);
@@ -51,7 +42,7 @@ if ~exist(imageSaveDir,  'dir'), mkdir(imageSaveDir);  end
 if ~exist(figureSaveDir, 'dir'), mkdir(figureSaveDir); end
 
 % Save mat file
-save(fullfile(saveSubdir, 'sweepOutputs.mat'), 'outputs');
+save(fullfile(saveSubdir, 'sweepOutputs.mat'), 'outputs', '-v7.3');
 fprintf('[saveTransformedOutputs] Saved sweep outputs to: %s\n', saveSubdir);
 
 % Helper for CalFormat -> image
