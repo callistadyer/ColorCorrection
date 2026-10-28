@@ -1,4 +1,4 @@
-function [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, transformRGBmatrix, info, infoNormalized, distortion, distortionNormalized, nlconSatisfied] = ...
+function [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, transformRGBmatrix, info, infoNormalized, distortion, distortionNormalized, nlconSatisfied, fminconInfo] = ...
     colorCorrectionOptimize(target, lambda, targetInfo, targetDist, ...
     triLMSCalFormat, imgParams, dichromatType, infoFnc, distortionFcn, infoParams, distortionParams, infoNormalizer, distortionNormalizer, Disp, varargin)
 % Optimizes a linear transformation to enhance color contrast for dichromats
@@ -43,7 +43,14 @@ function [LMSDaltonizedCalFormat, rgbLinDaltonizedCalFormat, transformRGBmatrix,
 %   info:                      info from infoFcn
 %   infoNormalized:            info from infoFcn, normalized
 %   distortion:                distortion from distortionFcn
-%   distortionNormalized:      distortion from distortionFcn, normalized 
+%   distortionNormalized:      distortion from distortionFcn, normalized
+%   nlconSatisfied:            true if the returned transform satisfies the band constraint
+%   fminconInfo:               struct describing how fmincon stopped:
+%                                   .exitflag   final fmincon exitflag (NaN if skipFmincon)
+%                                   .reason     exitflag in words
+%                                   .iterations total iterations, including restarts
+%                                   .funcCount  total function evaluations, including restarts
+%                                   .nRestarts  warm restarts after hitting MaxIterations
 %
 % Constraints:
 %   - RGB values must be between 0 and 1
@@ -186,16 +193,82 @@ if skipFmincon
     % This is to make sure that the first step (in the forward pass, last
     % step in backwards pass) always returns identity. Basically, don't
     % even give the algorithm a chance to deviate from identity when it is
-    % the first step. 
+    % the first step.
     transformRGB_opt = T_init(:);   % return identity (or whatever T_init was)
+
+    % fmincon never runs here, so there is no fval/exitflag/output from it.
+    % Fill them with placeholders so later code can still refer to them.
     fval = NaN; exitflag = NaN; output = struct();
     nlconSatisfied = true;   % forced endpoint; do not test nonlinear band
+
+    % Record that fmincon was skipped (exitflag NaN, zero iterations), so
+    % anyone reading the saved candidate files can tell this step apart
+    % from a step where fmincon actually ran.
+    fminconInfo = struct('exitflag', NaN, 'reason', 'skipped (forced T_init)', ...
+        'iterations', 0, 'funcCount', 0, 'nRestarts', 0);
 else
-    [transformRGB_opt, fval, exitflag, output] = fmincon(fun, T_init(:), ...            
-        A_total, b_total, ...           
-        [], [], [], [], ...             
-        nonlcon, ...                    
+    % Run fmincon from the starting transformation T_init.
+    %   fun      - objective (distortion for an info sweep, -info for a
+    %              distortion sweep, or the lambda tradeoff)
+    %   A_total, b_total - linear gamut constraints (RGB must stay in [0,1])
+    %   nonlcon  - band constraint keeping info (or distortion) within
+    %              bandTol of the target ([] for a lambda search)
+    % Outputs:
+    %   transformRGB_opt - the 3x3 transformation found, as a 9x1 vector
+    %   exitflag         - why fmincon stopped (see exitflagReason below)
+    %   output           - details, including .iterations and .funcCount
+    [transformRGB_opt, fval, exitflag, output] = fmincon(fun, T_init(:), ...
+        A_total, b_total, ...
+        [], [], [], [], ...
+        nonlcon, ...
         options);
+
+    % Keep running totals of the work done, so that if fmincon is
+    % restarted below, the counts cover all of the runs combined.
+    totalIterations = output.iterations;   % optimizer steps taken
+    totalFuncCount  = output.funcCount;    % objective evaluations (includes the
+                                           % extra ones for finite-difference gradients)
+
+    % WARM RESTARTS
+    % exitflag == 0 means fmincon hit MaxIterations (or MaxFunctionEvaluations)
+    % before converging: it simply ran out of iterations, it did not finish.
+    % In that case, start fmincon again from the point where it stopped
+    % (transformRGB_opt), not from T_init. Allow at most maxRestarts extra
+    % runs, so a search that never settles cannot loop forever.
+    maxRestarts = 3;
+    nRestarts   = 0;
+    while exitflag == 0 && nRestarts < maxRestarts
+        nRestarts = nRestarts + 1;
+        fprintf('fmincon hit its iteration limit; warm restart %d of %d\n', nRestarts, maxRestarts);
+        [transformRGB_opt, fval, exitflag, output] = fmincon(fun, transformRGB_opt(:), ...
+            A_total, b_total, ...
+            [], [], [], [], ...
+            nonlcon, ...
+            options);
+        % Add this run's work to the running totals
+        totalIterations = totalIterations + output.iterations;
+        totalFuncCount  = totalFuncCount  + output.funcCount;
+    end
+
+    % Summarize how fmincon finished. exitflag here is from the LAST run
+    % (after any restarts). This struct is returned as an output and
+    % chooseStartPoints saves it in each candidate's .mat file.
+    fminconInfo = struct('exitflag', exitflag, 'reason', exitflagReason(exitflag), ...
+        'iterations', totalIterations, 'funcCount', totalFuncCount, 'nRestarts', nRestarts);
+
+    % Print a one-line summary for the command window log
+    fprintf('fmincon exitflag %d (%s), %d iterations, %d restarts\n', ...
+        exitflag, fminconInfo.reason, totalIterations, nRestarts);
+
+    % exitflag == -2: fmincon could not find ANY transformation that meets
+    % all the constraints (gamut + band). The returned transformRGB_opt is
+    % then not a valid answer, so warn loudly. Note the band check below
+    % only re-tests the band (nonlcon), not the gamut constraints, so it
+    % will not catch an answer that is infeasible only because of gamut.
+    if exitflag == -2
+        warning('colorCorrectionOptimize:noFeasiblePoint', ...
+            'fmincon found no feasible point (exitflag -2).');
+    end
 end
 
 
@@ -222,7 +295,8 @@ else
     %   All inequality constraints must be <= tol
     %   All equality constraints must have |ceq| <= tol
     % nlconSatisfied = (maxC <= tol) && (maxAbsCeq <= tol);
-    slack = 1e-12;  % tiny numerical wiggle room
+    % slack = 1e-12;  % tiny numerical wiggle room
+    slack = options.ConstraintTolerance;
     nlconSatisfied = (maxC <= slack);
 
     % If the nonlinear constraints are not satisfied:
@@ -299,6 +373,19 @@ LMSDaltonizedCalFormat = Disp.M_rgb2cones * rgbLinDaltonizedCalFormat;
 
 end
 
+function reason = exitflagReason(exitflag)
+% Short description of an fmincon exitflag
+switch exitflag
+    case 1,  reason = 'converged: first-order optimality met';
+    case 2,  reason = 'stalled: step smaller than StepTolerance';
+    case 0,  reason = 'hit MaxIterations or MaxFunctionEvaluations';
+    case -1, reason = 'stopped by output or plot function';
+    case -2, reason = 'no feasible point found';
+    case -3, reason = 'objective unbounded below';
+    otherwise, reason = sprintf('exitflag %d', exitflag);
+end
+end
+
 function [c, ceq] = constraintBand(t_vec, triLMSCalFormat, imgParams, dichromatType,infoFnc, distortionFcn, infoNormalizer, distortionNormalizer, paramsStruct, Disp, whichMetric, targetVal, epsBand)
 
 % Doesn't really matter what the loss is here, I just want to grab the
@@ -318,8 +405,15 @@ end
 
 % Try to keep the distortion or info value as close as possible to the
 % target value (epsBand gives some wiggle room)
-% Band inequality: (metric - target)^2 - eps^2 <= 0
-c   = (metricVal - targetVal).^2 - (epsBand.^2);
+% Old band inequality: (metric - target)^2 - eps^2 <= 0
+% Its gradient 2*(metric-target)*grad(metric) is ~0 near the target, which
+% gives fmincon (interior-point) almost no guidance.
+% c   = (metricVal - targetVal).^2 - (epsBand.^2);
+
+% Same band as two one-sided constraints, each linear in the metric:
+%   metric <= target + eps   and   metric >= target - eps
+c   = [metricVal - targetVal - epsBand; ...
+       targetVal - metricVal - epsBand];
 
 ceq = [];
 end
