@@ -125,9 +125,24 @@ disp('Just reached optimization')
 options = optimoptions('fmincon', ...
     'Algorithm','interior-point', ...  
     'ConstraintTolerance',  1e-10, ...  
-    'StepTolerance',        1e-10, ... 
+    'StepTolerance',        1e-10, ...
+    'FiniteDifferenceType', 'central', ...   % see note below options
     'Display','iter', ...
     'MaxIterations',200);
+
+% FiniteDifferenceType = 'central' (fmincon's default is 'forward'):
+% central differences estimate gradients more accurately, especially near
+% the solution where the true slope is small. Tested 10/28 on Gaugin, 100x100,
+% L,M,S info sweep vs the same run with forward differences:
+%   - fmincon runs that stalled (exitflag 2): 35 -> 9; converged: 14 -> 42;
+%     failed / no feasible point: 2 -> 0
+%   - a little slower: +13% run time (8700 s vs 7679 s), despite +84%
+%     function evaluations
+%   - did NOT change the results: identical transforms and images at every
+%     step (max pixel difference 1e-5), because another start point usually
+%     converged anyway in the forward-difference run
+% Kept for now for more reliable individual fmincon runs. Revisit if run
+% time becomes a problem.
 
 % paramsStruct = struct();  % default empty
 if exist('infoParams','var') && ~isempty(infoParams)
