@@ -20,11 +20,11 @@
 %   (lambda = 1).
 
 % Image types
-imageTypes = {'Gaugin.png'};
-% imageTypes = {'flower1.png', ...
-%     'fruit.png', ...
-%     'Gaugin.png'};
-
+% imageTypes = {'flower1.png'};
+imageTypes = {'flower1.png', ...
+    'fruit.png', ...
+    'Gaugin.png'};
+% imageTypes = {'Gaugin.png'};
 % Set type (choose 1 unless ishihara)
 setType       = 1;
 
@@ -33,8 +33,8 @@ dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
 
-m = 67;
-n = 67;
+m = 100;
+n = 100;
 
 % THIS WAS FOR THE OLD NORMALIZING... WHERE IT WAS NO ABS() 
 % m = 69;
@@ -61,10 +61,10 @@ infoFcn = @computeInfo_regressCIE;
 
 % infoParams only necessary when infoFcn is regress
 % infoParams = struct( ...
-%     'predictingWhat',     'L,M,S', ...          % options: 'M' or 'L-M' or 'L,M,S'
+%     'predictingWhat',     'M', ...          % options: 'M' or 'L-M' or 'L,M,S'
 %     'predictingFromWhat', 'L and S');           % options: 'L and S' or 'deltaL and deltaS' or 'deltaL+M and delta S'
 infoParams = struct( ...
-    'predictingWhat',     'M', ...          % options: 'M' or 'L-M' or 'L,M,S'
+    'predictingWhat',     'L,M,S', ...          % options: 'M' or 'L-M' or 'L,M,S'
     'predictingFromWhat', 'L and S');           % options: 'L and S' or 'deltaL and deltaS' or 'deltaL+M and delta S'
     % infoParams = struct();
 
@@ -302,4 +302,159 @@ for ii = 1:numel(imageTypes)
     legend('Location','southeast');
 
 
+
+
+    %% Save individual sweep images to folders
+    %
+    % Saves each optimized image and its dichromat rendering as separate PNGs.
+    % Creates a folder for each input image, dichromacy type, and sweep type.
+
+    % % Remove extension from image name
+    % [~, imgName, ~] = fileparts(imgType);
+    % 
+    % % Main output folder (inside current MATLAB working directory)
+    % outputFolder = fullfile(pwd, 'ColorCorrection_Results', ...
+    %     imgName, dichromatType);
+    % 
+    % if ~exist(outputFolder, 'dir')
+    %     mkdir(outputFolder);
+    % end
+
+    % %% INFO SWEEP
+    % if ranInfo
+    % 
+    %     infoFolder = fullfile(outputFolder, 'InfoSweep');
+    % 
+    %     if ~exist(infoFolder, 'dir')
+    %         mkdir(infoFolder);
+    %     end
+    % 
+    %     for i = 1:nSteps
+    % 
+    %         % Extract individual images
+    %         imgTri = RGBTriImgFormat_optAllInfo(:,:,:,i);
+    %         imgDi  = RGBDiImgFormat_optAllInfo(:,:,:,i);
+    % 
+    %         % Save trichromat optimized image
+    %         imwrite(imgTri, fullfile(infoFolder, ...
+    %             sprintf('Step_%02d_Trichromat.png', i)));
+    % 
+    %         % Save dichromat rendering
+    %         imwrite(imgDi, fullfile(infoFolder, ...
+    %             sprintf('Step_%02d_Dichromat.png', i)));
+    % 
+    %     end
+    % 
+    %     fprintf('Saved info sweep images to:\n%s\n', infoFolder);
+    % 
+    % end
+    % 
+    % 
+    % %% DISTORTION SWEEP
+    % if ranDist
+    % 
+    %     distFolder = fullfile(outputFolder, 'DistortionSweep');
+    % 
+    %     if ~exist(distFolder, 'dir')
+    %         mkdir(distFolder);
+    %     end
+    % 
+    %     for i = 1:nSteps
+    % 
+    %         % Extract individual images
+    %         imgTri = RGBTriImgFormat_optAllDist(:,:,:,i);
+    %         imgDi  = RGBDiImgFormat_optAllDist(:,:,:,i);
+    % 
+    %         % Save trichromat optimized image
+    %         imwrite(imgTri, fullfile(distFolder, ...
+    %             sprintf('Step_%02d_Trichromat.png', i)));
+    % 
+    %         % Save dichromat rendering
+    %         imwrite(imgDi, fullfile(distFolder, ...
+    %             sprintf('Step_%02d_Dichromat.png', i)));
+    % 
+    %     end
+    % 
+    %     fprintf('Saved distortion sweep images to:\n%s\n', distFolder);
+    % 
+    % end
+
+
+    %% Plot each sweep as 2 rows x nSteps columns
+    % Row 1 = Trichromat optimized images
+    % Row 2 = Dichromat renderings
+    % Above each column = Achieved information score
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % INFO SWEEP
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    if ranInfo
+
+        figure('Color','w', ...
+            'Position',[100 100 150*nSteps 350], ...
+            'Name',sprintf('%s - %s - Info Sweep',imgType,dichromatType));
+
+        tl = tiledlayout(2,nSteps, ...
+            'TileSpacing','none', ...
+            'Padding','none');
+
+        for i = 1:nSteps
+
+            % Top row: Trichromat
+            nexttile(i);
+            imshow(RGBTriImgFormat_optAllInfo(:,:,:,i));
+            axis image off;
+
+            title(sprintf('%.3f',infoNormAch_info(i)), ...
+                'FontSize',15);
+
+            % Bottom row: Dichromat
+            nexttile(nSteps+i);
+            imshow(RGBDiImgFormat_optAllInfo(:,:,:,i));
+            axis image off;
+
+        end
+
+        % sgtitle(sprintf('%s - %s - Info Sweep',imgType,dichromatType), ...
+        %     'FontSize',14);
+
+    end
+
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % DISTORTION SWEEP
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    if ranDist
+
+        figure('Color','w', ...
+            'Position',[100 100 150*nSteps 350], ...
+            'Name',sprintf('%s - %s - Distortion Sweep',imgType,dichromatType));
+
+        tl = tiledlayout(2,nSteps, ...
+            'TileSpacing','none', ...
+            'Padding','none');
+
+        for i = 1:nSteps
+
+            % Top row: Trichromat
+            nexttile(i);
+            imshow(RGBTriImgFormat_optAllDist(:,:,:,i));
+            axis image off;
+
+            title(sprintf('%.3f',infoNormAch_dist(i)), ...
+                'FontSize',15);
+
+            % Bottom row: Dichromat
+            nexttile(nSteps+i);
+            imshow(RGBDiImgFormat_optAllDist(:,:,:,i));
+            axis image off;
+
+        end
+
+        % sgtitle(sprintf('%s - %s - Distortion Sweep',imgType,dichromatType), ...
+        %     'FontSize',14);
+
+    end
+
 end
+

@@ -163,7 +163,7 @@ for k = 1:nCands
         end
 
         % Run the optimizer from this start
-        [LMS_k, rgbLin_k, T_k, ~, infoNorm_k, ~, distNorm_k, nonLinSatisfied_k] = colorCorrectionOptimize(sweepAxis, lamArg, tgtInfoArg, tgtDistArg, LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
+        [LMS_k, rgbLin_k, T_k, ~, infoNorm_k, ~, distNorm_k, nonLinSatisfied_k, fminconInfo] = colorCorrectionOptimize(sweepAxis, lamArg, tgtInfoArg, tgtDistArg, LMSCalFormat, imgParams, dichromatType, obj.infoFcn, obj.distortionFcn, ...
             obj.infoParams, obj.distortionParams, ...
             infoNormalizer, distortionNormalizer, Disp, ...
             'T_init', T_init,...
@@ -229,16 +229,19 @@ for k = 1:nCands
         startPtSolns(k).violation       = violation_k;
 
 
-        % Save so resume works
-        candSoln  = startPtSolns(k);  
-        completed = true;           
-        timestamp = datestr(now);    
-        save(candFile, 'candSoln', 'completed', 'timestamp', 'i', 'k', 'thisX', 'sweepAxis', '-v7.3');
+        % Save so resume works. fminconInfo (how fmincon stopped) is saved as
+        % its own variable, not a candSoln field, so candSoln keeps the same
+        % fields as the struct arrays in computeSweep and older cached files.
+        candSoln  = startPtSolns(k);
+        completed = true;
+        timestamp = datestr(now);
+        save(candFile, 'candSoln', 'fminconInfo', 'completed', 'timestamp', 'i', 'k', 'thisX', 'sweepAxis', '-v7.3');
 
         % debugPlot_CandidatesUsingSweepFigure(i, sweepAxis, thisX, startPtSolns(k), passName, saveSubdir);
 
 
-        fprintf('  [%s] saved %s -> %s\n', char(passName), thisName, candFile);
+        fprintf('  [%s] saved %s (fmincon: %s, %d iters, %d restarts) -> %s\n', char(passName), thisName, ...
+            fminconInfo.reason, fminconInfo.iterations, fminconInfo.nRestarts, candFile);
 
     end
 end

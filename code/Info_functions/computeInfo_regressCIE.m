@@ -65,12 +65,7 @@ if all(X == 0, 'all')                 % If all predictors are zero, can't do reg
     y_hat    = zeros(size(y));
     residual = y;                     % ... so use the full missing cone contrast as residual
 else
-    % beta = X \ y;                     % Linear least-squares regression to predict missing cone
-
-    % TESTING: RIDGE REGRESSION
-    noiseSigma = 0.03;                % noise SD (cone contrast) on the dichromat's channels; 0 = same as X \ y
-    beta = (X'*X + N*noiseSigma^2*eye(size(X,2))) \ (X'*y);
-    
+    beta = X \ y;                     % Linear least-squares regression to predict missing cone
     y_hat = X * beta;                 % Predicted missing cone contrast
     residual = y - y_hat;             % Difference between actual and predicted (unexplained stuff)
 end
@@ -93,8 +88,6 @@ switch paramsStruct.predictingWhat
         LMSContrast_pred(3,:) = y_hat(:).';
     case 'L,M,S' % If you are predicting all LMS, then y_hat will simply be the predicted LMS
         LMSContrast_pred = y_hat';   % y_hat is N×3 here
-    case 'L-M' % Predicting the L-M difference: keep the dichromat's L and S, rebuild M as L - (L-M)
-        LMSContrast_pred(2,:) = L_new - y_hat(:).';
     otherwise
         error('Unsupported predictingWhat: %s', paramsStruct.predictingWhat);
 end
