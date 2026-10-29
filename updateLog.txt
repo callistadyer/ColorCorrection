@@ -9,19 +9,21 @@ Add a new entry whenever the settings change.
 
 SUMMARY - ALL UPDATES SIDE BY SIDE
 ----------------------------------
-Setting              | Update 0          | Update 1          | Update 2
----------------------+-------------------+-------------------+-------------------
-fmincon method       | interior-point    | interior-point    | interior-point
-Gradients            | forward diff      | central diff **   | central diff
-Gamut constraints    | all pixels        | all pixels        | convex hull **
-Loss scaling         | 1e8               | 1e8               | 1e8
-Info band            | +-1% of range     | +-1% of range     | +-1% of range
-Info score           | regressCIE        | regressCIE        | regressCIE
-Predicting           | L,M,S or M        | L,M,S             | L,M,S
-Regression           | plain             | plain             | plain
-Distortion           | DE2000            | DE2000            | DE2000
-Start points         | I, prev, presolve | I, prev, presolve | I, prev, presolve
-Time (Gaugin 100)    | ~2.1 h            | ~2.4 h            | ~17 min
+Setting              | Update 0          | Update 1          | Update 2          | Update 3
+---------------------+-------------------+-------------------+-------------------+-------------------
+fmincon method       | interior-point    | interior-point    | interior-point    | sqp **
+Gradients            | forward diff      | central diff **   | central diff      | central diff
+Gamut constraints    | all pixels        | all pixels        | convex hull **    | convex hull
+Max function evals   | default (3000)    | default (3000)    | default (3000)    | 3000 **
+Loss scaling         | 1e8               | 1e8               | 1e8               | 1e8
+Info band            | +-1% of range     | +-1% of range     | +-1% of range     | +-1% of range
+Info score           | regressCIE        | regressCIE        | regressCIE        | regressCIE
+Predicting           | L,M,S or M        | L,M,S             | L,M,S             | L,M,S
+Regression           | plain             | plain             | plain             | plain
+Distortion           | DE2000            | DE2000            | DE2000            | DE2000
+Start points         | I, prev, presolve | I, prev, presolve | I, prev, presolve | I, prev, presolve
+Time (Gaugin 100)    | ~2.1 h            | ~2.4 h            | ~17 min           | -
+Time (4 imgs, 128)   | -                 | -                 | ~1 h 45 min       | ~1 h
 (** = changed in this update, compared with the update before)
 
 
@@ -141,3 +143,50 @@ Notes (compared with update 1, Gaugin 100x100 L,M,S):
     different), and 6 failed fmincon runs (vs 0). The allowed transforms
     are the same; interior-point just lands in worse local minima with
     fewer constraints.
+
+
+UPDATE 3
+========
+Everything the same as update 2, but changed:
+  fmincon method: interior-point -> sqp
+  Max function evaluations: default -> 3000 (sqp's own default, 900,
+    ran out in testing; 3000 matches interior-point's default)
+
+Settings:
+  Setting            | Value
+  -------------------+--------------------------------------------------------
+  Info score         | computeInfo_regressCIE
+  Predicting         | L,M,S, from L and S
+  Regression         | plain (no ridge)
+  Normalizer         | abs()
+  Distortion         | computeDistortion_DE2000
+  Sweep              | info sweep, 10 steps
+  Info band          | +-1% of the info range, two-sided constraint
+  fmincon method     | sqp                                       <-- CHANGED
+  Gradients          | central finite differences
+  Gamut constraints  | convex hull only (useConvexHull = true in
+                     | buildGamutConstraints)
+  Loss scaling       | fminconFactor = 1e8
+  Tolerances         | ConstraintTolerance 1e-10, StepTolerance 1e-10
+  Iteration limits   | MaxIterations 200, MaxFunctionEvaluations 3000 <-- CHANGED
+  Failure handling   | accept within fmincon's tolerance; up to 3 warm
+                     | restarts at the iteration limit; a failed run still
+                     | returns its start point
+  Start points       | identity, previous step, findDesiredInfo presolve;
+                     | forward and backward passes
+
+Runs:
+  flower1  128x128  L,M,S   (2026-10-29)
+  fruit    128x128  L,M,S   (2026-10-29)
+  Gaugin   128x128  L,M,S   (2026-10-29)
+  ishi45   128x128  L,M,S   (2026-10-29)
+
+Notes:
+  - Why: interior-point is affected by every constraint, even far-away
+    ones, and landed in worse local minima with the convex hull (update 2).
+    sqp is not. In a single-step test sqp found 0.0408 at flower1 'M'
+    step 9 (interior-point: 0.066).
+  - sqp only works with the convex hull (with all pixels it needs a
+    107 GB matrix).
+  - About 1 hour for all 4 images at 128x128 (update 2: ~1 h 45 min).
+  - Comparison with update 2: not done yet.
