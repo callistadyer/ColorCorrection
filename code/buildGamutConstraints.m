@@ -54,6 +54,8 @@ function [A_total, b_total, M_triRGBc2diRGBc] = buildGamutConstraints(triLMSCalF
 %                     dichromat contrast RGB
 
 % Use only convex-hull pixels (same constraints, far fewer rows). See above.
+% true for updates 2 and 3; false for updates 0 and 1.
+% CURRENTLY true: update 2 run, flower1 100x100 (10/29).
 useConvexHull = true;
 
 % Step 1: Convert LMS to RGB

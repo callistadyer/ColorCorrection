@@ -20,11 +20,14 @@
 %   (lambda = 1).
 
 % Image types
-% imageTypes = {'flower1.png'};
-imageTypes = {'flower1.png', ...
-    'fruit.png', ...
-    'Gaugin.png'};
 % imageTypes = {'Gaugin.png'};
+% imageTypes = {'flower1.png', 'fruit.png', 'Gaugin.png', 'ishi45.png'};   % all 4 test images (updates 1-3 at 64x64, 10/29)
+imageTypes = {'square.png'};          % update 2 at 100x100 (10/29)
+
+% imageTypes = {'flower1.png', ...
+%     'Gaugin.png'};
+% imageTypes = {'Gaugin.png'};          % convex-hull test: compare with info_10steps_centralFiniteDifferences
+
 % Set type (choose 1 unless ishihara)
 setType       = 1;
 
@@ -33,8 +36,10 @@ dichromatType = 'Deuteranopia';
 
 % Image size (keep <60 for fast testing)
 
-m = 100;
-n = 100;
+% m = 100;
+% n = 100;
+m = 60;
+n = 60;
 
 % THIS WAS FOR THE OLD NORMALIZING... WHERE IT WAS NO ABS() 
 % m = 69;
@@ -44,9 +49,15 @@ n = 100;
 nSteps = 10;
 
 sweepAxis = 'info';
-%   'info'        = run info sweep only. this chooses set of info scores and minimizes distortion. 
+%   'info'        = run info sweep only. this chooses set of info scores and minimizes distortion.
 %   'distortion'  = run distortion sweep only
-%   'both'        = run both sweeps 
+%   'both'        = run both sweeps
+
+% Which update to look at (see updateLog.txt for what each number means)
+%   []  = run a new sweep with the current code; results go in info_10steps
+%   N   = LOOK UP ONLY: load the finished sweep in info_10steps_update<N> and
+%         make the figures. If it doesn't exist, stop; nothing is computed.
+updateNumber = [];
 
 
 %% Define metric functions
@@ -60,12 +71,12 @@ infoFcn = @computeInfo_regressCIE;
 % infoFcn = @computeInfo_Wade;
 
 % infoParams only necessary when infoFcn is regress
-% infoParams = struct( ...
-%     'predictingWhat',     'M', ...          % options: 'M' or 'L-M' or 'L,M,S'
-%     'predictingFromWhat', 'L and S');           % options: 'L and S' or 'deltaL and deltaS' or 'deltaL+M and delta S'
 infoParams = struct( ...
-    'predictingWhat',     'L,M,S', ...          % options: 'M' or 'L-M' or 'L,M,S'
+    'predictingWhat',     'M', ...          % options: 'M' or 'L-M' or 'L,M,S'
     'predictingFromWhat', 'L and S');           % options: 'L and S' or 'deltaL and deltaS' or 'deltaL+M and delta S'
+% infoParams = struct( ...
+%     'predictingWhat',     'L,M,S', ...          % options: 'M' or 'L-M' or 'L,M,S'
+%     'predictingFromWhat', 'L and S');           % options: 'L and S' or 'deltaL and deltaS' or 'deltaL+M and delta S'
     % infoParams = struct();
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -161,7 +172,7 @@ for ii = 1:numel(imageTypes)
 
         % Compute the sweep over info targets!!
         [LMSSweep_info, rgbLinSweep_info, LMSRenderedSweep_info, rgbLinRenderedSweep_info,TSweep_info, targetInfoNorm_info, targetDistNorm_info, infoNormAch_info, distNormAch_info] = ...
-            computeSweep(theDaltonizer,LMSCalFormat, imgParams, dichromatType,nSteps, pathName, sweepAxis_info);
+            computeSweep(theDaltonizer,LMSCalFormat, imgParams, dichromatType,nSteps, pathName, sweepAxis_info, 'updateNumber', updateNumber);
    
         % Target vs achieved info
         fprintf('\nInfo sweep (n=%d): target vs achieved info\n', numel(targetInfoNorm_info));
@@ -212,7 +223,7 @@ for ii = 1:numel(imageTypes)
 
         % Compute the sweep over info targets!!
         [LMSSweep_dist, rgbLinSweep_dist, LMSRenderedSweep_dist, rgbLinRenderedSweep_dist, TSweep_dist, targetInfoNorm_dist, targetDistNorm_dist, infoNormAch_dist, distNormAch_dist] = ...
-            computeSweep(theDaltonizer,LMSCalFormat, imgParams, dichromatType, nSteps, pathName, sweepAxis_dist);
+            computeSweep(theDaltonizer,LMSCalFormat, imgParams, dichromatType, nSteps, pathName, sweepAxis_dist, 'updateNumber', updateNumber);
 
         % Target vs achieved distortion (normalized)
         fprintf('\nDistortion sweep (n=%d): target vs achieved distortion\n', numel(targetDistNorm_dist));

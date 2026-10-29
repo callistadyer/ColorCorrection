@@ -122,11 +122,29 @@ rng(1);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% OPTIMIZATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 disp('Just reached optimization')
 
+% UPDATE 3 (testing, 10/29): fmincon 'sqp' instead of 'interior-point'.
+% Why: with the convex-hull gamut constraints (update 2), interior-point
+% landed in worse local minima (Gaugin 100x100 L,M,S steps 3-6), and at
+% flower1 'M' step 9 it ends at distortion 0.066 although 0.041 exists.
+% interior-point is affected by every constraint, even far-away ones; sqp
+% is not. In a single-step test sqp found 0.0408 at flower1 step 9.
+% sqp only works with the convex hull (with all 120,000 rows it needs a
+% 107 GB matrix). sqp's default MaxFunctionEvaluations (900) ran out in
+% that test, so use 3000 (interior-point's default).
+% Everything else is unchanged from update 2.
+%
+% CURRENTLY SET TO: UPDATE 1/2 (interior-point, default evaluation limit),
+% for re-running updates 1 and 2 at 64x64 (10/29). For update 3: use the
+% 'sqp' line instead of 'interior-point' and un-comment
+% MaxFunctionEvaluations. (Updates 1 vs 2 differ only in useConvexHull in
+% buildGamutConstraints.m.)
 options = optimoptions('fmincon', ...
-    'Algorithm','interior-point', ...  
-    'ConstraintTolerance',  1e-10, ...  
+    ... 'Algorithm','sqp', ...                  % update 3
+    'Algorithm','interior-point', ...           % updates 0-2
+    'ConstraintTolerance',  1e-10, ...
     'StepTolerance',        1e-10, ...
     'FiniteDifferenceType', 'central', ...   % see note below options
+    ... 'MaxFunctionEvaluations', 3000, ...     % update 3 only: sqp's default (900) runs out
     'Display','iter', ...
     'MaxIterations',200);
 

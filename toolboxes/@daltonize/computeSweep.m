@@ -41,6 +41,20 @@ if ~exist('sweepAxis','var') || isempty(sweepAxis)
     sweepAxis = 'info';
 end
 
+% Optional key/value:
+%   'updateNumber'  [] (default) = run the sweep as usual (folder <axis>_<N>steps,
+%                   e.g. info_10steps), resuming from cached results if any.
+%                   A number N = LOOK-UP ONLY: load the finished sweep saved in
+%                   <axis>_<N>steps_update<N> (e.g. info_10steps_update2). If
+%                   that folder has no finished sweep, stop with an error -
+%                   nothing is computed and no folders are created. What each
+%                   update number means is in updateLog.txt (repo root).
+p = inputParser;
+p.addParameter('updateNumber', [], @(x) isempty(x) || (isnumeric(x) && isscalar(x)));
+p.parse(varargin{:});
+updateNumber = p.Results.updateNumber;
+lookUpOnly   = ~isempty(updateNumber);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% Load it %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -49,20 +63,37 @@ outputDir     = getpref(projectName, 'outputDir');
 saveBase      = fullfile(outputDir, 'testImagesTransformed');
 metricFolder  = buildMetricFolderName(obj.infoFcn, obj.infoParams, obj.distortionFcn);
 runFolder     = sprintf('%s_%dsteps', lower(char(sweepAxis)), nSteps);
+if lookUpOnly
+    % Look in the labeled folder of that update, e.g. info_10steps_update2
+    runFolder = sprintf('%s_update%d', runFolder, updateNumber);
+end
 saveSubdir    = fullfile(saveBase, pathName, metricFolder, runFolder);
 saveFile      = fullfile(saveSubdir, 'sweepOutputs.mat');
+
+% Look-up only: stop BEFORE creating any folders if the update's results
+% are not there.
+if lookUpOnly && ~isfile(saveFile)
+    error('computeSweep:updateNotFound', ...
+        ['No finished sweep for update %d at:\n  %s\n' ...
+         'Nothing was computed. Set updateNumber = [] to run a new sweep.'], ...
+        updateNumber, saveSubdir);
+end
+
 % Best folder (final chosen per-step winners)
 bestSubdir    = fullfile(saveSubdir, 'best');
-if ~exist(bestSubdir, 'dir'); mkdir(bestSubdir); end
 bestSaveFile  = fullfile(bestSubdir, 'sweepOutputs_best.mat');   % separate from main
-if ~exist(saveSubdir, 'dir'); mkdir(saveSubdir); end
 forwardDir    = fullfile(saveSubdir, 'forward');
 backwardDir   = fullfile(saveSubdir, 'backward');
 bestDir       = fullfile(saveSubdir, 'best');
 
-if ~exist(forwardDir,'dir');  mkdir(forwardDir);  end
-if ~exist(backwardDir,'dir'); mkdir(backwardDir); end
-if ~exist(bestDir,'dir');     mkdir(bestDir);     end
+% Create the run folders (only when running a sweep, not when looking up)
+if ~lookUpOnly
+    if ~exist(saveSubdir, 'dir');  mkdir(saveSubdir);  end
+    if ~exist(bestSubdir, 'dir');  mkdir(bestSubdir);  end
+    if ~exist(forwardDir,'dir');   mkdir(forwardDir);  end
+    if ~exist(backwardDir,'dir');  mkdir(backwardDir); end
+    if ~exist(bestDir,'dir');      mkdir(bestDir);     end
+end
 
 % Defaults
 outputs   = cell(1, nSteps);
@@ -70,6 +101,14 @@ startStep = 1;
 
 % Load function
 [outputs, startStep, allDone, loaded] = loadSweepOutputs(saveFile, nSteps);
+
+% Look-up only: an unfinished sweep is not completed here (nothing is computed)
+if lookUpOnly && ~allDone
+    error('computeSweep:updateIncomplete', ...
+        ['The sweep for update %d is not finished (resume would start at step %d):\n  %s\n' ...
+         'Nothing was computed. Set updateNumber = [] to run sweeps.'], ...
+        updateNumber, startStep, saveSubdir);
+end
 
 if allDone
     LMSDaltonizedCalFormatSweep            = loaded.LMSDaltonizedCalFormatSweep;
