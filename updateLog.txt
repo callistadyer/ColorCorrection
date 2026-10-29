@@ -1,0 +1,143 @@
+COLOR CORRECTION - UPDATE LOG
+=============================
+Each "update" is one set of code settings. Sweep folders made with that
+setting are named  info_10steps_update<N>  under
+  testImagesTransformed/<dichromat>/<image>/s1_m<size>_n<size>/<metric folder>/
+
+Add a new entry whenever the settings change.
+
+
+SUMMARY - ALL UPDATES SIDE BY SIDE
+----------------------------------
+Setting              | Update 0          | Update 1          | Update 2
+---------------------+-------------------+-------------------+-------------------
+fmincon method       | interior-point    | interior-point    | interior-point
+Gradients            | forward diff      | central diff **   | central diff
+Gamut constraints    | all pixels        | all pixels        | convex hull **
+Loss scaling         | 1e8               | 1e8               | 1e8
+Info band            | +-1% of range     | +-1% of range     | +-1% of range
+Info score           | regressCIE        | regressCIE        | regressCIE
+Predicting           | L,M,S or M        | L,M,S             | L,M,S
+Regression           | plain             | plain             | plain
+Distortion           | DE2000            | DE2000            | DE2000
+Start points         | I, prev, presolve | I, prev, presolve | I, prev, presolve
+Time (Gaugin 100)    | ~2.1 h            | ~2.4 h            | ~17 min
+(** = changed in this update, compared with the update before)
+
+
+UPDATE 0
+========
+Starting point (no earlier update).
+
+Settings:
+  Setting            | Value
+  -------------------+--------------------------------------------------------
+  Info score         | computeInfo_regressCIE
+  Predicting         | L,M,S or M, from L and S
+  Regression         | plain (no ridge)
+  Normalizer         | abs()
+  Distortion         | computeDistortion_DE2000
+  Sweep              | info sweep, 10 steps
+  Info band          | +-1% of the info range, two-sided constraint
+  fmincon method     | interior-point
+  Gradients          | forward finite differences (fmincon default)
+  Gamut constraints  | all pixels (12 rows per pixel; 120,000 at 100x100)
+  Loss scaling       | fminconFactor = 1e8
+  Tolerances         | ConstraintTolerance 1e-10, StepTolerance 1e-10
+  Iteration limits   | MaxIterations 200, default MaxFunctionEvaluations
+  Failure handling   | accept within fmincon's tolerance; up to 3 warm
+                     | restarts at the iteration limit; a failed run still
+                     | returns its start point
+  Start points       | identity, previous step, findDesiredInfo presolve;
+                     | forward and backward passes
+
+Runs:
+  flower1  100x100  L,M,S and M   (2026-10-25 to 10-26)
+  fruit    100x100  L,M,S and M   (2026-10-25 to 10-27)
+  Gaugin   100x100  L,M,S and M   (2026-10-25 to 10-27)
+
+Notes:
+  - About 2-2.5 hours per image at 100x100.
+  - Many fmincon stalls (exit flag 2), e.g. 35 of 51 for Gaugin L,M,S.
+  - flower1 M step 9 is a known bad local minimum (0.066; 0.041 exists).
+
+
+UPDATE 1
+========
+Everything the same as update 0, but changed:
+  Gradients: forward -> central finite differences.
+
+Settings:
+  Setting            | Value
+  -------------------+--------------------------------------------------------
+  Info score         | computeInfo_regressCIE
+  Predicting         | L,M,S, from L and S
+  Regression         | plain (no ridge)
+  Normalizer         | abs()
+  Distortion         | computeDistortion_DE2000
+  Sweep              | info sweep, 10 steps
+  Info band          | +-1% of the info range, two-sided constraint
+  fmincon method     | interior-point
+  Gradients          | central finite differences                <-- CHANGED
+  Gamut constraints  | all pixels (12 rows per pixel; 120,000 at 100x100)
+  Loss scaling       | fminconFactor = 1e8
+  Tolerances         | ConstraintTolerance 1e-10, StepTolerance 1e-10
+  Iteration limits   | MaxIterations 200, default MaxFunctionEvaluations
+  Failure handling   | accept within fmincon's tolerance; up to 3 warm
+                     | restarts at the iteration limit; a failed run still
+                     | returns its start point
+  Start points       | identity, previous step, findDesiredInfo presolve;
+                     | forward and backward passes
+
+Runs:
+  Gaugin   100x100  L,M,S   (2026-10-28)
+
+Notes (compared with update 0, Gaugin 100x100 L,M,S):
+  - Stalls 35 -> 9, converged runs 14 -> 42, failures 2 -> 0.
+  - Identical images at every step.
+  - +13% run time.
+
+
+UPDATE 2
+========
+Everything the same as update 1, but changed:
+  Gamut constraints: all pixels -> convex hull only.
+
+Settings:
+  Setting            | Value
+  -------------------+--------------------------------------------------------
+  Info score         | computeInfo_regressCIE
+  Predicting         | L,M,S, from L and S
+  Regression         | plain (no ridge)
+  Normalizer         | abs()
+  Distortion         | computeDistortion_DE2000
+  Sweep              | info sweep, 10 steps
+  Info band          | +-1% of the info range, two-sided constraint
+  fmincon method     | interior-point
+  Gradients          | central finite differences
+  Gamut constraints  | convex hull only (useConvexHull = true in  <-- CHANGED
+                     | buildGamutConstraints); 120,000 -> ~1,000-1,500 rows
+                     | at 100x100; same allowed transforms
+  Loss scaling       | fminconFactor = 1e8
+  Tolerances         | ConstraintTolerance 1e-10, StepTolerance 1e-10
+  Iteration limits   | MaxIterations 200, default MaxFunctionEvaluations
+  Failure handling   | accept within fmincon's tolerance; up to 3 warm
+                     | restarts at the iteration limit; a failed run still
+                     | returns its start point
+  Start points       | identity, previous step, findDesiredInfo presolve;
+                     | forward and backward passes
+
+Runs:
+  Gaugin   100x100  L,M,S   (2026-10-29)
+  flower1  128x128  L,M,S   (2026-10-29)
+  Gaugin   128x128  L,M,S   (2026-10-29)
+  ishi45   128x128  L,M,S   (2026-10-29)
+  fruit    128x128  L,M,S   (2026-10-29)
+
+Notes (compared with update 1, Gaugin 100x100 L,M,S):
+  - 8.4x faster (1,037 s vs 8,700 s).
+  - Steps 1, 2, 7-10: identical images.
+  - Steps 3-6: worse answers (distortion 1.3-2.5x higher, images visibly
+    different), and 6 failed fmincon runs (vs 0). The allowed transforms
+    are the same; interior-point just lands in worse local minima with
+    fewer constraints.
