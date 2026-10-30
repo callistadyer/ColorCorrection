@@ -21,9 +21,17 @@
 
 % Image types
 % imageTypes = {'Gaugin.png'};
-% imageTypes = {'flower1.png', 'fruit.png', 'Gaugin.png', 'ishi45.png'};   % all 4 test images (updates 1-3 at 64x64, 10/29)
-imageTypes = {'square.png'};          % update 2 at 100x100 (10/29)
+% imageTypes = {'map.png','tree.png','car.png','cell.png','pool.png','flower1.png', 'fruit.png', 'Gaugin.png', 'ishi45.png'};   % all 4 test images (updates 1-3 at 64x64, 10/29)
 
+% Gray image with one square in the middle.
+% The square changes only the missing cone (M for Deuteranopia).
+% setType (below) = number of squares, so setType = 1 gives one square.
+% imageTypes = {'gray'};
+
+% Gray image with a red-green (L-M) square plus noise in L and M
+% (settings in loadLMSvalues): same noise in L and M vs different noise.
+imageTypes = {'noiseSquareCorrelated', 'noiseSquareUncorrelated'};
+% imageTypes = {'tree.png'};
 % imageTypes = {'flower1.png', ...
 %     'Gaugin.png'};
 % imageTypes = {'Gaugin.png'};          % convex-hull test: compare with info_10steps_centralFiniteDifferences
@@ -38,12 +46,11 @@ dichromatType = 'Deuteranopia';
 
 % m = 100;
 % n = 100;
-m = 60;
-n = 60;
+m = 128;
+n = 128;
+m = 20;
+n = 20;
 
-% THIS WAS FOR THE OLD NORMALIZING... WHERE IT WAS NO ABS() 
-% m = 69;
-% n = 69;
 
 % How many steps do you want in a transformation sweep?
 nSteps = 10;
@@ -59,6 +66,11 @@ sweepAxis = 'info';
 %         make the figures. If it doesn't exist, stop; nothing is computed.
 updateNumber = [];
 
+% TEST: replace the L cone plane with the M cone plane, so the image is
+% [M M S], and look at how well M is predicted. true = run only this test
+% (no sweep); false = normal run.
+runMMSTest = false;
+
 
 %% Define metric functions
 
@@ -72,12 +84,14 @@ infoFcn = @computeInfo_regressCIE;
 
 % infoParams only necessary when infoFcn is regress
 infoParams = struct( ...
-    'predictingWhat',     'M', ...          % options: 'M' or 'L-M' or 'L,M,S'
-    'predictingFromWhat', 'L and S');           % options: 'L and S' or 'deltaL and deltaS' or 'deltaL+M and delta S'
+    'predictingWhat',     'L-M', ...          % options: 'M', 'L,M,S', 'L-M' (score R^2)
+    'predictingFromWhat', 'L and S', ...        % options: 'L and S', 'opponent' (dichromat's perceived L*a*b*; use weightPenaltySD in DE, e.g. 1), 'deltaL and deltaS', 'deltaL+M and delta S'
+    'whichWeightPenalty', 'ridge', ...      % options: 'none', 'noise', 'ridge' (penalizes huge regression weights)
+    'weightPenaltySD',    .02);            % noise SD (or matching ridge strength), in cone contrast
 % infoParams = struct( ...
 %     'predictingWhat',     'L,M,S', ...          % options: 'M' or 'L-M' or 'L,M,S'
 %     'predictingFromWhat', 'L and S');           % options: 'L and S' or 'deltaL and deltaS' or 'deltaL+M and delta S'
-    % infoParams = struct();
+% infoParams = struct();
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%% DISTORTION FUNCTION %%%%%%%%%%%%%%
@@ -101,59 +115,80 @@ for ii = 1:numel(imageTypes)
 
     % Generate input image
     [LMSCalFormat, rgbLinCalFormat, LMSCalFormatRendered, rgbLinCalFormatRendered, Disp, imgParams, pathName] = colorCorrectionGenerateImages(imgType, setType, m, n, dichromatType, 0);
+
+    % ---- CHECK: is there contrast only in the M cone? ----
+    LMSContrastCheck = (LMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
+    maxContrastL = max(abs(LMSContrastCheck(1,:)));
+    maxContrastM = max(abs(LMSContrastCheck(2,:)));
+    maxContrastS = max(abs(LMSContrastCheck(3,:)));
+    fprintf('\nLargest contrast in each cone:  L = %.3g   M = %.3g   S = %.3g\n', maxContrastL, maxContrastM, maxContrastS);
+    if maxContrastL > 1e-10 || maxContrastS > 1e-10
+        warning('There is contrast in L or S, not only in M.');
+    end
+
+    % ---- TEST: image = [M M S] (L cone plane replaced by M) ----
+    if runMMSTest
+
+        % 1. Original cone contrast
+        originalContrast = (LMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
+
+        % 2. Copy the M plane into the L plane: [M M S]
+        mmsContrast      = originalContrast;
+        mmsContrast(1,:) = 2 * (originalContrast(1,:) - originalContrast(2,:));
+        % mmsContrast(3,:) = originalContrast(2,:);        
+        mmsLMS           = mmsContrast .* Disp.grayLMS + Disp.grayLMS;
+
+        % 3. Info of the original and of [M M S] (raw info, normalizer = 1)
+        infoOriginal = computeInfo_regressCIE(originalContrast, originalContrast, imgParams, dichromatType, 1, Disp, infoParams);
+        [infoMMS, ~, mmsPredictedLMS, betaMMS] = computeInfo_regressCIE(originalContrast, mmsContrast, imgParams, dichromatType, 1, Disp, infoParams);
+
+        % 4. Dichromat view of [M M S]
+        [~, mmsDiRGBlin] = DichromRenderLinear(mmsLMS, dichromatType, Disp);
+
+        % 5. Linear RGB of each picture, clipped to the display range [0, 1]
+        originalRGBlin     = min(max(rgbLinCalFormat, 0), 1);
+        originalDiRGBlin   = min(max(rgbLinCalFormatRendered, 0), 1);
+        mmsRGBlin          = min(max(Disp.M_cones2rgb * mmsLMS, 0), 1);
+        mmsDiRGBlin        = min(max(mmsDiRGBlin, 0), 1);
+        mmsPredictedRGBlin = min(max(Disp.M_cones2rgb * mmsPredictedLMS, 0), 1);
+
+        % 6. Convert to displayable images
+        originalImage     = CalFormatToImage(rgbLin2RGB(originalRGBlin, Disp), m, n);
+        originalDiImage   = CalFormatToImage(rgbLin2RGB(originalDiRGBlin, Disp), m, n);
+        mmsImage          = CalFormatToImage(rgbLin2RGB(mmsRGBlin, Disp), m, n);
+        mmsDiImage        = CalFormatToImage(rgbLin2RGB(mmsDiRGBlin, Disp), m, n);
+        mmsPredictedImage = CalFormatToImage(rgbLin2RGB(mmsPredictedRGBlin, Disp), m, n);
+
+        % 7. Show them side by side
+        figure;
+        tiledlayout(1, 5, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+        nexttile;
+        imshow(originalImage);
+        title('Original');
+
+        nexttile;
+        imshow(originalDiImage);
+        title('Original (dichromat)');
+
+        nexttile;
+        imshow(mmsImage);
+        title('[M M S]');
+
+        nexttile;
+        imshow(mmsDiImage);
+        title('[M M S] (dichromat)');
+
+        nexttile;
+        imshow(mmsPredictedImage);
+        title('Predicted from [M M S]');
+
+        % Skip the sweep for this image
+        % continue
+    end
+
     % Set up daltonizer object
     theDaltonizer = daltonize(infoFcn, infoParams,distortionFcn, distortionParams,renderFcn, renderParams, Disp);
-
-
-    %% Let's do some R squared tests on this image - how much do the L and S cones explain without transforming at all?
-    % Cone contrast of the original image (same as lossFunction)
-    % C = (LMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
-    % L = C(1,:)'; M = C(2,:)'; S = C(3,:)';
-    % 
-    % % Same regression as computeInfo_regressCIE: predict M from L and S, no intercept
-    % X     = [L S];
-    % w     = X \ M;
-    % Mhat  = X * w;
-    % resid = M - Mhat;
-    % R2_noIntercept = 1 - sum(resid.^2) / sum(M.^2);
-    % 
-    % % Standard centered R^2 (with intercept), so the mean color can't inflate it
-    % Xc     = [ones(size(L)) L S];
-    % residC = M - Xc * (Xc \ M);
-    % R2_centered = 1 - sum(residC.^2) / sum((M - mean(M)).^2);
-    % 
-    % fprintf('corr(L,M) = %.3f\n', corr(L, M));
-    % fprintf('M = %.2f*L + %.2f*S\n', w(1), w(2));
-    % fprintf('R2 (no intercept) = %.4f, R2 (centered) = %.4f\n', R2_noIntercept, R2_centered);
-    % fprintf('rms of M = %.3f, rms of leftover = %.3f\n', sqrt(mean(M.^2)), sqrt(mean(resid.^2)));
-    % 
-    % 
-    % figure; scatter(L, M, 8, 'filled',MarkerEdgeColor='black',MarkerFaceColor='white'); hold on; axis equal; grid on
-    % plot(xlim, xlim, 'k--')
-    % axis square
-    % xlabel('L cone contrast'); 
-    % ylabel('M cone contrast')
-    % title(sprintf('corr(L,M) = %.3f', corr(L, M)))
-    % 
-    % lim = max(abs(M));
-    % figure; tiledlayout(1,2)
-    % nexttile; imagesc(reshape(M, m, n), [-lim lim]); axis image off; colorbar; title('M contrast')
-    % nexttile; imagesc(reshape(resid, m, n), [-lim lim]); axis image off; colorbar; title('M not predictable from L,S')
-    % colormap(gray)
-    % 
-    % Cpred = C; Cpred(2,:) = Mhat';
-    % LMSpred = Cpred .* Disp.grayLMS + Disp.grayLMS;
-    % 
-    % Lab1 = XYZToLab(Disp.M_lms2xyz * LMSCalFormat, Disp.labWhiteXYZ);
-    % Lab2 = XYZToLab(Disp.M_lms2xyz * LMSpred,      Disp.labWhiteXYZ);
-    % dE   = ComputeDE2000_Lab(Lab1', Lab2');
-    % 
-    % toImg = @(LMS) CalFormatToImage(rgbLin2RGB(min(max(Disp.M_cones2rgb * LMS, 0), 1), Disp), m, n);
-    % figure; tiledlayout(1,3)
-    % nexttile; imshow(toImg(LMSCalFormat)); title('original')
-    % nexttile; imshow(toImg(LMSpred));      title('M replaced by prediction from L,S')
-    % nexttile; imagesc(reshape(dE, m, n)); axis image off; colorbar; title(sprintf('\\DeltaE2000, mean %.1f', mean(dE)))
-
 
     %% Info and distortion sweeps
     %   (1) Run an info sweep (minimize distortion at each target info)
@@ -173,44 +208,102 @@ for ii = 1:numel(imageTypes)
         % Compute the sweep over info targets!!
         [LMSSweep_info, rgbLinSweep_info, LMSRenderedSweep_info, rgbLinRenderedSweep_info,TSweep_info, targetInfoNorm_info, targetDistNorm_info, infoNormAch_info, distNormAch_info] = ...
             computeSweep(theDaltonizer,LMSCalFormat, imgParams, dichromatType,nSteps, pathName, sweepAxis_info, 'updateNumber', updateNumber);
-   
+
         % Target vs achieved info
         fprintf('\nInfo sweep (n=%d): target vs achieved info\n', numel(targetInfoNorm_info));
         disp([targetInfoNorm_info(:), infoNormAch_info(:)]);
 
-        % Image montage
+        % Turn each step's result into pictures (used by the figures below)
         RGBTriImgFormat_optAllInfo = zeros(m, n, 3, nSteps);
         RGBDiImgFormat_optAllInfo  = zeros(m, n, 3, nSteps);
 
         for i = 1:nSteps
+            % Keep RGB values in the display range [0, 1]
             rgbLinSweep_info{i}(rgbLinSweep_info{i}<0) = 0;
             rgbLinSweep_info{i}(rgbLinSweep_info{i}>1) = 1;
 
-            % Trichromat (optimized) image for step i
+            % Trichromat (transformed) image for step i
             RGBTriCalFormat_opt = rgbLin2RGB(rgbLinSweep_info{i}, Disp);
-            RGBTriImgFormat_opt = CalFormatToImage(RGBTriCalFormat_opt,m,n);
-            RGBTriImgFormat_optAllInfo(:,:,:,i) = RGBTriImgFormat_opt;
+            RGBTriImgFormat_optAllInfo(:,:,:,i) = CalFormatToImage(RGBTriCalFormat_opt,m,n);
 
-            % Dichromat render of the optimized image for step i
+            % Dichromat view of the transformed image for step i
             RGBDiCalFormat_opt = rgbLin2RGB(rgbLinRenderedSweep_info{i}, Disp);
-            RGBDiImgFormat_opt = CalFormatToImage(RGBDiCalFormat_opt,m,n);
-            RGBDiImgFormat_optAllInfo(:,:,:,i) = RGBDiImgFormat_opt;
+            RGBDiImgFormat_optAllInfo(:,:,:,i) = CalFormatToImage(RGBDiCalFormat_opt,m,n);
         end
 
-        % Figure stuff
-        figName_info = sprintf('%s — %s — %d-step info sweep', imgType, dichromatType, nSteps);
-        figInfo      = figure('Color','w','Name', figName_info);
-        tlInfo       = tiledlayout(figInfo, 1, 2, 'TileSpacing','compact', 'Padding','compact');
 
-        % Left panel: Trichromat grid
-        triMontageInfo = nexttile(tlInfo, 1);
-        montage(RGBTriImgFormat_optAllInfo, 'Size', [nRows nCols], 'Parent', triMontageInfo,'BorderSize', 1, 'BackgroundColor', 'w');
-        title(triMontageInfo, 'Trichromat (optimized)');
+        % ---- CHECKS FOR EACH STEP: predicted image and regression weights ----
+        % The info score rebuilds the full color image from the dichromat's
+        % channels using a regression. For each step we:
+        %   1. save and show that rebuilt ("predicted") trichromat image
+        %   2. save the regression weights (beta), and print the largest
+        %      weight and how well M was rebuilt (R^2, 1 = perfect).
+        % A huge weight with a near-perfect rebuild = a tiny signal is being
+        % scaled up by the regression.
 
-        % Right panel: Dichromat grid
-        diMontageInfo = nexttile(tlInfo, 2);
-        montage(RGBDiImgFormat_optAllInfo, 'Size', [nRows nCols], 'Parent', diMontageInfo,'BorderSize', 1, 'BackgroundColor', 'w');
-        title(diMontageInfo, sprintf('Dichromat render (%s)', dichromatType));
+        % Folder to save the checks in (inside this run's results folder)
+        runFolder = sprintf('info_%dsteps', nSteps);
+        if ~isempty(updateNumber)
+            runFolder = sprintf('%s_update%d', runFolder, updateNumber);
+        end
+        metricFolder = buildMetricFolderName(infoFcn, infoParams, distortionFcn);
+        checkDir = fullfile(getpref('ColorCorrection','outputDir'), 'testImagesTransformed', ...
+            pathName, metricFolder, runFolder, 'regressionChecks');
+        if ~exist(checkDir, 'dir')
+            mkdir(checkDir);
+        end
+
+        % Original M cone contrast (what the regression tries to rebuild)
+        originalContrast = (LMSCalFormat - Disp.grayLMS) ./ Disp.grayLMS;
+        originalM        = originalContrast(2,:);
+
+        % Places to keep the results of every step
+        predictedImages = zeros(m, n, 3, nSteps);
+        allBeta         = cell(1, nSteps);
+        largestWeight   = zeros(1, nSteps);
+        rebuildR2       = zeros(1, nSteps);
+
+        for i = 1:nSteps
+
+            % 1. This step's transform
+            T = TSweep_info{i};
+
+            % 2. Run the info score on it. Output 6 = rebuilt LMS image,
+            %    output 7 = regression weights. (Normalizers = 1: these
+            %    two outputs don't depend on them.)
+            [~, ~, ~, ~, ~, predictedLMS, beta] = lossFunction('lambda', 0, T(:), ...
+                LMSCalFormat, imgParams, dichromatType, infoFcn, distortionFcn, ...
+                1, 1, Disp, infoParams);
+
+            % 3. How well was M rebuilt? (R^2: 1 = perfectly)
+            predictedContrast = (predictedLMS - Disp.grayLMS) ./ Disp.grayLMS;
+            predictedM        = predictedContrast(2,:);
+            errorSum          = sum((originalM - predictedM).^2);
+            totalSum          = sum((originalM - mean(originalM)).^2);
+            rebuildR2(i)      = 1 - errorSum / max(totalSum, eps);
+
+            % 4. Keep the weights and the largest one
+            allBeta{i}       = beta;
+            largestWeight(i) = max(abs(beta(:)));
+
+            % 5. Turn the rebuilt LMS image into a picture
+            predictedRGBlinear = Disp.M_cones2rgb * predictedLMS;
+            predictedRGBlinear = min(max(predictedRGBlinear, 0), 1);   % keep in display range
+            predictedRGB       = rgbLin2RGB(predictedRGBlinear, Disp);
+            predictedImages(:,:,:,i) = CalFormatToImage(predictedRGB, m, n);
+
+            % 6. Save this step's picture
+            imwrite(predictedImages(:,:,:,i), fullfile(checkDir, sprintf('predicted_step_%02d.png', i)));
+        end
+
+        % ---- Print the largest regression weight at each step (table) ----
+        Step          = (1:nSteps)';
+        LargestWeight = largestWeight(:);
+        weightTable   = table(Step, LargestWeight);
+
+        fprintf('\nLargest regression weight at each step:\n');
+        disp(weightTable)
+
     end
 
     % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -229,40 +322,23 @@ for ii = 1:numel(imageTypes)
         fprintf('\nDistortion sweep (n=%d): target vs achieved distortion\n', numel(targetDistNorm_dist));
         disp([targetDistNorm_dist(:), distNormAch_dist(:)]);
 
-        % Image montage
+        % Turn each step's result into pictures (used by the figures below)
         RGBTriImgFormat_optAllDist = zeros(m, n, 3, nSteps);
         RGBDiImgFormat_optAllDist  = zeros(m, n, 3, nSteps);
 
         for i = 1:nSteps
-            rgbLinSweep_dist{i}(rgbLinSweep_dist{i} < 0) = 0;
-            rgbLinSweep_dist{i}(rgbLinSweep_dist{i} > 1) = 1;
+            % Keep RGB values in the display range [0, 1]
+            rgbLinSweep_dist{i}(rgbLinSweep_dist{i}<0) = 0;
+            rgbLinSweep_dist{i}(rgbLinSweep_dist{i}>1) = 1;
 
-            % Trichromat (optimized) image for step i
+            % Trichromat (transformed) image for step i
             RGBTriCalFormat_opt = rgbLin2RGB(rgbLinSweep_dist{i}, Disp);
-            RGBTriImgFormat_opt = CalFormatToImage(RGBTriCalFormat_opt,m,n);
-            RGBTriImgFormat_optAllDist(:,:,:,i) = RGBTriImgFormat_opt;
+            RGBTriImgFormat_optAllDist(:,:,:,i) = CalFormatToImage(RGBTriCalFormat_opt,m,n);
 
-            % Dichromat render of the optimized image for step i
+            % Dichromat view of the transformed image for step i
             RGBDiCalFormat_opt = rgbLin2RGB(rgbLinRenderedSweep_dist{i}, Disp);
-            RGBDiImgFormat_opt = CalFormatToImage(RGBDiCalFormat_opt,m,n);
-            RGBDiImgFormat_optAllDist(:,:,:,i) = RGBDiImgFormat_opt;
+            RGBDiImgFormat_optAllDist(:,:,:,i) = CalFormatToImage(RGBDiCalFormat_opt,m,n);
         end
-
-        % Figure stuff
-        figNameDist = sprintf('%s — %s — %d-step distortion sweep', imgType, dichromatType, nSteps);
-        figDist = figure('Color','w','Name', figNameDist);
-        tlDist  = tiledlayout(figDist, 1, 2, 'TileSpacing','compact', 'Padding','compact');
-
-        % Left panel: Trichromat grid
-        triMontageDist = nexttile(tlDist, 1);
-        montage(RGBTriImgFormat_optAllDist, 'Size', [nRows nCols], 'Parent', triMontageDist,'BorderSize', 1, 'BackgroundColor', 'w');
-        title(triMontageDist, 'Trichromat (optimized)');
-
-        % Right panel: Dichromat grid
-        diMontageDist = nexttile(tlDist, 2);
-        montage(RGBDiImgFormat_optAllDist, 'Size', [nRows nCols], 'Parent', diMontageDist,'BorderSize', 1, 'BackgroundColor', 'w');
-        title(diMontageDist, sprintf('Dichromat render (%s)', dichromatType));
-
     end
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -313,84 +389,6 @@ for ii = 1:numel(imageTypes)
     legend('Location','southeast');
 
 
-
-
-    %% Save individual sweep images to folders
-    %
-    % Saves each optimized image and its dichromat rendering as separate PNGs.
-    % Creates a folder for each input image, dichromacy type, and sweep type.
-
-    % % Remove extension from image name
-    % [~, imgName, ~] = fileparts(imgType);
-    % 
-    % % Main output folder (inside current MATLAB working directory)
-    % outputFolder = fullfile(pwd, 'ColorCorrection_Results', ...
-    %     imgName, dichromatType);
-    % 
-    % if ~exist(outputFolder, 'dir')
-    %     mkdir(outputFolder);
-    % end
-
-    % %% INFO SWEEP
-    % if ranInfo
-    % 
-    %     infoFolder = fullfile(outputFolder, 'InfoSweep');
-    % 
-    %     if ~exist(infoFolder, 'dir')
-    %         mkdir(infoFolder);
-    %     end
-    % 
-    %     for i = 1:nSteps
-    % 
-    %         % Extract individual images
-    %         imgTri = RGBTriImgFormat_optAllInfo(:,:,:,i);
-    %         imgDi  = RGBDiImgFormat_optAllInfo(:,:,:,i);
-    % 
-    %         % Save trichromat optimized image
-    %         imwrite(imgTri, fullfile(infoFolder, ...
-    %             sprintf('Step_%02d_Trichromat.png', i)));
-    % 
-    %         % Save dichromat rendering
-    %         imwrite(imgDi, fullfile(infoFolder, ...
-    %             sprintf('Step_%02d_Dichromat.png', i)));
-    % 
-    %     end
-    % 
-    %     fprintf('Saved info sweep images to:\n%s\n', infoFolder);
-    % 
-    % end
-    % 
-    % 
-    % %% DISTORTION SWEEP
-    % if ranDist
-    % 
-    %     distFolder = fullfile(outputFolder, 'DistortionSweep');
-    % 
-    %     if ~exist(distFolder, 'dir')
-    %         mkdir(distFolder);
-    %     end
-    % 
-    %     for i = 1:nSteps
-    % 
-    %         % Extract individual images
-    %         imgTri = RGBTriImgFormat_optAllDist(:,:,:,i);
-    %         imgDi  = RGBDiImgFormat_optAllDist(:,:,:,i);
-    % 
-    %         % Save trichromat optimized image
-    %         imwrite(imgTri, fullfile(distFolder, ...
-    %             sprintf('Step_%02d_Trichromat.png', i)));
-    % 
-    %         % Save dichromat rendering
-    %         imwrite(imgDi, fullfile(distFolder, ...
-    %             sprintf('Step_%02d_Dichromat.png', i)));
-    % 
-    %     end
-    % 
-    %     fprintf('Saved distortion sweep images to:\n%s\n', distFolder);
-    % 
-    % end
-
-
     %% Plot each sweep as 2 rows x nSteps columns
     % Row 1 = Trichromat optimized images
     % Row 2 = Dichromat renderings
@@ -401,17 +399,20 @@ for ii = 1:numel(imageTypes)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     if ranInfo
 
+        % 3 rows: transformed (trichromat), predicted, dichromat
         figure('Color','w', ...
-            'Position',[100 100 150*nSteps 350], ...
+            'Position',[100 100 150*nSteps 520], ...
             'Name',sprintf('%s - %s - Info Sweep',imgType,dichromatType));
 
-        tl = tiledlayout(2,nSteps, ...
-            'TileSpacing','none', ...
-            'Padding','none');
+        % 'compact' padding leaves room for the row labels on the left
+        % 'compact' tile spacing leaves a small gap between rows
+        tl = tiledlayout(3,nSteps, ...
+            'TileSpacing','compact', ...
+            'Padding','compact');
 
         for i = 1:nSteps
 
-            % Top row: Trichromat
+            % Top row: Trichromat (transformed image)
             nexttile(i);
             imshow(RGBTriImgFormat_optAllInfo(:,:,:,i));
             axis image off;
@@ -419,16 +420,110 @@ for ii = 1:numel(imageTypes)
             title(sprintf('%.3f',infoNormAch_info(i)), ...
                 'FontSize',15);
 
-            % Bottom row: Dichromat
+            % Row label on the left (axis off hides labels, so turn it on)
+            if i == 1
+                ylabel('Trichromat', 'FontSize', 15, 'Visible', 'on');
+            end
+
+            % Middle row: Predicted image (rebuilt by the info regression,
+            % computed in the regression checks above)
             nexttile(nSteps+i);
+            imshow(predictedImages(:,:,:,i));
+            axis image off;
+
+            if i == 1
+                ylabel('Predicted', 'FontSize', 15, 'Visible', 'on');
+            end
+
+            % Bottom row: Dichromat
+            nexttile(2*nSteps+i);
             imshow(RGBDiImgFormat_optAllInfo(:,:,:,i));
             axis image off;
+
+            if i == 1
+                ylabel('Dichromat', 'FontSize', 15, 'Visible', 'on');
+            end
 
         end
 
         % sgtitle(sprintf('%s - %s - Info Sweep',imgType,dichromatType), ...
         %     'FontSize',14);
 
+    end
+
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % INFO SWEEP: info-distortion curve with the images
+    %   The images sit in a row along the bottom of the plot, one pair per
+    %   chosen step: trichromat (top), dichromat (bottom). A grey line
+    %   connects each pair to its point on the curve.
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    if ranInfo
+
+        % Settings
+        stepsToShow = unique(round(linspace(1, nSteps, 5)));   % which steps get images (5, incl. first and last)
+        thumbSize   = 0.10;             % largest image size, as a fraction of the figure
+
+        % 1. Draw the curve
+        figure('Color','w', 'Position',[100 100 1000 900], ...
+            'Name',sprintf('%s - %s - Info vs Distortion with images',imgType,dichromatType));
+        curveAx = axes('Position',[0.10 0.08 0.82 0.82]);   % [left bottom width height], fraction of the figure
+        plot(curveAx, distNormAch_info, infoNormAch_info, 'ko-', ...
+            'LineWidth',2, 'MarkerFaceColor','w', 'MarkerSize',10);
+        curveAx.LineWidth = 1.5;
+        curveAx.FontSize  = 15;
+        xlabel(curveAx, 'Achieved Distortion (normalized)');
+        ylabel(curveAx, 'Achieved Info (normalized)');
+        title(curveAx, sprintf('%s — %s — %d steps', imgType, dichromatType, nSteps), 'FontSize',20);
+        subtitle(curveAx, 'Images: trichromat (top), dichromat (bottom)');
+
+        % 2. Image size: shrink if needed so the pairs fit side by side
+        axPos     = curveAx.Position;
+        nShow     = numel(stepsToShow);
+        thumbSize = min(thumbSize, 0.9 * axPos(3) / nShow);
+
+        % 3. Axis limits: leave an empty band at the bottom for the images.
+        %    The lowest point on the curve sits just above the band.
+        bandHeight = 2*thumbSize + 0.05;                % 2 images + room for labels, fraction of the figure
+        bandFrac   = bandHeight / axPos(4);             % same, as a fraction of the axes
+        xRange = max(distNormAch_info) - min(distNormAch_info);
+        yRange = max(infoNormAch_info) - min(infoNormAch_info);
+        yTop    = max(infoNormAch_info) + 0.05*yRange;
+        yBottom = (min(infoNormAch_info) - bandFrac*yTop) / (1 - bandFrac);
+        xlim(curveAx, [min(distNormAch_info) - 0.05*xRange, max(distNormAch_info) + 0.05*xRange]);
+        ylim(curveAx, [yBottom, yTop]);
+        xLimits = xlim(curveAx);
+        yLimits = ylim(curveAx);
+
+        % 4. One image pair per chosen step, evenly spaced along the bottom
+        for k = 1:nShow
+            i = stepsToShow(k);
+
+            % Where this pair goes (fraction of the figure)
+            pairCenterX = axPos(1) + (k - 0.5) * axPos(3) / nShow;
+            imageLeft   = pairCenterX - thumbSize/2;
+            dichromatBottom  = axPos(2) + 0.01;
+            trichromatBottom = dichromatBottom + thumbSize;
+
+            % Where this step's point is on the curve (fraction of the figure)
+            pointX = axPos(1) + axPos(3) * (distNormAch_info(i) - xLimits(1)) / diff(xLimits);
+            pointY = axPos(2) + axPos(4) * (infoNormAch_info(i) - yLimits(1)) / diff(yLimits);
+
+            % Grey line from the point to the top of its pair
+            annotation('line', [pointX, pairCenterX], [pointY, trichromatBottom + thumbSize + 0.025], ...
+                'Color', [0.6 0.6 0.6], 'LineWidth', 1);
+
+            % Trichromat image (top), labeled with its info value
+            axes('Position', [imageLeft, trichromatBottom, thumbSize, thumbSize]);
+            imshow(RGBTriImgFormat_optAllInfo(:,:,:,i));
+            axis image off;
+            title(sprintf('%.3f', infoNormAch_info(i)), 'FontSize', 12);
+
+            % Dichromat image (bottom)
+            axes('Position', [imageLeft, dichromatBottom, thumbSize, thumbSize]);
+            imshow(RGBDiImgFormat_optAllInfo(:,:,:,i));
+            axis image off;
+        end
     end
 
 
@@ -441,9 +536,11 @@ for ii = 1:numel(imageTypes)
             'Position',[100 100 150*nSteps 350], ...
             'Name',sprintf('%s - %s - Distortion Sweep',imgType,dichromatType));
 
+        % 'compact' padding leaves room for the row labels on the left
+        % 'compact' tile spacing leaves a small gap between rows
         tl = tiledlayout(2,nSteps, ...
-            'TileSpacing','none', ...
-            'Padding','none');
+            'TileSpacing','compact', ...
+            'Padding','compact');
 
         for i = 1:nSteps
 
@@ -455,10 +552,19 @@ for ii = 1:numel(imageTypes)
             title(sprintf('%.3f',infoNormAch_dist(i)), ...
                 'FontSize',15);
 
+            % Row label on the left (axis off hides labels, so turn it on)
+            if i == 1
+                ylabel('Trichromat', 'FontSize', 15, 'Visible', 'on');
+            end
+
             % Bottom row: Dichromat
             nexttile(nSteps+i);
             imshow(RGBDiImgFormat_optAllDist(:,:,:,i));
             axis image off;
+
+            if i == 1
+                ylabel('Dichromat', 'FontSize', 15, 'Visible', 'on');
+            end
 
         end
 
@@ -467,5 +573,5 @@ for ii = 1:numel(imageTypes)
 
     end
 
-end
 
+end
