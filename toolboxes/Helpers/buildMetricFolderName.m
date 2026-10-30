@@ -63,7 +63,19 @@ function metricFolder = buildMetricFolderName(infoFcn, infoParams, distortionFcn
 
         % Add some underscores, make it pretty
         paramsString   = regexprep(paramsStrRaw, '[^A-Za-z0-9]+', '_');  
-        paramsString   = regexprep(paramsString, '^_+|_+$', '');           
+        paramsString   = regexprep(paramsString, '^_+|_+$', '');
+
+        % If a weight penalty is on, add it to the name (e.g. "_ridge0p02"),
+        % so runs with different penalties save to different folders.
+        % 'none' (or no field) leaves the name unchanged.
+        if isfield(infoParams, 'whichWeightPenalty') && ~strcmp(infoParams.whichWeightPenalty, 'none')
+            penaltySD = 0.02;
+            if isfield(infoParams, 'weightPenaltySD')
+                penaltySD = infoParams.weightPenaltySD;
+            end
+            penaltyString = strrep(sprintf('%s%g', infoParams.whichWeightPenalty, penaltySD), '.', 'p');
+            paramsString  = sprintf('%s_%s', paramsString, penaltyString);
+        end
 
         % Construct the folder name in the form:
         %   "<infoFcnName>__<paramsString>__<distortionFcnName>"
