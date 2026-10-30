@@ -1,4 +1,4 @@
-function [loss, info, infoNormalized, distortion, distortionNormalized, LMSCalFormat_pred] = lossFunction(useLambdaOrTarget, lambdaOrTarget,...
+function [loss, info, infoNormalized, distortion, distortionNormalized, LMSCalFormat_pred, regressionBeta] = lossFunction(useLambdaOrTarget, lambdaOrTarget,...
     t_vec, LMSCalFormat, imgParams, dichromatType, infoFcn, distortionFcn, infoNormalizer, distortionNormalizer, Disp, paramsStruct)
 % lossFunction  Objective for color correction optimization
 %
@@ -69,6 +69,10 @@ function [loss, info, infoNormalized, distortion, distortionNormalized, LMSCalFo
 %   LMSCalFormat_pred         Reconstructed LMS image from the info metric, if the
 %                             info function returns one (computeInfo_regressCIE
 %                             does); otherwise []
+%   regressionBeta            The info metric's regression weights (rows =
+%                             predictors, columns = targets), if the info
+%                             function returns them (computeInfo_regressCIE
+%                             does); otherwise []. Used for diagnostics.
 
 % Reshape transformation matrix
 T = reshape(t_vec, 3, 3);
@@ -98,7 +102,11 @@ LMSnew = newLMSContrastCalFormat;  % Transformed LMS contrast
 % Info function. Some info functions (e.g. computeInfo_regressCIE) also
 % return the reconstructed LMS image as a third output; ask for it only
 % when the function provides one.
-if nargout(infoFcn) >= 3
+% Regression weights are only fetched when the caller asks for them.
+regressionBeta = [];
+if nargout(infoFcn) >= 4 && nargout >= 7
+    [info, infoNormalized, LMSCalFormat_pred, regressionBeta] = infoFcn(LMSold, LMSnew, imgParams, dichromatType, infoNormalizer, Disp, paramsStruct);
+elseif nargout(infoFcn) >= 3
     [info, infoNormalized, LMSCalFormat_pred] = infoFcn(LMSold, LMSnew, imgParams, dichromatType, infoNormalizer, Disp, paramsStruct);
 else
     LMSCalFormat_pred = [];
