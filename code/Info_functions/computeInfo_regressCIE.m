@@ -183,7 +183,7 @@ switch paramsStruct.predictingWhat
         predictedM = predictedL - predictedLminusM;     % 1 x N  =  1 x N - 1 x N
 
         % Step 4: predicted image = [original L, predicted M, original S]
-        LMSContrast_pred = [predictedL; predictedM; S_old];   % [3 x N]
+        LMSContrast_pred = [L_old; predictedM; S_old];   % [3 x N]
     otherwise
         error('Unsupported predictingWhat: %s', paramsStruct.predictingWhat);
 end
