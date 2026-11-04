@@ -86,7 +86,8 @@ them on an open science repository.
 - [ ] Work through the optimizer-robustness TODO list below (from a
       2026-10-20 read-through of the search code; DHB will ask Callista
       to tackle these with Claude's help). In progress: items 1, 3, 5, 9
-      done; see the STATUS lines and "Current state and findings" below.
+      done, 11 partly done; see the STATUS lines and "Current state and
+      findings" below.
 
 ## TODO: improving the parameter search (fmincon robustness)
 
@@ -197,9 +198,10 @@ cache folders when re-testing, or stale results will be loaded).
        `colorCorrectionOptimize.m` (~line 103) currently does nothing
        since nothing downstream is stochastic. MATLAB's MultiStart (Global
        Optimization Toolbox) is a drop-in alternative.
-       STATUS: not done; now the main open problem (see Findings below).
-       A neighbour-blend start ((T(i-1)+T(i+1))/2) was tested on flower1 M
-       100x100 step 9 and did NOT help.
+       STATUS: not done for the sweep steps; now the main open problem
+       (see Findings below). A neighbour-blend start ((T(i-1)+T(i+1))/2)
+       was tested on flower1 M 100x100 step 9 and did NOT help. Random
+       starts now exist for the lambda=1 endpoint only (see #11).
 
 9. [x] Prune gamut constraints to the convex hull.
        `buildGamutConstraints.m` builds 12N x 9 rows (10,800 for a 30x30
@@ -238,8 +240,15 @@ cache folders when re-testing, or stale results will be loaded).
         real range (sweep looks almost unchanged end to end). Other three
         images reached the same max with both methods. Earlier, a 2D
         plane search confirmed the interior-point lambda=1 endpoints are the
-        true max (fruit, flower1, Gaugin at 64x64). Fix not done: e.g. run
-        lambda=1 with both algorithms / several starts and keep the best.
+        true max (fruit, flower1, Gaugin at 64x64).
+        STATUS (10/30): partly done. `computeEndpoints.m` now runs lambda=1
+        from the identity plus 5 random starts (`eye(3) + 0.3*randn(3)`,
+        `rng(1)`; switch: `useRandomStarts`) and keeps the highest info
+        that stays in gamut. It checks the gamut itself, because
+        colorCorrectionOptimize doesn't. Motivation: for the gray square +
+        ridge, info is flat around the identity, so an identity-only start
+        never moved. Not done: checking exitflag, or trying both algorithms.
+        Existing `endpoints.mat` caches were made before this change.
 
 12. [ ] Housekeeping (not search-related but confusing):
         `code/Info_functions/computeInfo_regress.m` contains a function
@@ -252,12 +261,42 @@ cache folders when re-testing, or stale results will be loaded).
         'distortion' mode removed, callers documented). Remaining unused
         files listed in Findings below.
 
-## Current state and findings (as of 2026-10-29)
+## Current state and findings (as of 2026-11-04)
 
 ### Code settings right now
-- Info: `computeInfo_regressCIE`, plain regression (ridge was tried and
-  removed), `abs()` info normalizer in computeSweep. Runner uses
-  predictingWhat `'L,M,S'` from `'L and S'`.
+- Info: `computeInfo_regressCIE`, `abs()` info normalizer in
+  computeSweep. Runner (uncommitted edits) uses predictingWhat `'L-M'`
+  from `'L and S'`, `whichWeightPenalty = 'ridge'`, `weightPenaltySD =
+  0.02`, test image `ishi45.png` at 128x128, `nSteps = 6`.
+- computeInfo_regressCIE options (added 10/30):
+  - predictingWhat `'L-M'` (re-added). Target = original L-M, centered
+    (the same as fitting a constant term). Rebuilt image = [original L,
+    original L - predicted(L-M), original S], scored by -DE2000 like the
+    other targets. An R^2 score for L-M is in the file but commented out.
+    Stale comments: the runner says "'L-M' (score R^2)", and the
+    computeInfo comment mentions "matching normalizer lines in
+    computeSweep.m", which don't exist.
+  - `whichWeightPenalty`: 'none' (default) / 'noise' (adds noise with
+    SD weightPenaltySD to the predictors, rng(1)) / 'ridge' (lambda =
+    N*SD^2). `weightPenaltySD` is in cone contrast, default 0.02.
+  - predictingFromWhat `'opponent'`: the dichromat's rendered image in
+    CIELAB (use weightPenaltySD in DE units, e.g. 1).
+  - Fourth output `beta` (regression weights). lossFunction returns it
+    as a 7th output `regressionBeta` when asked for.
+- buildMetricFolderName appends the penalty (e.g. `_ridge0p02`) when
+  whichWeightPenalty is not 'none', so ridge runs cache separately.
+- Runner diagnostics (runAllTestImages.m): prints the largest contrast
+  per cone (warns if L or S has contrast); `runMMSTest` (off) tests a
+  hand-made L-plane replacement; for each info-sweep step it rebuilds the
+  predicted image, the regression beta and the M rebuild R^2, saving them
+  to `<run folder>/regressionChecks/`. Uncommitted: saves trichromat /
+  dichromat / predicted PNGs per step to `<run folder>/rawImages/`, plus
+  bigger plot fonts and lines.
+- `imageTypes = {'noiseSquareCorrelated','noiseSquareUncorrelated'}`
+  (commented out in the runner) is described as a gray image with an L-M
+  square plus noise "settings in loadLMSvalues", but no code generates
+  it yet. Unknown names currently fall through to the gray-square
+  generator.
 - fmincon (colorCorrectionOptimize.m): interior-point, central finite
   differences, fminconFactor 1e8 (lossFunction.m), tolerances 1e-10,
   MaxIterations 200. The 'sqp' + MaxFunctionEvaluations 3000 lines
@@ -281,10 +320,17 @@ cache folders when re-testing, or stale results will be loaded).
 - Ridge regression (noise sigma 0.03 on the dichromat's channels) did not
   fix this: the injected signal rides on the large L/S channels, so ridge
   barely penalizes it; instead ridge rewarded remixing L and S (large
-  image changes, no extra red-green). Removed.
+  image changes, no extra red-green). Removed then, but brought back
+  10/30 as an option (`whichWeightPenalty`) and now on again for the L-M
+  experiments.
 - 'M' vs 'L,M,S': 'M' widens the info range for fruit/Gaugin, same for
-  flower1, fewer stalls. Not yet decided which to use. 'L-M' as written
-  penalizes exactly the useful transforms; its case was removed.
+  flower1, fewer stalls. Not yet decided which to use. The OLD 'L-M'
+  case penalized exactly the useful transforms and was removed; a new
+  version was added 10/30 (see Code settings) and is being tried. Note:
+  when the transform leaves L unchanged, original L is one of the
+  predictors, so predicting L-M then works out the same as predicting M
+  (apart from the constant term and ridge). The two only differ when L
+  changes.
 - Open question for the project: should the transform deliver the
   red-green information accurately (current metric) or exaggerate it to
   make it visible (would need a visibility/discriminability metric)?

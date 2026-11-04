@@ -77,6 +77,20 @@ function metricFolder = buildMetricFolderName(infoFcn, infoParams, distortionFcn
             paramsString  = sprintf('%s_%s', paramsString, penaltyString);
         end
 
+        % Centering (centerData in computeInfo_regressCIE; default off):
+        %   centered            -> add "_centered"
+        %   not centered, 'L-M' or 'LMS_L-M' -> add "_uncentered"
+        %   not centered, other cases -> name unchanged
+        % Why the L-M exception: before 11/4, 'L-M' was ALWAYS centered and
+        % saved with no suffix. Adding "_uncentered" keeps new uncentered
+        % L-M runs from loading those old centered results.
+        centerData = isfield(infoParams, 'centerData') && ~isempty(infoParams.centerData) && infoParams.centerData;
+        if centerData
+            paramsString = sprintf('%s_centered', paramsString);
+        elseif ismember(infoParams.predictingWhat, {'L-M', 'LMS_L-M'})
+            paramsString = sprintf('%s_uncentered', paramsString);
+        end
+
         % Construct the folder name in the form:
         %   "<infoFcnName>__<paramsString>__<distortionFcnName>"
         % Example: "computeInfo_regress__L_from_M__computeDistortion_squared"

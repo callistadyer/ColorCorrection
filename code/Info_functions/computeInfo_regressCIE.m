@@ -21,6 +21,10 @@ function [info,infoNormalized,LMSCalFormat_pred,beta] = computeInfo_regressCIE(L
 %               original S. Info = -DE2000(original, rebuilt image).
 %               Rewards transforms that make L-M stand out in what the
 %               dichromat sees.
+%     'LMS_L-M': predict original L, M and S (like 'L,M,S'), then
+%               predicted L-M = predicted L - predicted M, and score it
+%               exactly like 'L-M'. A check: regression is linear in the
+%               target, so this should give the same result as 'L-M'.
 %     ('L' and 'S' work like 'M'.)
 %
 %   paramsStruct.predictingFromWhat (predictors), e.g.
@@ -39,6 +43,12 @@ function [info,infoNormalized,LMSCalFormat_pred,beta] = computeInfo_regressCIE(L
 %   contrast (default 0.02). Signals smaller than about this count as
 %   unreadable.
 %
+%   paramsStruct.centerData: remove the image's averages before the
+%   regression (= add a constant term) and add the ORIGINAL averages back
+%   afterwards. true / false, same for every case. Default: off (until
+%   11/4 it was always on for 'L-M' and 'LMS_L-M'). See step 3 for why
+%   and what it implies.
+%
 % Inputs:
 %   LMSContrastCalFormat_old   3 x N original LMS contrast
 %   LMSContrastCalFormat_new   3 x N transformed LMS contrast
@@ -53,7 +63,8 @@ function [info,infoNormalized,LMSCalFormat_pred,beta] = computeInfo_regressCIE(L
 %   info                       info score (higher = better)
 %   infoNormalized             info / normalizingValue
 %   LMSCalFormat_pred          3 x N rebuilt ("predicted") LMS image. For
-%                              'L-M': original L, predicted M, original S
+%                              'L-M' and 'LMS_L-M': original L, predicted
+%                              M, original S
 %                              (used for the DE2000 score and the picture).
 %   beta                       regression weights, rows = predictors,
 %                              columns = targets. Huge weights = a tiny
@@ -120,11 +131,33 @@ if strcmp(whichWeightPenalty, 'noise')
     X = X + weightPenaltySD * randn(size(X));
 end
 
-% 'L-M' only: remove the averages. Only the PATTERN of L-M across the
-% image matters, not its overall level (same as adding a constant term).
-yMean = 0;
-if strcmp(paramsStruct.predictingWhat, 'L-M')
-    yMean = mean(y);                % added back in step 5, for the picture
+% Centering (paramsStruct.centerData): remove the image's averages
+% from the target and the predictors before the regression.
+%
+% Why this can matter even though the image is already in contrast:
+% contrast is measured from the DISPLAY GRAY, not from the image's own
+% average. A reddish image (or a gray image with a colored square) has a
+% non-zero average contrast. The regression below has no constant term
+% (it fits y = X*beta through 0), so without centering the weights must
+% explain the average AND the pixel-to-pixel pattern, which skews them.
+% Centering is the same as adding a constant term: the weights then only
+% explain the pattern.
+%
+% Catch: the average added back in step 5 is the ORIGINAL image's
+% average (yMean), so the overall level of the target (e.g. the image's
+% overall red-green tint) is given to the rebuild for free; it does not
+% have to be recovered from what the dichromat sees.
+%
+% centerData = true / false, same for every case. Default: off.
+% (Until 11/4 it was always on for 'L-M' and 'LMS_L-M'.)
+centerData = false;                                                          % default: off
+if isfield(paramsStruct, 'centerData') && ~isempty(paramsStruct.centerData)  % set in the runner?
+    centerData = paramsStruct.centerData;                                    % yes -> use it
+end
+
+yMean = zeros(1, size(y,2));        % 1 x (number of targets); 0 = not centered
+if centerData
+    yMean = mean(y, 1);             % added back in step 5
     y     = y - yMean;
     X     = X - mean(X, 1);
 end
@@ -149,6 +182,10 @@ end
 y_hat    = X * beta;                % prediction
 residual = y - y_hat;               % the part of the target that could NOT be predicted
 
+% Prediction in the original units: add back the averages removed in
+% step 3 (yMean = 0 if not centered)
+y_pred   = y_hat + yMean;           % N x (number of targets)
+
 
 %% 5. Rebuilt ("predicted") image, in LMS contrast
 % Start from the original; replace what was predicted
@@ -156,31 +193,45 @@ LMSContrast_pred = LMSContrastCalFormat_old;
 
 switch paramsStruct.predictingWhat
     case 'L'
-        LMSContrast_pred(1,:) = y_hat(:).';
+        LMSContrast_pred(1,:) = y_pred(:).';
     case 'M'
-        LMSContrast_pred(2,:) = y_hat(:).';
+        LMSContrast_pred(2,:) = y_pred(:).';
     case 'S'
-        LMSContrast_pred(3,:) = y_hat(:).';
+        LMSContrast_pred(3,:) = y_pred(:).';
     case 'L,M,S'
-        LMSContrast_pred = y_hat';                       % y_hat is N x 3 here
+        LMSContrast_pred = y_pred';                      % y_pred is N x 3 here
     case 'L-M'
         % The regression predicted only L-M, one number per pixel. To make
         % an image we need L, M and S, so:
         % (Sizes: N = number of pixels.)
 
-        % Step 1: predicted L-M (add back the average removed in step 3)
-        %   y_hat: [N x 1]
-        %   .'   : [1 x N]
-        %   yMean: [1 x 1]
-        predictedLminusM = y_hat(:).' + yMean;          % [1 x N]
+        % Step 1: predicted L-M (averages already added back in y_pred)
+        %   y_pred: [N x 1]
+        %   .'    : [1 x N]
+        predictedLminusM = y_pred(:).';                 % [1 x N]
 
-        % Step 2: assume the dichromat has the original L, so keep it
-        predictedL = L_old;                             % [1 x N]
+        % Step 2: solve for M using the predicted L-M:
+        %       (L-M)predicted = Loriginal - Mpredicted
+        %        Mpredicted    = Loriginal - (L-M)predicted
+        predictedM = L_old - predictedLminusM;     % 1 x N  =  1 x N - 1 x N
+
+        % Step 3: predicted image = [original L, predicted M, original S]
+        LMSContrast_pred = [L_old; predictedM; S_old];   % [3 x N]
+    case 'LMS_L-M'
+        % The regression predicted L, M and S separately. Take predicted
+        % L - predicted M as the predicted L-M, then do the same as 'L-M'.
+
+        % Step 1: predicted L, M, S (averages already added back in y_pred)
+        %   y_pred: [N x 3]
+        predictedLMS = y_pred.';                        % [3 x N]
+
+        % Step 2: predicted L-M from the predicted L and M
+        predictedLminusM = predictedLMS(1,:) - predictedLMS(2,:);   % [1 x N]
 
         % Step 3: solve for M using the predicted L-M:
-        %       predicted L-M = original L - predicted M
-        %       predicted M   = original L - predicted L-M
-        predictedM = predictedL - predictedLminusM;     % 1 x N  =  1 x N - 1 x N
+        %       (L-M)predicted = Loriginal - Mpredicted
+        %        Mpredicted    = Loriginal - (L-M)predicted
+        predictedM = L_old - predictedLminusM;          % [1 x N]
 
         % Step 4: predicted image = [original L, predicted M, original S]
         LMSContrast_pred = [L_old; predictedM; S_old];   % [3 x N]
@@ -225,7 +276,8 @@ switch spec
     case 'M',     y = M;
     case 'S',     y = S;
     case 'L-M',   y = L - M;
-    case 'L,M,S', y = [L(:), M(:), S(:)];
+    case {'L,M,S', 'LMS_L-M'}
+        y = [L(:), M(:), S(:)];
     otherwise
         error('Unsupported predictingWhat: %s', spec);
 end
