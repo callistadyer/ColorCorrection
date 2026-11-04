@@ -20,8 +20,9 @@
 %   (lambda = 1).
 
 % Image types
-% imageTypes = {'Gaugin.png'};
+% imageTypes = {'ishi45noBg.png'};
 % imageTypes = {'map.png','tree.png','car.png','cell.png','pool.png','flower1.png', 'fruit.png', 'Gaugin.png', 'ishi45.png'};   % all 4 test images (updates 1-3 at 64x64, 10/29)
+imageTypes = {'fruit.png', 'Gaugin.png','ishi45.png','flower1.png'};
 
 % Gray image with one square in the middle.
 % The square changes only the missing cone (M for Deuteranopia).
@@ -30,7 +31,7 @@
 
 % Gray image with a red-green (L-M) square plus noise in L and M
 % (settings in loadLMSvalues): same noise in L and M vs different noise.
-imageTypes = {'noiseSquareCorrelated', 'noiseSquareUncorrelated'};
+% imageTypes = {'noiseSquareCorrelated', 'noiseSquareUncorrelated'};
 % imageTypes = {'tree.png'};
 % imageTypes = {'flower1.png', ...
 %     'Gaugin.png'};
@@ -48,12 +49,9 @@ dichromatType = 'Deuteranopia';
 % n = 100;
 m = 128;
 n = 128;
-m = 20;
-n = 20;
-
 
 % How many steps do you want in a transformation sweep?
-nSteps = 10;
+nSteps = 6;
 
 sweepAxis = 'info';
 %   'info'        = run info sweep only. this chooses set of info scores and minimizes distortion.
@@ -84,10 +82,11 @@ infoFcn = @computeInfo_regressCIE;
 
 % infoParams only necessary when infoFcn is regress
 infoParams = struct( ...
-    'predictingWhat',     'L-M', ...          % options: 'M', 'L,M,S', 'L-M' (score R^2)
+    'predictingWhat',     'L-M', ...          % options: 'M', 'L,M,S', 'L-M', 'LMS_L-M' (predict L,M,S; score its L-M like 'L-M')
     'predictingFromWhat', 'L and S', ...        % options: 'L and S', 'opponent' (dichromat's perceived L*a*b*; use weightPenaltySD in DE, e.g. 1), 'deltaL and deltaS', 'deltaL+M and delta S'
     'whichWeightPenalty', 'ridge', ...      % options: 'none', 'noise', 'ridge' (penalizes huge regression weights)
-    'weightPenaltySD',    .02);            % noise SD (or matching ridge strength), in cone contrast
+    'weightPenaltySD',    .02, ...         % noise SD (or matching ridge strength), in cone contrast
+    'centerData',         false);          % true = remove the averages before the regression (= constant term); false (default) = don't
 % infoParams = struct( ...
 %     'predictingWhat',     'L,M,S', ...          % options: 'M' or 'L-M' or 'L,M,S'
 %     'predictingFromWhat', 'L and S');           % options: 'L and S' or 'deltaL and deltaS' or 'deltaL+M and delta S'
@@ -341,6 +340,103 @@ for ii = 1:numel(imageTypes)
         end
     end
 
+
+    %% Save individual images for each sweep step
+    % Saves three standalone PNGs per step:
+    %   1. Trichromat (transformed image)
+    %   2. Dichromat (rendered transformed image)
+    %   3. Predicted (reconstructed original image)
+    %
+    % Folder structure:
+    %   .../info_6steps/rawImages/
+    %   .../distortion_6steps/rawImages/
+    %
+    % Images have no axes, titles, or labels.
+
+    saveRawImages = true;
+
+    if saveRawImages
+
+        metricFolder = buildMetricFolderName(infoFcn, infoParams, distortionFcn);
+
+        % Loop over whichever sweeps were run
+        sweepNames = {};
+        if ranInfo
+            sweepNames{end+1} = 'info';
+        end
+        if ranDist
+            sweepNames{end+1} = 'distortion';
+        end
+
+        for s = 1:numel(sweepNames)
+
+            currentSweep = sweepNames{s};
+
+            % Select images and transforms for this sweep
+            if strcmp(currentSweep, 'info')
+                triImages = RGBTriImgFormat_optAllInfo;
+                diImages  = RGBDiImgFormat_optAllInfo;
+                predImages = predictedImages;
+            else
+                triImages = RGBTriImgFormat_optAllDist;
+                diImages  = RGBDiImgFormat_optAllDist;
+
+                % Compute predicted images for distortion sweep
+                predImages = zeros(m, n, 3, nSteps);
+
+                for i = 1:nSteps
+                    T = TSweep_dist{i};
+
+                    [~, ~, ~, ~, ~, predictedLMS] = ...
+                        lossFunction('lambda', 0, T(:), ...
+                        LMSCalFormat, imgParams, dichromatType, ...
+                        infoFcn, distortionFcn, 1, 1, Disp, infoParams);
+
+                    predictedRGBlin = Disp.M_cones2rgb * predictedLMS;
+                    predictedRGBlin = min(max(predictedRGBlin, 0), 1);
+                    predictedRGB = rgbLin2RGB(predictedRGBlin, Disp);
+
+                    predImages(:,:,:,i) = ...
+                        CalFormatToImage(predictedRGB, m, n);
+                end
+            end
+
+            % Create folder inside the appropriate sweep directory
+            runFolder = sprintf('%s_%dsteps', currentSweep, nSteps);
+
+            if ~isempty(updateNumber)
+                runFolder = sprintf('%s_update%d', runFolder, updateNumber);
+            end
+
+            saveDir = fullfile( ...
+                getpref('ColorCorrection','outputDir'), ...
+                'testImagesTransformed', ...
+                pathName, metricFolder, runFolder, 'rawImages');
+
+            if ~exist(saveDir, 'dir')
+                mkdir(saveDir);
+            end
+
+            % Save each image individually, without figure decorations
+            for i = 1:nSteps
+
+                imwrite(triImages(:,:,:,i), ...
+                    fullfile(saveDir, sprintf('trichromat_step_%02d.png', i)));
+
+                imwrite(diImages(:,:,:,i), ...
+                    fullfile(saveDir, sprintf('dichromat_step_%02d.png', i)));
+
+                imwrite(predImages(:,:,:,i), ...
+                    fullfile(saveDir, sprintf('predicted_step_%02d.png', i)));
+
+            end
+
+            fprintf('Saved %d raw images to:\n%s\n', 3*nSteps, saveDir);
+
+        end
+    end
+
+
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%% Info-Distortion curve %%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -351,7 +447,7 @@ for ii = 1:numel(imageTypes)
     nPlot = 20;
     if ranInfo
         idx = 1:min(nPlot, numel(distNormAch_info));
-        plot(distNormAch_info(idx), infoNormAch_info(idx), 'ko-', 'LineWidth', 2,'MarkerFaceColor','w', 'MarkerSize',10 , 'DisplayName', 'Info sweep (minimize distortion)');
+        plot(distNormAch_info(idx), infoNormAch_info(idx), 'ko-', 'LineWidth', 4,'MarkerFaceColor','w', 'MarkerSize',20 , 'DisplayName', 'Info sweep (minimize distortion)');
         hold on;
         for k = idx
             yline(targetInfoNorm_info(k), ':', 'HandleVisibility','off');
@@ -362,7 +458,7 @@ for ii = 1:numel(imageTypes)
     % curve for that sweep
     if ranDist
         idx = 1:min(nPlot, numel(distNormAch_dist));
-        plot(distNormAch_dist(idx), infoNormAch_dist(idx), 'ks-', 'LineWidth', 2, 'MarkerFaceColor','w', 'MarkerSize',10 ,'DisplayName', 'Distortion sweep (maximize info)');
+        plot(distNormAch_dist(idx), infoNormAch_dist(idx), 'ks-', 'LineWidth', 4, 'MarkerFaceColor','w', 'MarkerSize',20 ,'DisplayName', 'Distortion sweep (maximize info)');
         hold on;
         for k = idx
             xline(targetDistNorm_dist(k), ':', 'HandleVisibility','off');
@@ -372,10 +468,10 @@ for ii = 1:numel(imageTypes)
     % Make it pretty
     grid off; axis square;
     ax = gca;
-    ax.LineWidth = 1.5;
-    ax.FontSize = 15;
-    xlabel('Achieved Distortion (normalized)','FontSize',15);
-    ylabel('Achieved Info (normalized)','FontSize',15);
+    ax.LineWidth = 5;
+    ax.FontSize = 25;
+    xlabel('Achieved Distortion (normalized)','FontSize',22);
+    ylabel('Achieved Info (normalized)','FontSize',22);
     title(sprintf('%s — %s — %d steps', imgType, dichromatType, nSteps),'FontSize',20);
 
     if ranInfo && ranDist
@@ -385,6 +481,9 @@ for ii = 1:numel(imageTypes)
     else
         subtitle('Achieved Info vs Distortion (distortion sweep)');
     end
+
+    title('')
+    subtitle('')
 
     legend('Location','southeast');
 
@@ -461,7 +560,7 @@ for ii = 1:numel(imageTypes)
     if ranInfo
 
         % Settings
-        stepsToShow = unique(round(linspace(1, nSteps, 5)));   % which steps get images (5, incl. first and last)
+        stepsToShow = 1:6;   % which steps get images (5, incl. first and last)
         thumbSize   = 0.10;             % largest image size, as a fraction of the figure
 
         % 1. Draw the curve
